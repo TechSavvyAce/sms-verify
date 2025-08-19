@@ -1,0 +1,62 @@
+[
+  {
+    "value": 1,
+    "label": "1 Hour",
+    "label_cn": "1小时",
+    "price_multiplier": 1.0,
+    "description": "Quick verification, suitable for one-time use",
+    "description_cn": "快速验证，适合一次性使用",
+    "popularity": "high",
+    "best_for": "Quick SMS verification"
+  },
+  {
+    "value": 6,
+    "label": "6 Hours",
+    "label_cn": "6小时",
+    "price_multiplier": 1.5,
+    "description": "Short-term rental, suitable for multiple verifications",
+    "description_cn": "短期租用，适合多次验证",
+    "popularity": "high",
+    "best_for": "Multiple SMS verifications"
+  },
+  {
+    "value": 12,
+    "label": "12 Hours",
+    "label_cn": "12小时",
+    "price_multiplier": 2.0,
+    "description": "Half-day rental, suitable for workday use",
+    "description_cn": "半天租用，适合工作日使用",
+    "popularity": "medium",
+    "best_for": "Workday verification needs"
+  },
+  {
+    "value": 24,
+    "label": "24 Hours",
+    "label_cn": "24小时",
+    "price_multiplier": 3.0,
+    "description": "Full-day rental, suitable for complete processes",
+    "description_cn": "全天租用，适合完整流程",
+    "popularity": "high",
+    "best_for": "Complete verification processes"
+  },
+  {
+    "value": 48,
+    "label": "48 Hours",
+    "label_cn": "48小时",
+    "price_multiplier": 5.0,
+    "description": "Two-day rental, suitable for complex verifications",
+    "description_cn": "两天租用，适合复杂验证",
+    "popularity": "medium",
+    "best_for": "Complex verification workflows"
+  },
+  {
+    "value": 72,
+    "label": "72 Hours",
+    "label_cn": "72小时",
+    "price_multiplier": 7.0,
+    "description": "Three-day rental, suitable for long-term projects",
+    "description_cn": "三天租用，适合长期项目",
+    "popularity": "low",
+    "best_for": "Long-term verification projects"
+  }
+]

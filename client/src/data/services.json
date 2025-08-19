@@ -1,0 +1,736 @@
+[
+  {
+    "code": "social",
+    "name": "Social Media",
+    "name_cn": "社交媒体",
+    "category": "social",
+    "icon": "📱",
+    "description": "主流社交媒体平台验证码服务",
+    "description_cn": "主流社交媒体平台验证码服务",
+    "services": [
+      {
+        "code": "ig",
+        "name": "Instagram",
+        "name_cn": "Instagram",
+        "price": 3.5,
+        "success_rate": 90,
+        "available": 80,
+        "estimated_time": "5-10分钟",
+        "popularity": "high",
+        "features": ["照片分享", "短视频", "直播", "购物"],
+        "difficulty": "medium"
+      },
+      {
+        "code": "fb",
+        "name": "Facebook",
+        "name_cn": "Facebook",
+        "price": 3.0,
+        "success_rate": 92,
+        "available": 100,
+        "estimated_time": "3-8分钟",
+        "popularity": "high",
+        "features": ["社交网络", "即时通讯", "群组", "广告"],
+        "difficulty": "low"
+      },
+      {
+        "code": "wa",
+        "name": "WhatsApp",
+        "name_cn": "WhatsApp",
+        "price": 2.5,
+        "success_rate": 95,
+        "available": 150,
+        "estimated_time": "2-5分钟",
+        "popularity": "high",
+        "features": ["即时通讯", "语音通话", "视频通话", "群聊"],
+        "difficulty": "low"
+      },
+      {
+        "code": "tg",
+        "name": "Telegram",
+        "name_cn": "Telegram",
+        "price": 2.0,
+        "success_rate": 98,
+        "available": 200,
+        "estimated_time": "1-3分钟",
+        "popularity": "high",
+        "features": ["即时通讯", "频道", "机器人", "加密聊天"],
+        "difficulty": "low"
+      },
+      {
+        "code": "tw",
+        "name": "Twitter",
+        "name_cn": "Twitter",
+        "price": 2.8,
+        "success_rate": 93,
+        "available": 120,
+        "estimated_time": "2-6分钟",
+        "popularity": "high",
+        "features": ["微博", "话题讨论", "实时新闻", "认证"],
+        "difficulty": "medium"
+      },
+      {
+        "code": "lf",
+        "name": "TikTok",
+        "name_cn": "TikTok",
+        "price": 4.0,
+        "success_rate": 88,
+        "available": 60,
+        "estimated_time": "8-15分钟",
+        "popularity": "high",
+        "features": ["短视频", "直播", "电商", "创作者工具"],
+        "difficulty": "high"
+      },
+      {
+        "code": "ds",
+        "name": "Discord",
+        "name_cn": "Discord",
+        "price": 3.2,
+        "success_rate": 98,
+        "available": 90,
+        "estimated_time": "1-3分钟",
+        "popularity": "medium",
+        "features": ["语音聊天", "服务器", "机器人", "游戏集成"],
+        "difficulty": "low"
+      },
+      {
+        "code": "wb",
+        "name": "WeChat",
+        "name_cn": "微信",
+        "price": 4.5,
+        "success_rate": 96,
+        "available": 70,
+        "estimated_time": "2-6分钟",
+        "popularity": "high",
+        "features": ["即时通讯", "朋友圈", "支付", "小程序"],
+        "difficulty": "medium"
+      },
+      {
+        "code": "vi",
+        "name": "Viber",
+        "name_cn": "Viber",
+        "price": 2.2,
+        "success_rate": 94,
+        "available": 110,
+        "estimated_time": "2-4分钟",
+        "popularity": "medium",
+        "features": ["即时通讯", "语音通话", "群聊", "贴纸"],
+        "difficulty": "low"
+      },
+      {
+        "code": "oi",
+        "name": "Tinder",
+        "name_cn": "Tinder",
+        "price": 3.8,
+        "success_rate": 89,
+        "available": 75,
+        "estimated_time": "5-12分钟",
+        "popularity": "medium",
+        "features": ["交友", "匹配", "聊天", "高级功能"],
+        "difficulty": "medium"
+      },
+      {
+        "code": "yw",
+        "name": "Grindr",
+        "name_cn": "Grindr",
+        "price": 3.5,
+        "success_rate": 91,
+        "available": 85,
+        "estimated_time": "4-8分钟",
+        "popularity": "medium",
+        "features": ["交友", "定位", "聊天", "社区"],
+        "difficulty": "medium"
+      },
+      {
+        "code": "vz",
+        "name": "Hinge",
+        "name_cn": "Hinge",
+        "price": 4.2,
+        "success_rate": 87,
+        "available": 65,
+        "estimated_time": "6-12分钟",
+        "popularity": "medium",
+        "features": ["交友", "深度匹配", "聊天", "关系导向"],
+        "difficulty": "high"
+      },
+      {
+        "code": "bw",
+        "name": "Signal",
+        "name_cn": "Signal",
+        "price": 2.8,
+        "success_rate": 96,
+        "available": 95,
+        "estimated_time": "2-5分钟",
+        "popularity": "medium",
+        "features": ["加密通讯", "隐私保护", "群聊", "语音通话"],
+        "difficulty": "low"
+      }
+    ]
+  },
+  {
+    "code": "ecommerce",
+    "name": "E-commerce",
+    "name_cn": "电商平台",
+    "category": "ecommerce",
+    "icon": "🛒",
+    "description": "全球主流电商平台验证码服务",
+    "description_cn": "全球主流电商平台验证码服务",
+    "services": [
+      {
+        "code": "am",
+        "name": "Amazon",
+        "name_cn": "亚马逊",
+        "price": 5.0,
+        "success_rate": 96,
+        "available": 50,
+        "estimated_time": "5-15分钟",
+        "popularity": "high",
+        "features": ["全球购物", "Prime会员", "AWS服务", "Kindle"],
+        "difficulty": "high"
+      },
+      {
+        "code": "dl",
+        "name": "Lazada",
+        "name_cn": "Lazada",
+        "price": 3.0,
+        "success_rate": 95,
+        "available": 100,
+        "estimated_time": "2-6分钟",
+        "popularity": "high",
+        "features": ["东南亚电商", "本地化", "支付集成", "物流"],
+        "difficulty": "medium"
+      },
+      {
+        "code": "sg",
+        "name": "OZON",
+        "name_cn": "OZON",
+        "price": 4.5,
+        "success_rate": 93,
+        "available": 70,
+        "estimated_time": "4-10分钟",
+        "popularity": "medium",
+        "features": ["俄罗斯电商", "本地支付", "物流", "金融服务"],
+        "difficulty": "medium"
+      },
+      {
+        "code": "hw",
+        "name": "Alipay/Alibaba",
+        "name_cn": "支付宝/阿里巴巴",
+        "price": 4.0,
+        "success_rate": 97,
+        "available": 80,
+        "estimated_time": "2-5分钟",
+        "popularity": "high",
+        "features": ["支付", "电商", "金融", "本地服务"],
+        "difficulty": "medium"
+      },
+      {
+        "code": "qf",
+        "name": "RedBook",
+        "name_cn": "小红书",
+        "price": 4.8,
+        "success_rate": 89,
+        "available": 55,
+        "estimated_time": "6-12分钟",
+        "popularity": "high",
+        "features": ["种草", "电商", "社区", "直播"],
+        "difficulty": "high"
+      },
+      {
+        "code": "ev",
+        "name": "Picpay",
+        "name_cn": "Picpay",
+        "price": 3.8,
+        "success_rate": 92,
+        "available": 75,
+        "estimated_time": "4-8分钟",
+        "popularity": "medium",
+        "features": ["巴西支付", "转账", "购物", "金融服务"],
+        "difficulty": "medium"
+      },
+      {
+        "code": "bnu",
+        "name": "Qpon",
+        "name_cn": "Qpon",
+        "price": 3.2,
+        "success_rate": 94,
+        "available": 90,
+        "estimated_time": "3-6分钟",
+        "popularity": "medium",
+        "features": ["优惠券", "本地优惠", "商家合作", "用户奖励"],
+        "difficulty": "low"
+      }
+    ]
+  },
+  {
+    "code": "tech",
+    "name": "Technology",
+    "name_cn": "科技平台",
+    "category": "tech",
+    "icon": "💻",
+    "description": "主流科技平台和互联网服务",
+    "description_cn": "主流科技平台和互联网服务",
+    "services": [
+      {
+        "code": "go",
+        "name": "Google Services",
+        "name_cn": "谷歌服务",
+        "price": 4.5,
+        "success_rate": 97,
+        "available": 85,
+        "estimated_time": "2-5分钟",
+        "popularity": "high",
+        "features": ["Gmail", "YouTube", "Drive", "搜索"],
+        "difficulty": "medium"
+      },
+      {
+        "code": "wx",
+        "name": "Apple Services",
+        "name_cn": "苹果服务",
+        "price": 5.5,
+        "success_rate": 99,
+        "available": 40,
+        "estimated_time": "5-15分钟",
+        "popularity": "high",
+        "features": ["iCloud", "App Store", "Apple Pay", "iMessage"],
+        "difficulty": "high"
+      },
+      {
+        "code": "mm",
+        "name": "Microsoft",
+        "name_cn": "微软",
+        "price": 4.8,
+        "success_rate": 95,
+        "available": 60,
+        "estimated_time": "4-10分钟",
+        "popularity": "high",
+        "features": ["Office 365", "Outlook", "Teams", "Azure"],
+        "difficulty": "medium"
+      },
+      {
+        "code": "li",
+        "name": "Baidu",
+        "name_cn": "百度",
+        "price": 3.5,
+        "success_rate": 96,
+        "available": 95,
+        "estimated_time": "2-5分钟",
+        "popularity": "high",
+        "features": ["搜索", "地图", "云服务", "AI"],
+        "difficulty": "low"
+      },
+      {
+        "code": "mb",
+        "name": "Yahoo",
+        "name_cn": "雅虎",
+        "price": 3.0,
+        "success_rate": 94,
+        "available": 100,
+        "estimated_time": "2-6分钟",
+        "popularity": "medium",
+        "features": ["邮箱", "新闻", "搜索", "金融"],
+        "difficulty": "low"
+      },
+      {
+        "code": "pm",
+        "name": "AOL",
+        "name_cn": "AOL",
+        "price": 2.8,
+        "success_rate": 93,
+        "available": 110,
+        "estimated_time": "3-7分钟",
+        "popularity": "low",
+        "features": ["邮箱", "新闻", "搜索", "即时通讯"],
+        "difficulty": "low"
+      },
+      {
+        "code": "nv",
+        "name": "Naver",
+        "name_cn": "Naver",
+        "price": 3.8,
+        "success_rate": 95,
+        "available": 80,
+        "estimated_time": "3-8分钟",
+        "popularity": "medium",
+        "features": ["搜索", "新闻", "地图", "云服务"],
+        "difficulty": "medium"
+      },
+      {
+        "code": "vk",
+        "name": "VK.com",
+        "name_cn": "VK.com",
+        "price": 3.2,
+        "success_rate": 96,
+        "available": 90,
+        "estimated_time": "2-5分钟",
+        "popularity": "medium",
+        "features": ["社交网络", "即时通讯", "游戏", "音乐"],
+        "difficulty": "low"
+      }
+    ]
+  },
+  {
+    "code": "finance",
+    "name": "Finance & Payment",
+    "name_cn": "金融支付",
+    "category": "finance",
+    "icon": "💳",
+    "description": "安全可靠的金融支付平台验证",
+    "description_cn": "安全可靠的金融支付平台验证",
+    "services": [
+      {
+        "code": "ts",
+        "name": "PayPal",
+        "name_cn": "PayPal",
+        "price": 8.0,
+        "success_rate": 99,
+        "available": 20,
+        "estimated_time": "5-15分钟",
+        "popularity": "high",
+        "features": ["全球支付", "安全", "商家服务", "跨境"],
+        "difficulty": "high"
+      },
+      {
+        "code": "abu",
+        "name": "BPJSTK",
+        "name_cn": "BPJSTK",
+        "price": 4.5,
+        "success_rate": 96,
+        "available": 70,
+        "estimated_time": "3-8分钟",
+        "popularity": "medium",
+        "features": ["印尼社保", "政府服务", "身份验证", "福利"],
+        "difficulty": "medium"
+      },
+      {
+        "code": "xh",
+        "name": "OVO",
+        "name_cn": "OVO",
+        "price": 4.0,
+        "success_rate": 97,
+        "available": 80,
+        "estimated_time": "2-5分钟",
+        "popularity": "medium",
+        "features": ["印尼支付", "转账", "购物", "金融服务"],
+        "difficulty": "medium"
+      }
+    ]
+  },
+  {
+    "code": "transport",
+    "name": "Transportation",
+    "name_cn": "交通出行",
+    "category": "transport",
+    "icon": "🚗",
+    "description": "主流交通出行平台服务",
+    "description_cn": "主流交通出行平台服务",
+    "services": [
+      {
+        "code": "ub",
+        "name": "Uber",
+        "name_cn": "Uber",
+        "price": 4.8,
+        "success_rate": 94,
+        "available": 65,
+        "estimated_time": "4-10分钟",
+        "popularity": "high",
+        "features": ["网约车", "外卖", "货运", "金融"],
+        "difficulty": "medium"
+      },
+      {
+        "code": "jg",
+        "name": "Grab",
+        "name_cn": "Grab",
+        "price": 4.2,
+        "success_rate": 95,
+        "available": 75,
+        "estimated_time": "3-8分钟",
+        "popularity": "high",
+        "features": ["网约车", "外卖", "支付", "金融服务"],
+        "difficulty": "medium"
+      },
+      {
+        "code": "ni",
+        "name": "Gojek",
+        "name_cn": "Gojek",
+        "price": 4.0,
+        "success_rate": 96,
+        "available": 80,
+        "estimated_time": "2-6分钟",
+        "popularity": "high",
+        "features": ["网约车", "外卖", "支付", "本地服务"],
+        "difficulty": "medium"
+      },
+      {
+        "code": "jr",
+        "name": "Samokat",
+        "name_cn": "Samokat",
+        "price": 3.8,
+        "success_rate": 93,
+        "available": 85,
+        "estimated_time": "3-7分钟",
+        "popularity": "medium",
+        "features": ["共享单车", "短途出行", "环保", "健康"],
+        "difficulty": "low"
+      }
+    ]
+  },
+  {
+    "code": "gaming",
+    "name": "Gaming",
+    "name_cn": "游戏平台",
+    "category": "gaming",
+    "icon": "🎮",
+    "description": "热门游戏平台账号验证",
+    "description_cn": "热门游戏平台账号验证",
+    "services": [
+      {
+        "code": "steam",
+        "name": "Steam",
+        "name_cn": "Steam",
+        "price": 6.0,
+        "success_rate": 98,
+        "available": 30,
+        "estimated_time": "3-8分钟",
+        "popularity": "high",
+        "features": ["游戏平台", "社区", "交易", "云存档"],
+        "difficulty": "medium"
+      },
+      {
+        "code": "epic",
+        "name": "Epic Games",
+        "name_cn": "Epic Games",
+        "price": 5.5,
+        "success_rate": 97,
+        "available": 40,
+        "estimated_time": "2-6分钟",
+        "popularity": "high",
+        "features": ["游戏平台", "免费游戏", "虚幻引擎", "商城"],
+        "difficulty": "medium"
+      },
+      {
+        "code": "origin",
+        "name": "Origin",
+        "name_cn": "Origin",
+        "price": 5.0,
+        "success_rate": 96,
+        "available": 45,
+        "estimated_time": "3-7分钟",
+        "popularity": "medium",
+        "features": ["游戏平台", "EA游戏", "云存档", "社交"],
+        "difficulty": "medium"
+      },
+      {
+        "code": "battlenet",
+        "name": "Battle.net",
+        "name_cn": "Battle.net",
+        "price": 6.5,
+        "success_rate": 99,
+        "available": 25,
+        "estimated_time": "2-5分钟",
+        "popularity": "high",
+        "features": ["游戏平台", "暴雪游戏", "社交", "商城"],
+        "difficulty": "high"
+      }
+    ]
+  },
+  {
+    "code": "streaming",
+    "name": "Streaming & Media",
+    "name_cn": "流媒体",
+    "category": "streaming",
+    "icon": "🎬",
+    "description": "热门流媒体和娱乐平台",
+    "description_cn": "热门流媒体和娱乐平台",
+    "services": [
+      {
+        "code": "netflix",
+        "name": "Netflix",
+        "name_cn": "Netflix",
+        "price": 4.5,
+        "success_rate": 94,
+        "available": 60,
+        "estimated_time": "3-8分钟",
+        "popularity": "high",
+        "features": ["视频流媒体", "原创内容", "多语言", "4K"],
+        "difficulty": "medium"
+      },
+      {
+        "code": "spotify",
+        "name": "Spotify",
+        "name_cn": "Spotify",
+        "price": 3.5,
+        "success_rate": 96,
+        "available": 85,
+        "estimated_time": "2-5分钟",
+        "popularity": "high",
+        "features": ["音乐流媒体", "播客", "个性化", "社交"],
+        "difficulty": "low"
+      },
+      {
+        "code": "youtube",
+        "name": "YouTube",
+        "name_cn": "YouTube",
+        "price": 3.0,
+        "success_rate": 97,
+        "available": 100,
+        "estimated_time": "1-3分钟",
+        "popularity": "high",
+        "features": ["视频平台", "直播", "创作者工具", "广告"],
+        "difficulty": "low"
+      },
+      {
+        "code": "disney",
+        "name": "Disney+",
+        "name_cn": "Disney+",
+        "price": 5.0,
+        "success_rate": 93,
+        "available": 45,
+        "estimated_time": "4-10分钟",
+        "popularity": "high",
+        "features": ["家庭娱乐", "迪士尼内容", "漫威", "星球大战"],
+        "difficulty": "medium"
+      }
+    ]
+  },
+  {
+    "code": "work",
+    "name": "Work & Productivity",
+    "name_cn": "工作协作",
+    "category": "work",
+    "icon": "💼",
+    "description": "企业级工作协作平台",
+    "description_cn": "企业级工作协作平台",
+    "services": [
+      {
+        "code": "slack",
+        "name": "Slack",
+        "name_cn": "Slack",
+        "price": 4.0,
+        "success_rate": 96,
+        "available": 75,
+        "estimated_time": "2-6分钟",
+        "popularity": "high",
+        "features": ["团队协作", "即时通讯", "集成", "工作流"],
+        "difficulty": "low"
+      },
+      {
+        "code": "teams",
+        "name": "Microsoft Teams",
+        "name_cn": "Microsoft Teams",
+        "price": 5.5,
+        "success_rate": 94,
+        "available": 55,
+        "estimated_time": "4-10分钟",
+        "popularity": "high",
+        "features": ["团队协作", "视频会议", "Office集成", "企业级"],
+        "difficulty": "medium"
+      },
+      {
+        "code": "zoom",
+        "name": "Zoom",
+        "name_cn": "Zoom",
+        "price": 4.8,
+        "success_rate": 95,
+        "available": 65,
+        "estimated_time": "3-8分钟",
+        "popularity": "high",
+        "features": ["视频会议", "网络研讨会", "录制", "云存储"],
+        "difficulty": "medium"
+      },
+      {
+        "code": "notion",
+        "name": "Notion",
+        "name_cn": "Notion",
+        "price": 4.2,
+        "success_rate": 97,
+        "available": 80,
+        "estimated_time": "2-5分钟",
+        "popularity": "high",
+        "features": ["知识管理", "项目管理", "协作", "模板"],
+        "difficulty": "low"
+      },
+      {
+        "code": "trello",
+        "name": "Trello",
+        "name_cn": "Trello",
+        "price": 3.8,
+        "success_rate": 96,
+        "available": 85,
+        "estimated_time": "2-4分钟",
+        "popularity": "high",
+        "features": ["项目管理", "看板", "协作", "自动化"],
+        "difficulty": "low"
+      }
+    ]
+  },
+  {
+    "code": "fashion",
+    "name": "Fashion & Lifestyle",
+    "name_cn": "时尚生活",
+    "category": "fashion",
+    "icon": "👗",
+    "description": "时尚和生活方式平台",
+    "description_cn": "时尚和生活方式平台",
+    "services": [
+      {
+        "code": "ew",
+        "name": "Nike",
+        "name_cn": "Nike",
+        "price": 4.2,
+        "success_rate": 95,
+        "available": 70,
+        "estimated_time": "3-8分钟",
+        "popularity": "high",
+        "features": ["运动装备", "会员", "定制", "健身"],
+        "difficulty": "medium"
+      },
+      {
+        "code": "ju",
+        "name": "Indomaret",
+        "name_cn": "Indomaret",
+        "price": 3.5,
+        "success_rate": 94,
+        "available": 85,
+        "estimated_time": "3-6分钟",
+        "popularity": "medium",
+        "features": ["零售", "会员", "优惠", "本地服务"],
+        "difficulty": "low"
+      }
+    ]
+  },
+  {
+    "code": "other",
+    "name": "Other Services",
+    "name_cn": "其他服务",
+    "category": "other",
+    "icon": "🔧",
+    "description": "其他各类服务平台",
+    "description_cn": "其他各类服务平台",
+    "services": [
+      {
+        "code": "ot",
+        "name": "Any Other",
+        "name_cn": "其他服务",
+        "price": 3.0,
+        "success_rate": 90,
+        "available": 200,
+        "estimated_time": "3-8分钟",
+        "popularity": "medium",
+        "features": ["通用服务", "定制化", "灵活配置", "技术支持"],
+        "difficulty": "variable"
+      },
+      {
+        "code": "full",
+        "name": "Full Rent",
+        "name_cn": "完整租用",
+        "price": 8.0,
+        "success_rate": 99,
+        "available": 50,
+        "estimated_time": "即时",
+        "popularity": "high",
+        "features": ["完整服务", "优先支持", "定制化", "SLA保障"],
+        "difficulty": "low"
+      }
+    ]
+  }
+]

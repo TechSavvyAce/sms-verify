@@ -1,0 +1,663 @@
+const express = require("express");
+const { User, Activation, Rental, Transaction } = require("../models");
+const { authenticateToken, requireAdmin, logUserActivity } = require("../middleware/auth");
+const {
+  validatePagination,
+  validateId,
+  createValidationMiddleware,
+} = require("../middleware/validation");
+const { getPaginationParams, buildPaginatedResponse, formatDateTime } = require("../utils/helpers");
+const logger = require("../utils/logger");
+const router = express.Router();
+
+// 所有管理员路由都需要认证和管理员权限
+router.use(authenticateToken);
+router.use(requireAdmin);
+
+/**
+ * 获取系统统计信息
+ * GET /api/admin/stats
+ */
+router.get("/stats", logUserActivity("admin_view_stats"), async (req, res) => {
+  try {
+    const { days = 30 } = req.query;
+    const daysAgo = new Date();
+    daysAgo.setDate(daysAgo.getDate() - parseInt(days));
+
+    // 并行获取各种统计数据
+    const [
+      userStats,
+      activationStats,
+      rentalStats,
+      transactionStats,
+      recentUsers,
+      recentActivations,
+      recentRentals,
+    ] = await Promise.all([
+      // 用户统计
+      User.findAll({
+        attributes: ["status", [sequelize.fn("COUNT", sequelize.col("id")), "count"]],
+        group: ["status"],
+        raw: true,
+      }),
+
+      // 激活统计
+      Activation.findAll({
+        attributes: [
+          "status",
+          [sequelize.fn("COUNT", sequelize.col("id")), "count"],
+          [sequelize.fn("SUM", sequelize.col("cost")), "total_cost"],
+        ],
+        where: {
+          created_at: { $gte: daysAgo },
+        },
+        group: ["status"],
+        raw: true,
+      }),
+
+      // 租用统计
+      Rental.findAll({
+        attributes: [
+          "status",
+          [sequelize.fn("COUNT", sequelize.col("id")), "count"],
+          [sequelize.fn("SUM", sequelize.col("cost")), "total_cost"],
+        ],
+        where: {
+          created_at: { $gte: daysAgo },
+        },
+        group: ["status"],
+        raw: true,
+      }),
+
+      // 交易统计
+      Transaction.findAll({
+        attributes: [
+          "type",
+          [sequelize.fn("COUNT", sequelize.col("id")), "count"],
+          [sequelize.fn("SUM", sequelize.col("amount")), "total_amount"],
+        ],
+        where: {
+          created_at: { $gte: daysAgo },
+        },
+        group: ["type"],
+        raw: true,
+      }),
+
+      // 最近注册用户
+      User.count({
+        where: {
+          created_at: { $gte: daysAgo },
+        },
+      }),
+
+      // 最近激活数量
+      Activation.count({
+        where: {
+          created_at: { $gte: daysAgo },
+        },
+      }),
+
+      // 最近租用数量
+      Rental.count({
+        where: {
+          created_at: { $gte: daysAgo },
+        },
+      }),
+    ]);
+
+    // 计算总收入
+    const totalRevenue = transactionStats.reduce((sum, stat) => {
+      if (stat.type === "activation" || stat.type === "rental") {
+        return sum + Math.abs(parseFloat(stat.total_amount || 0));
+      }
+      return sum;
+    }, 0);
+
+    // 计算总退款
+    const totalRefunds = transactionStats.find((stat) => stat.type === "refund");
+    const refundAmount = totalRefunds ? parseFloat(totalRefunds.total_amount || 0) : 0;
+
+    res.json({
+      success: true,
+      data: {
+        period_days: parseInt(days),
+        users: {
+          total: userStats.reduce((sum, stat) => sum + parseInt(stat.count), 0),
+          by_status: userStats.reduce((acc, stat) => {
+            acc[stat.status] = parseInt(stat.count);
+            return acc;
+          }, {}),
+          new_registrations: recentUsers,
+        },
+        activations: {
+          total: recentActivations,
+          by_status: activationStats.reduce((acc, stat) => {
+            acc[stat.status] = {
+              count: parseInt(stat.count),
+              total_cost: parseFloat(stat.total_cost || 0),
+            };
+            return acc;
+          }, {}),
+        },
+        rentals: {
+          total: recentRentals,
+          by_status: rentalStats.reduce((acc, stat) => {
+            acc[stat.status] = {
+              count: parseInt(stat.count),
+              total_cost: parseFloat(stat.total_cost || 0),
+            };
+            return acc;
+          }, {}),
+        },
+        financial: {
+          total_revenue: totalRevenue,
+          total_refunds: Math.abs(refundAmount),
+          net_revenue: totalRevenue - Math.abs(refundAmount),
+          transactions_by_type: transactionStats.reduce((acc, stat) => {
+            acc[stat.type] = {
+              count: parseInt(stat.count),
+              total_amount: parseFloat(stat.total_amount || 0),
+            };
+            return acc;
+          }, {}),
+        },
+      },
+    });
+  } catch (error) {
+    logger.error("获取管理员统计失败:", error);
+    res.status(500).json({
+      success: false,
+      error: "获取统计信息失败",
+    });
+  }
+});
+
+/**
+ * 获取用户列表
+ * GET /api/admin/users
+ */
+router.get(
+  "/users",
+  createValidationMiddleware(validatePagination, "query"),
+  logUserActivity("admin_view_users"),
+  async (req, res) => {
+    try {
+      const { page, limit, offset } = getPaginationParams(req.query.page, req.query.limit);
+      const { status, search, sort = "created_at", order = "DESC" } = req.query;
+
+      // 构建查询条件
+      const whereClause = {};
+
+      if (status) {
+        whereClause.status = status;
+      }
+
+      if (search) {
+        whereClause.$or = [
+          { username: { $like: `%${search}%` } },
+          { email: { $like: `%${search}%` } },
+        ];
+      }
+
+      const { count, rows: users } = await User.findAndCountAll({
+        where: whereClause,
+        order: [[sort, order.toUpperCase()]],
+        limit,
+        offset,
+        attributes: { exclude: ["password_hash"] },
+      });
+
+      // 获取每个用户的统计信息
+      const usersWithStats = await Promise.all(
+        users.map(async (user) => {
+          const [activationCount, rentalCount, totalSpent] = await Promise.all([
+            Activation.count({ where: { user_id: user.id } }),
+            Rental.count({ where: { user_id: user.id } }),
+            Transaction.sum("amount", {
+              where: {
+                user_id: user.id,
+                type: ["activation", "rental"],
+              },
+            }),
+          ]);
+
+          return {
+            ...user.toJSON(),
+            stats: {
+              activation_count: activationCount,
+              rental_count: rentalCount,
+              total_spent: Math.abs(parseFloat(totalSpent || 0)),
+            },
+          };
+        })
+      );
+
+      const response = buildPaginatedResponse(usersWithStats, count, page, limit);
+
+      res.json({
+        success: true,
+        data: response,
+      });
+    } catch (error) {
+      logger.error("获取用户列表失败:", error);
+      res.status(500).json({
+        success: false,
+        error: "获取用户列表失败",
+      });
+    }
+  }
+);
+
+/**
+ * 获取用户详情
+ * GET /api/admin/users/:id
+ */
+router.get(
+  "/users/:id",
+  createValidationMiddleware(validateId, "params"),
+  logUserActivity("admin_view_user_detail"),
+  async (req, res) => {
+    try {
+      const userId = req.params.id;
+
+      const user = await User.findByPk(userId, {
+        attributes: { exclude: ["password_hash"] },
+      });
+
+      if (!user) {
+        return res.status(404).json({
+          success: false,
+          error: "用户不存在",
+        });
+      }
+
+      // 获取用户的详细统计信息
+      const [activations, rentals, transactions, activationStats, rentalStats] = await Promise.all([
+        Activation.findAll({
+          where: { user_id: userId },
+          order: [["created_at", "DESC"]],
+          limit: 10,
+        }),
+
+        Rental.findAll({
+          where: { user_id: userId },
+          order: [["created_at", "DESC"]],
+          limit: 10,
+        }),
+
+        Transaction.findAll({
+          where: { user_id: userId },
+          order: [["created_at", "DESC"]],
+          limit: 20,
+        }),
+
+        Activation.findAll({
+          where: { user_id: userId },
+          attributes: [
+            "status",
+            [sequelize.fn("COUNT", sequelize.col("id")), "count"],
+            [sequelize.fn("SUM", sequelize.col("cost")), "total_cost"],
+          ],
+          group: ["status"],
+          raw: true,
+        }),
+
+        Rental.findAll({
+          where: { user_id: userId },
+          attributes: [
+            "status",
+            [sequelize.fn("COUNT", sequelize.col("id")), "count"],
+            [sequelize.fn("SUM", sequelize.col("cost")), "total_cost"],
+          ],
+          group: ["status"],
+          raw: true,
+        }),
+      ]);
+
+      res.json({
+        success: true,
+        data: {
+          user: user.toJSON(),
+          recent_activations: activations.map((a) => ({
+            id: a.id,
+            service: a.service,
+            status: a.status,
+            cost: parseFloat(a.cost),
+            created_at: formatDateTime(a.created_at),
+          })),
+          recent_rentals: rentals.map((r) => ({
+            id: r.id,
+            service: r.service,
+            status: r.status,
+            cost: parseFloat(r.cost),
+            duration_hours: r.duration_hours,
+            created_at: formatDateTime(r.created_at),
+          })),
+          recent_transactions: transactions.map((t) => ({
+            id: t.id,
+            type: t.type,
+            amount: parseFloat(t.amount),
+            description: t.description,
+            created_at: formatDateTime(t.created_at),
+          })),
+          stats: {
+            activations_by_status: activationStats.reduce((acc, stat) => {
+              acc[stat.status] = {
+                count: parseInt(stat.count),
+                total_cost: parseFloat(stat.total_cost || 0),
+              };
+              return acc;
+            }, {}),
+            rentals_by_status: rentalStats.reduce((acc, stat) => {
+              acc[stat.status] = {
+                count: parseInt(stat.count),
+                total_cost: parseFloat(stat.total_cost || 0),
+              };
+              return acc;
+            }, {}),
+          },
+        },
+      });
+    } catch (error) {
+      logger.error("获取用户详情失败:", error);
+      res.status(500).json({
+        success: false,
+        error: "获取用户详情失败",
+      });
+    }
+  }
+);
+
+/**
+ * 更新用户状态
+ * PUT /api/admin/users/:id/status
+ */
+router.put(
+  "/users/:id/status",
+  createValidationMiddleware(validateId, "params"),
+  logUserActivity("admin_update_user_status"),
+  async (req, res) => {
+    try {
+      const userId = req.params.id;
+      const { status, reason } = req.body;
+
+      if (!["active", "suspended", "pending"].includes(status)) {
+        return res.status(400).json({
+          success: false,
+          error: "无效的用户状态",
+        });
+      }
+
+      const user = await User.findByPk(userId);
+
+      if (!user) {
+        return res.status(404).json({
+          success: false,
+          error: "用户不存在",
+        });
+      }
+
+      const oldStatus = user.status;
+      await user.update({ status });
+
+      logger.info("管理员更新用户状态:", {
+        adminId: req.user.id,
+        userId,
+        oldStatus,
+        newStatus: status,
+        reason,
+      });
+
+      res.json({
+        success: true,
+        message: "用户状态更新成功",
+        data: {
+          user_id: userId,
+          old_status: oldStatus,
+          new_status: status,
+        },
+      });
+    } catch (error) {
+      logger.error("更新用户状态失败:", error);
+      res.status(500).json({
+        success: false,
+        error: "更新用户状态失败",
+      });
+    }
+  }
+);
+
+/**
+ * 调整用户余额
+ * POST /api/admin/users/:id/balance
+ */
+router.post(
+  "/users/:id/balance",
+  createValidationMiddleware(validateId, "params"),
+  logUserActivity("admin_adjust_balance"),
+  async (req, res) => {
+    const transaction = await sequelize.transaction();
+
+    try {
+      const userId = req.params.id;
+      const { amount, type, description } = req.body;
+
+      if (!amount || !type || !["add", "subtract"].includes(type)) {
+        await transaction.rollback();
+        return res.status(400).json({
+          success: false,
+          error: "无效的余额调整参数",
+        });
+      }
+
+      const user = await User.findByPk(userId, { transaction });
+
+      if (!user) {
+        await transaction.rollback();
+        return res.status(404).json({
+          success: false,
+          error: "用户不存在",
+        });
+      }
+
+      const adjustAmount = parseFloat(amount);
+      const balanceBefore = parseFloat(user.balance);
+      let balanceAfter;
+
+      if (type === "add") {
+        balanceAfter = balanceBefore + adjustAmount;
+      } else {
+        balanceAfter = Math.max(0, balanceBefore - adjustAmount);
+      }
+
+      await user.update(
+        {
+          balance: balanceAfter,
+          ...(type === "add" && {
+            total_recharged: parseFloat(user.total_recharged) + adjustAmount,
+          }),
+        },
+        { transaction }
+      );
+
+      // 记录交易
+      await Transaction.create(
+        {
+          user_id: userId,
+          type: "recharge",
+          amount: type === "add" ? adjustAmount : -adjustAmount,
+          balance_before: balanceBefore,
+          balance_after: balanceAfter,
+          description: description || `管理员${type === "add" ? "增加" : "扣除"}余额`,
+        },
+        { transaction }
+      );
+
+      await transaction.commit();
+
+      // 通知用户余额更新
+      if (req.io) {
+        req.io.to(`user_${userId}`).emit("balance_updated", {
+          new_balance: balanceAfter,
+          change_amount: type === "add" ? adjustAmount : -adjustAmount,
+          transaction_type: "admin_adjustment",
+          reference_id: `admin_${req.user.id}`,
+          description: description || `管理员${type === "add" ? "增加" : "扣除"}余额`,
+        });
+      }
+
+      logger.info("管理员调整用户余额:", {
+        adminId: req.user.id,
+        userId,
+        type,
+        amount: adjustAmount,
+        balanceBefore,
+        balanceAfter,
+        description,
+      });
+
+      res.json({
+        success: true,
+        message: "余额调整成功",
+        data: {
+          user_id: userId,
+          balance_before: balanceBefore,
+          balance_after: balanceAfter,
+          adjustment_amount: type === "add" ? adjustAmount : -adjustAmount,
+        },
+      });
+    } catch (error) {
+      await transaction.rollback();
+      logger.error("调整用户余额失败:", error);
+      res.status(500).json({
+        success: false,
+        error: "调整用户余额失败",
+      });
+    }
+  }
+);
+
+/**
+ * 获取系统配置
+ * GET /api/admin/config
+ */
+router.get("/config", logUserActivity("admin_view_config"), async (req, res) => {
+  try {
+    // 返回系统配置（敏感信息需要过滤）
+    const config = {
+      price_markup: process.env.PRICE_MARKUP || "20",
+      rate_limit_window: process.env.RATE_LIMIT_WINDOW_MS || "60000",
+      rate_limit_max: process.env.RATE_LIMIT_MAX_REQUESTS || "100",
+      jwt_expire: process.env.JWT_EXPIRE || "24h",
+      environment: process.env.NODE_ENV || "development",
+    };
+
+    res.json({
+      success: true,
+      data: config,
+    });
+  } catch (error) {
+    logger.error("获取系统配置失败:", error);
+    res.status(500).json({
+      success: false,
+      error: "获取系统配置失败",
+    });
+  }
+});
+
+/**
+ * 获取系统日志
+ * GET /api/admin/logs
+ */
+router.get(
+  "/logs",
+  createValidationMiddleware(validatePagination, "query"),
+  logUserActivity("admin_view_logs"),
+  async (req, res) => {
+    try {
+      const { level = "info", days = 7 } = req.query;
+      const { page, limit } = getPaginationParams(req.query.page, req.query.limit);
+
+      // 这里应该实现日志查询逻辑
+      // 由于日志通常存储在文件中，需要特殊处理
+
+      res.json({
+        success: true,
+        message: "日志查询功能需要单独实现",
+        data: {
+          logs: [],
+          pagination: {
+            page,
+            limit,
+            total: 0,
+            totalPages: 0,
+          },
+        },
+      });
+    } catch (error) {
+      logger.error("获取系统日志失败:", error);
+      res.status(500).json({
+        success: false,
+        error: "获取系统日志失败",
+      });
+    }
+  }
+);
+
+/**
+ * 获取活跃激活列表
+ * GET /api/admin/activations/active
+ */
+router.get(
+  "/activations/active",
+  createValidationMiddleware(validatePagination, "query"),
+  logUserActivity("admin_view_active_activations"),
+  async (req, res) => {
+    try {
+      const { page, limit, offset } = getPaginationParams(req.query.page, req.query.limit);
+
+      const { count, rows: activations } = await Activation.findAndCountAll({
+        where: {
+          status: ["0", "1"], // 等待短信或等待重试
+        },
+        include: [
+          {
+            model: User,
+            as: "user",
+            attributes: ["id", "username", "email"],
+          },
+        ],
+        order: [["created_at", "DESC"]],
+        limit,
+        offset,
+      });
+
+      const formattedActivations = activations.map((activation) => ({
+        id: activation.id,
+        activation_id: activation.activation_id,
+        service: activation.service,
+        phone_number: activation.phone_number,
+        status: activation.status,
+        cost: parseFloat(activation.cost),
+        created_at: formatDateTime(activation.created_at),
+        expires_at: formatDateTime(activation.expires_at),
+        user: activation.user,
+      }));
+
+      const response = buildPaginatedResponse(formattedActivations, count, page, limit);
+
+      res.json({
+        success: true,
+        data: response,
+      });
+    } catch (error) {
+      logger.error("获取活跃激活列表失败:", error);
+      res.status(500).json({
+        success: false,
+        error: "获取活跃激活列表失败",
+      });
+    }
+  }
+);
+
+module.exports = router;

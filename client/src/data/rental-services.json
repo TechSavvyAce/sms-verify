@@ -1,0 +1,84 @@
+[
+  {
+    "code": "general",
+    "name": "General Rental",
+    "name_cn": "通用租用",
+    "icon": "📱",
+    "description": "Universal number rental for most platforms",
+    "description_cn": "适用于大多数平台的通用号码租用",
+    "base_price": 5.0,
+    "success_rate": 95,
+    "available": 200,
+    "features": [
+      "Support all platforms",
+      "Stable and reliable",
+      "High cost performance",
+      "24-hour customer service"
+    ],
+    "features_cn": ["支持所有平台", "稳定可靠", "性价比高", "24小时客服"],
+    "best_for": "Individual users, daily verification needs",
+    "best_for_cn": "个人用户、日常验证需求",
+    "popularity": "high",
+    "difficulty": "low"
+  },
+  {
+    "code": "premium",
+    "name": "Premium Rental",
+    "name_cn": "高级租用",
+    "icon": "⭐",
+    "description": "High-quality numbers, support complex verification processes",
+    "description_cn": "高质量号码，支持复杂验证流程",
+    "base_price": 8.0,
+    "success_rate": 98,
+    "available": 100,
+    "features": [
+      "High-quality numbers",
+      "High success rate",
+      "Priority allocation",
+      "Exclusive customer service",
+      "Technical support"
+    ],
+    "features_cn": [
+      "高质量号码",
+      "高成功率",
+      "优先分配",
+      "专属客服",
+      "技术支持"
+    ],
+    "best_for": "Business users, important verification needs",
+    "best_for_cn": "商业用户、重要验证需求",
+    "popularity": "medium",
+    "difficulty": "medium"
+  },
+  {
+    "code": "enterprise",
+    "name": "Enterprise Rental",
+    "name_cn": "企业租用",
+    "icon": "🏢",
+    "description": "Enterprise-level service, support bulk rental and API calls",
+    "description_cn": "企业级服务，支持批量租用和API调用",
+    "base_price": 12.0,
+    "success_rate": 99,
+    "available": 50,
+    "features": [
+      "Enterprise-level service",
+      "API support",
+      "Bulk operations",
+      "Exclusive customer service",
+      "SLA guarantee",
+      "Customized solutions"
+    ],
+    "features_cn": [
+      "企业级服务",
+      "API支持",
+      "批量操作",
+      "专属客服",
+      "SLA保障",
+      "定制化方案"
+    ],
+    "best_for": "Enterprise users, bulk verification needs",
+    "best_for_cn": "企业用户、批量验证需求",
+    "popularity": "low",
+    "difficulty": "high"
+  }
+]
