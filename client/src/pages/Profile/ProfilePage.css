@@ -1,0 +1,477 @@
+/* Profile Page Mobile Responsive Styles */
+
+/* Container responsive padding */
+.profile-container {
+  padding: 24px;
+}
+
+@media (max-width: 768px) {
+  .profile-container {
+    padding: 16px;
+  }
+}
+
+@media (max-width: 480px) {
+  .profile-container {
+    padding: 12px;
+  }
+}
+
+/* Title responsive font size */
+.profile-title {
+  margin-bottom: 24px;
+  font-size: 24px;
+}
+
+@media (max-width: 768px) {
+  .profile-title {
+    font-size: 20px;
+    margin-bottom: 16px;
+  }
+}
+
+@media (max-width: 480px) {
+  .profile-title {
+    font-size: 18px;
+    margin-bottom: 12px;
+  }
+}
+
+/* Hide tab labels on small screens */
+.tab-label-text {
+  margin-left: 8px;
+}
+
+@media (max-width: 768px) {
+  .tab-label-text {
+    display: none;
+  }
+}
+
+/* Profile avatar responsive sizing */
+.profile-avatar-container {
+  text-align: center;
+  margin-bottom: 0;
+}
+
+.profile-avatar-responsive {
+  width: 80px !important;
+  height: 80px !important;
+}
+
+@media (max-width: 768px) {
+  .profile-avatar-responsive {
+    width: 70px !important;
+    height: 70px !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .profile-avatar-responsive {
+    width: 60px !important;
+    height: 60px !important;
+  }
+}
+
+/* Profile info container responsive alignment */
+.profile-info-container {
+  text-align: left;
+}
+
+@media (max-width: 768px) {
+  .profile-info-container {
+    text-align: center;
+  }
+}
+
+/* Profile title responsive font size */
+.profile-title-responsive {
+  font-size: 24px !important;
+}
+
+@media (max-width: 768px) {
+  .profile-title-responsive {
+    font-size: 22px !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .profile-title-responsive {
+    font-size: 20px !important;
+  }
+}
+
+/* Profile tags container responsive alignment */
+.profile-tags-container {
+  justify-content: flex-start;
+}
+
+@media (max-width: 768px) {
+  .profile-tags-container {
+    justify-content: center;
+  }
+}
+
+/* Profile actions container responsive alignment */
+.profile-actions-container {
+  text-align: right;
+}
+
+@media (max-width: 768px) {
+  .profile-actions-container {
+    text-align: center;
+  }
+}
+
+/* Mobile full width buttons */
+.mobile-full-width {
+  width: 100%;
+}
+
+@media (min-width: 768px) {
+  .mobile-full-width {
+    width: auto;
+  }
+}
+
+/* Statistic values responsive font size */
+.statistic-value-responsive .ant-statistic-content-value {
+  font-size: 24px !important;
+}
+
+@media (max-width: 768px) {
+  .statistic-value-responsive .ant-statistic-content-value {
+    font-size: 18px !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .statistic-value-responsive .ant-statistic-content-value {
+    font-size: 16px !important;
+  }
+}
+
+/* Progress circle responsive sizing */
+.progress-circle {
+  width: 120px !important;
+  height: 120px !important;
+}
+
+@media (max-width: 768px) {
+  .progress-circle {
+    width: 100px !important;
+    height: 100px !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .progress-circle {
+    width: 80px !important;
+    height: 80px !important;
+  }
+}
+
+/* Descriptions responsive font size */
+.descriptions-responsive .ant-descriptions-item-label,
+.descriptions-responsive .ant-descriptions-item-content {
+  font-size: 14px;
+}
+
+@media (max-width: 768px) {
+  .descriptions-responsive .ant-descriptions-item-label,
+  .descriptions-responsive .ant-descriptions-item-content {
+    font-size: 12px;
+  }
+}
+
+/* Payment modal responsive layout */
+.payment-modal-responsive .ant-modal-content {
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+@media (max-width: 768px) {
+  .payment-modal-responsive .ant-modal {
+    width: 95% !important;
+    margin: 10px;
+  }
+  
+  .payment-modal-responsive .ant-modal-content {
+    padding: 16px;
+  }
+}
+
+/* Payment amount buttons responsive */
+.payment-amount-buttons .ant-col {
+  margin-bottom: 8px;
+}
+
+@media (max-width: 480px) {
+  .payment-amount-buttons .ant-col {
+    span: 8;
+  }
+}
+
+/* Payment amount button responsive */
+.payment-amount-button {
+  height: 60px;
+  font-size: 16px;
+}
+
+@media (max-width: 480px) {
+  .payment-amount-button {
+    height: 50px;
+    font-size: 14px;
+  }
+}
+
+/* Button group responsive */
+.button-group {
+  flex-wrap: wrap;
+}
+
+@media (max-width: 768px) {
+  .button-group {
+    flex-direction: column;
+    width: 100%;
+  }
+  
+  .button-group .ant-btn {
+    margin-bottom: 8px;
+  }
+}
+
+/* Mobile hide utility */
+.mobile-hide {
+  display: inline;
+}
+
+@media (max-width: 768px) {
+  .mobile-hide {
+    display: none;
+  }
+}
+
+/* Wallet icon responsive */
+.wallet-icon-large {
+  font-size: 48px;
+  color: #1890ff;
+  margin-bottom: 16px;
+}
+
+@media (max-width: 768px) {
+  .wallet-icon-large {
+    font-size: 36px;
+    margin-bottom: 12px;
+  }
+}
+
+/* Statistic value large responsive */
+.statistic-value-large .ant-statistic-content-value {
+  font-size: 32px !important;
+}
+
+@media (max-width: 768px) {
+  .statistic-value-large .ant-statistic-content-value {
+    font-size: 24px !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .statistic-value-large .ant-statistic-content-value {
+    font-size: 20px !important;
+  }
+}
+
+/* Statistic value medium responsive */
+.statistic-value-medium .ant-statistic-content-value {
+  font-size: 24px !important;
+}
+
+@media (max-width: 768px) {
+  .statistic-value-medium .ant-statistic-content-value {
+    font-size: 18px !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .statistic-value-medium .ant-statistic-content-value {
+    font-size: 16px !important;
+  }
+}
+
+/* Profile tabs responsive */
+.profile-tabs-responsive .ant-tabs-tab {
+  font-size: 16px;
+}
+
+@media (max-width: 768px) {
+  .profile-tabs-responsive .ant-tabs-tab {
+    font-size: 14px;
+  }
+}
+
+@media (max-width: 480px) {
+  .profile-tabs-responsive .ant-tabs-tab {
+    font-size: 12px;
+  }
+}
+
+/* Space responsive direction */
+.space-responsive {
+  flex-direction: row;
+}
+
+@media (max-width: 768px) {
+  .space-responsive {
+    flex-direction: column;
+  }
+}
+
+.progress-section-title {
+  display: flex;
+  align-items: center;
+  font-size: 18px;
+  font-weight: 600;
+  color: #262626;
+}
+
+.progress-section-card {
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.progress-items-container {
+  margin-top: 16px;
+}
+
+.progress-item {
+  text-align: center;
+  padding: 16px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #fafafa 0%, #f5f5f5 100%);
+  transition: all 0.3s ease;
+}
+
+.progress-item:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.progress-label {
+  margin-top: 12px;
+  font-size: 14px;
+  color: #595959;
+}
+
+@media (max-width: 768px) {
+  .progress-section-title {
+    font-size: 16px;
+    justify-content: center;
+  }
+  
+  .progress-items-container {
+    margin-top: 12px;
+  }
+  
+  .progress-item {
+    padding: 12px;
+    margin-bottom: 16px;
+  }
+  
+  .progress-label {
+    font-size: 13px;
+    margin-top: 8px;
+  }
+}
+
+@media (max-width: 480px) {
+  .progress-section-title {
+    font-size: 15px;
+  }
+  
+  .progress-item {
+    padding: 10px;
+    margin-bottom: 12px;
+  }
+  
+  .progress-label {
+    font-size: 12px;
+    margin-top: 6px;
+  }
+}
+
+.ant-card {
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  transition: all 0.3s ease;
+}
+
+.ant-card:hover {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+}
+
+.ant-card-head {
+  border-radius: 12px 12px 0 0;
+  background: linear-gradient(135deg, #fafafa 0%, #f5f5f5 100%);
+}
+
+.mobile-full-width {
+  border-radius: 8px;
+  font-weight: 500;
+  transition: all 0.3s ease;
+}
+
+.mobile-full-width:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.ant-form-item-label > label {
+  font-weight: 500;
+  color: #262626;
+}
+
+.ant-input,
+.ant-select-selector,
+.ant-input-password {
+  border-radius: 8px;
+  border: 1px solid #d9d9d9;
+  transition: all 0.3s ease;
+}
+
+.ant-input:focus,
+.ant-select-selector:focus,
+.ant-input-password:focus {
+  border-color: #1890ff;
+  box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.1);
+}
+
+.statistic-value-responsive .ant-statistic-title {
+  font-weight: 500;
+  color: #595959;
+}
+
+.statistic-value-responsive .ant-statistic-content-value {
+  font-weight: 600;
+}
+
+.profile-avatar-responsive {
+  border: 3px solid #fff;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.ant-tag {
+  border-radius: 6px;
+  font-weight: 500;
+  padding: 4px 8px;
+}
+
+.progress-circle .ant-progress-circle-path {
+  stroke-linecap: round;
+}
+
+.progress-circle .ant-progress-text {
+  font-weight: 600;
+  font-size: 16px;
+}

@@ -58,6 +58,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { userApi, paymentApi } from "../../services/api";
 import { getApiErrorMessage } from "../../utils/errorHelpers";
 import { useWebSocket } from "../../hooks/useWebSocket";
+import "./ProfilePage.css";
 
 const { Title, Text, Paragraph } = Typography;
 const { TabPane } = Tabs;
@@ -297,150 +298,193 @@ const ProfilePage: React.FC = () => {
       label: (
         <span>
           <UserOutlined />
-          个人概览
+          <span className="tab-label-text">个人概览</span>
         </span>
       ),
       children: (
         <div>
           <Row gutter={[24, 24]}>
             {/* Profile Header */}
-            <Col span={24}>
+            <Col xs={24} sm={24} md={24} lg={24} xl={24}>
               <Card>
-                <Row gutter={24} align="middle">
-                  <Col>
-                    <Avatar
-                      size={80}
-                      src={avatarPreview || profileData?.avatar}
-                      icon={<UserOutlined />}
-                    />
-                  </Col>
-                  <Col flex="1">
-                    <Title level={3} style={{ margin: 0 }}>
-                      {profileData?.username || user?.username}
-                    </Title>
-                    <Space>
-                      <Tag color={getStatusColor(profileData?.status || user?.status)}>
-                        {getStatusText(profileData?.status || user?.status)}
-                      </Tag>
-                      <Tag color="blue">
-                        <MailOutlined /> {profileData?.email || user?.email}
-                      </Tag>
-                      {profileData?.phone && (
-                        <Tag color="green">
-                          <MobileOutlined /> {profileData.phone}
-                        </Tag>
-                      )}
-                    </Space>
-                    <div style={{ marginTop: 8 }}>
-                      <Text type="secondary">
-                        注册时间：
-                        {profileData?.created_at
-                          ? new Date(profileData.created_at).toLocaleDateString()
-                          : "未知"}
-                      </Text>
+                <Row gutter={[24, 16]} align="middle">
+                  <Col xs={24} sm={24} md={4} lg={3} xl={2}>
+                    <div className="profile-avatar-container">
+                      <Avatar
+                        size={80}
+                        src={avatarPreview || profileData?.avatar}
+                        icon={<UserOutlined />}
+                        className="profile-avatar-responsive"
+                      />
                     </div>
                   </Col>
-                  <Col>
-                    <Space>
-                      <Button
-                        type="primary"
-                        icon={<EditOutlined />}
-                        onClick={() => setEditMode(true)}
-                      >
-                        编辑资料
-                      </Button>
-                      <Button icon={<CameraOutlined />}>更换头像</Button>
-                    </Space>
+                  <Col xs={24} sm={24} md={16} lg={18} xl={20}>
+                    <div className="profile-info-container">
+                      <Title level={3} style={{ margin: 0 }} className="profile-title-responsive">
+                        {profileData?.username || user?.username}
+                      </Title>
+                      <Space wrap className="profile-tags-container">
+                        <Tag color={getStatusColor(profileData?.status || user?.status)}>
+                          {getStatusText(profileData?.status || user?.status)}
+                        </Tag>
+                        <Tag color="blue">
+                          <MailOutlined /> {profileData?.email || user?.email}
+                        </Tag>
+                        {profileData?.phone && (
+                          <Tag color="green">
+                            <MobileOutlined /> {profileData.phone}
+                          </Tag>
+                        )}
+                      </Space>
+                      <div style={{ marginTop: 8 }}>
+                        <Text type="secondary">
+                          注册时间：
+                          {profileData?.created_at
+                            ? new Date(profileData.created_at).toLocaleDateString()
+                            : "未知"}
+                        </Text>
+                      </div>
+                    </div>
+                  </Col>
+                  <Col xs={24} sm={24} md={4} lg={3} xl={2}>
+                    <div className="profile-actions-container">
+                      <Space direction="vertical" size="small" style={{ width: "100%" }}>
+                        <Button
+                          type="primary"
+                          icon={<EditOutlined />}
+                          onClick={() => setEditMode(true)}
+                          size="middle"
+                          block={false}
+                          className="mobile-full-width"
+                        >
+                          编辑资料
+                        </Button>
+                        <Button
+                          icon={<CameraOutlined />}
+                          size="middle"
+                          block={false}
+                          className="mobile-full-width"
+                        >
+                          更换头像
+                        </Button>
+                      </Space>
+                    </div>
                   </Col>
                 </Row>
               </Card>
             </Col>
 
             {/* Statistics */}
-            <Col span={6}>
+            <Col xs={12} sm={12} md={6} lg={6} xl={6}>
               <Card>
                 <Statistic
                   title="账户余额"
                   value={profileData?.balance || user?.balance || 0}
                   precision={2}
                   prefix="$"
-                  valueStyle={{ color: "#3f8600" }}
+                  valueStyle={{
+                    color: "#3f8600",
+                  }}
+                  className="statistic-value-responsive"
                 />
               </Card>
             </Col>
-            <Col span={6}>
+            <Col xs={12} sm={12} md={6} lg={6} xl={6}>
               <Card>
                 <Statistic
                   title="累计消费"
                   value={profileData?.total_spent || user?.total_spent || 0}
                   precision={2}
                   prefix="$"
-                  valueStyle={{ color: "#cf1322" }}
+                  valueStyle={{
+                    color: "#cf1322",
+                  }}
+                  className="statistic-value-responsive"
                 />
               </Card>
             </Col>
-            <Col span={6}>
+            <Col xs={12} sm={12} md={6} lg={6} xl={6}>
               <Card>
                 <Statistic
                   title="累计充值"
                   value={profileData?.total_recharged || user?.total_recharged || 0}
                   precision={2}
                   prefix="$"
-                  valueStyle={{ color: "#1890ff" }}
+                  valueStyle={{
+                    color: "#1890ff",
+                  }}
+                  className="statistic-value-responsive"
                 />
               </Card>
             </Col>
-            <Col span={6}>
+            <Col xs={12} sm={12} md={6} lg={6} xl={6}>
               <Card>
                 <Statistic
                   title="登录次数"
                   value={profileData?.login_count || 0}
                   suffix="次"
-                  valueStyle={{ color: "#722ed1" }}
+                  valueStyle={{
+                    color: "#722ed1",
+                  }}
+                  className="statistic-value-responsive"
                 />
               </Card>
             </Col>
 
             {/* Account Progress */}
-            <Col span={24}>
-              <Card title="账户进度" extra={<TrophyOutlined style={{ color: "#faad14" }} />}>
-                <Row gutter={[16, 16]}>
-                  <Col span={8}>
-                    <div style={{ textAlign: "center" }}>
+            <Col xs={24} sm={24} md={24} lg={24} xl={24}>
+              <Card
+                title={
+                  <div className="progress-section-title">
+                    <TrophyOutlined style={{ marginRight: 8, color: "#faad14" }} />
+                    账户完成度
+                  </div>
+                }
+                className="progress-section-card"
+              >
+                <Row gutter={[16, 16]} className="progress-items-container">
+                  <Col xs={24} sm={8} md={8} lg={8} xl={8}>
+                    <div className="progress-item">
                       <Progress
                         type="circle"
                         percent={profileData?.status === "active" ? 100 : 50}
                         format={(percent) => `${percent}%`}
                         strokeColor={profileData?.status === "active" ? "#52c41a" : "#faad14"}
+                        size={120}
+                        className="progress-circle"
                       />
-                      <div style={{ marginTop: 8 }}>
-                        <Text strong>账户状态</Text>
+                      <div className="progress-label">
+                        <Text strong>账户激活</Text>
                       </div>
                     </div>
                   </Col>
-                  <Col span={8}>
-                    <div style={{ textAlign: "center" }}>
+                  <Col xs={24} sm={8} md={8} lg={8} xl={8}>
+                    <div className="progress-item">
                       <Progress
                         type="circle"
                         percent={profileData?.two_factor_enabled ? 100 : 0}
                         format={(percent) => `${percent}%`}
                         strokeColor={profileData?.two_factor_enabled ? "#52c41a" : "#d9d9d9"}
+                        size={120}
+                        className="progress-circle"
                       />
-                      <div style={{ marginTop: 8 }}>
-                        <Text strong>双重认证</Text>
+                      <div className="progress-label">
+                        <Text strong>安全验证</Text>
                       </div>
                     </div>
                   </Col>
-                  <Col span={8}>
-                    <div style={{ textAlign: "center" }}>
+                  <Col xs={24} sm={8} md={8} lg={8} xl={8}>
+                    <div className="progress-item">
                       <Progress
                         type="circle"
                         percent={profileData?.avatar ? 100 : 0}
                         format={(percent) => `${percent}%`}
                         strokeColor={profileData?.avatar ? "#52c41a" : "#d9d9d9"}
+                        size={120}
+                        className="progress-circle"
                       />
-                      <div style={{ marginTop: 8 }}>
-                        <Text strong>头像设置</Text>
+                      <div className="progress-label">
+                        <Text strong>个人资料</Text>
                       </div>
                     </div>
                   </Col>
@@ -456,7 +500,7 @@ const ProfilePage: React.FC = () => {
       label: (
         <span>
           <EditOutlined />
-          个人资料
+          <span className="tab-label-text">账户管理</span>
         </span>
       ),
       children: (
@@ -465,8 +509,14 @@ const ProfilePage: React.FC = () => {
             <Card
               title="编辑个人资料"
               extra={
-                <Space>
-                  <Button onClick={() => setEditMode(false)} icon={<CloseOutlined />}>
+                <Space direction="horizontal" size="small" className="button-group">
+                  <Button
+                    onClick={() => setEditMode(false)}
+                    icon={<CloseOutlined />}
+                    size="middle"
+                    block={false}
+                    className="mobile-full-width"
+                  >
                     取消
                   </Button>
                   <Button
@@ -474,6 +524,9 @@ const ProfilePage: React.FC = () => {
                     loading={loading}
                     onClick={() => profileForm.submit()}
                     icon={<SaveOutlined />}
+                    size="middle"
+                    block={false}
+                    className="mobile-full-width"
                   >
                     保存
                   </Button>
@@ -486,8 +539,8 @@ const ProfilePage: React.FC = () => {
                 onFinish={handleProfileUpdate}
                 initialValues={profileData || {}}
               >
-                <Row gutter={16}>
-                  <Col span={12}>
+                <Row gutter={[16, 16]}>
+                  <Col xs={24} sm={24} md={12} lg={12} xl={12}>
                     <Form.Item
                       name="username"
                       label="用户名"
@@ -496,7 +549,7 @@ const ProfilePage: React.FC = () => {
                       <Input prefix={<UserOutlined />} placeholder="请输入用户名" />
                     </Form.Item>
                   </Col>
-                  <Col span={12}>
+                  <Col xs={24} sm={24} md={12} lg={12} xl={12}>
                     <Form.Item
                       name="email"
                       label="邮箱地址"
@@ -510,13 +563,13 @@ const ProfilePage: React.FC = () => {
                   </Col>
                 </Row>
 
-                <Row gutter={16}>
-                  <Col span={12}>
+                <Row gutter={[16, 16]}>
+                  <Col xs={24} sm={24} md={12} lg={12} xl={12}>
                     <Form.Item name="phone" label="手机号码">
                       <Input prefix={<MobileOutlined />} placeholder="请输入手机号码" />
                     </Form.Item>
                   </Col>
-                  <Col span={12}>
+                  <Col xs={24} sm={24} md={12} lg={12} xl={12}>
                     <Form.Item name="country" label="国家/地区">
                       <Select placeholder="请选择国家/地区">
                         <Option value="CN">中国</Option>
@@ -529,8 +582,8 @@ const ProfilePage: React.FC = () => {
                   </Col>
                 </Row>
 
-                <Row gutter={16}>
-                  <Col span={12}>
+                <Row gutter={[16, 16]}>
+                  <Col xs={24} sm={24} md={12} lg={12} xl={12}>
                     <Form.Item name="timezone" label="时区">
                       <Select placeholder="请选择时区">
                         <Option value="Asia/Shanghai">Asia/Shanghai (UTC+8)</Option>
@@ -539,7 +592,7 @@ const ProfilePage: React.FC = () => {
                       </Select>
                     </Form.Item>
                   </Col>
-                  <Col span={12}>
+                  <Col xs={24} sm={24} md={12} lg={12} xl={12}>
                     <Form.Item name="language" label="语言">
                       <Select placeholder="请选择语言">
                         <Option value="zh-CN">简体中文</Option>
@@ -572,7 +625,12 @@ const ProfilePage: React.FC = () => {
             </Card>
           ) : (
             <Card title="个人资料详情">
-              <Descriptions bordered column={2}>
+              <Descriptions
+                bordered
+                column={{ xs: 1, sm: 1, md: 2, lg: 2, xl: 2 }}
+                size="default"
+                className="descriptions-responsive"
+              >
                 <Descriptions.Item label="用户名">
                   {profileData?.username || user?.username}
                 </Descriptions.Item>
@@ -612,41 +670,50 @@ const ProfilePage: React.FC = () => {
       label: (
         <span>
           <WalletOutlined />
-          账户余额
+          <span className="tab-label-text">交易记录</span>
         </span>
       ),
       children: (
         <div>
           <Row gutter={[24, 24]}>
             {/* Balance Overview */}
-            <Col span={24}>
+            <Col xs={24} sm={24} md={24} lg={24} xl={24}>
               <Card title="余额概览" extra={<WalletOutlined style={{ color: "#52c41a" }} />}>
-                <Row gutter={24}>
-                  <Col span={8}>
+                <Row gutter={[24, 16]}>
+                  <Col xs={24} sm={8} md={8} lg={8} xl={8}>
                     <Statistic
                       title="当前余额"
                       value={profileData?.balance || user?.balance || 0}
                       precision={2}
                       prefix="$"
-                      valueStyle={{ color: "#3f8600", fontSize: "32px" }}
+                      valueStyle={{
+                        color: "#3f8600",
+                      }}
+                      className="statistic-value-large"
                     />
                   </Col>
-                  <Col span={8}>
+                  <Col xs={24} sm={8} md={8} lg={8} xl={8}>
                     <Statistic
                       title="累计充值"
                       value={profileData?.total_recharged || user?.total_recharged || 0}
                       precision={2}
                       prefix="$"
-                      valueStyle={{ color: "#1890ff", fontSize: "24px" }}
+                      valueStyle={{
+                        color: "#1890ff",
+                      }}
+                      className="statistic-value-medium"
                     />
                   </Col>
-                  <Col span={8}>
+                  <Col xs={24} sm={8} md={8} lg={8} xl={8}>
                     <Statistic
                       title="累计消费"
                       value={profileData?.total_spent || user?.total_spent || 0}
                       precision={2}
                       prefix="$"
-                      valueStyle={{ color: "#cf1322", fontSize: "24px" }}
+                      valueStyle={{
+                        color: "#cf1322",
+                      }}
+                      className="statistic-value-medium"
                     />
                   </Col>
                 </Row>
@@ -654,24 +721,30 @@ const ProfilePage: React.FC = () => {
             </Col>
 
             {/* Add Funds Section */}
-            <Col span={24}>
+            <Col xs={24} sm={24} md={24} lg={24} xl={24}>
               <Card
                 title="充值"
                 extra={
-                  <Space>
+                  <Space direction="horizontal" size="small" className="space-responsive">
                     <Badge
                       status={isConnected ? "success" : "error"}
                       text={isConnected ? "实时同步" : "离线模式"}
                     />
-                    <Text type="secondary">支持多种支付方式</Text>
+                    <Text type="secondary" className="mobile-hide">
+                      支持多种支付方式
+                    </Text>
                   </Space>
                 }
               >
                 <Row gutter={[24, 24]}>
-                  <Col span={12}>
+                  <Col xs={24} sm={24} md={12} lg={12} xl={12}>
                     <div style={{ textAlign: "center", padding: "24px" }}>
                       <WalletOutlined
-                        style={{ fontSize: "48px", color: "#1890ff", marginBottom: "16px" }}
+                        style={{
+                          color: "#1890ff",
+                          marginBottom: "16px",
+                        }}
+                        className="wallet-icon-large"
                       />
                       <Title level={4}>快速充值</Title>
                       <Text type="secondary" style={{ display: "block", marginBottom: "16px" }}>
@@ -682,12 +755,14 @@ const ProfilePage: React.FC = () => {
                         size="large"
                         onClick={() => setShowAddFundsModal(true)}
                         icon={<WalletOutlined />}
+                        block={false}
+                        className="mobile-full-width"
                       >
                         立即充值
                       </Button>
                     </div>
                   </Col>
-                  <Col span={12}>
+                  <Col xs={24} sm={24} md={12} lg={12} xl={12}>
                     <Card size="small" title="充值说明">
                       <ul style={{ paddingLeft: "20px", margin: 0 }}>
                         <li>充值金额将立即到账</li>
@@ -703,7 +778,7 @@ const ProfilePage: React.FC = () => {
             </Col>
 
             {/* Recent Transactions */}
-            <Col span={24}>
+            <Col xs={24} sm={24} md={24} lg={24} xl={24}>
               <Card
                 title="最近交易记录"
                 extra={
@@ -724,13 +799,13 @@ const ProfilePage: React.FC = () => {
       label: (
         <span>
           <SecurityScanOutlined />
-          安全设置
+          <span className="tab-label-text">安全中心</span>
         </span>
       ),
       children: (
         <div>
           <Row gutter={[24, 24]}>
-            <Col span={12}>
+            <Col xs={24} sm={24} md={12} lg={12} xl={12}>
               <Card title="双重认证" extra={<SafetyOutlined />}>
                 <div style={{ textAlign: "center", padding: "20px 0" }}>
                   <Badge
@@ -741,6 +816,9 @@ const ProfilePage: React.FC = () => {
                     <Button
                       type={profileData?.two_factor_enabled ? "default" : "primary"}
                       icon={<KeyOutlined />}
+                      size="large"
+                      block={false}
+                      className="mobile-full-width"
                     >
                       {profileData?.two_factor_enabled ? "管理双重认证" : "启用双重认证"}
                     </Button>
@@ -749,7 +827,7 @@ const ProfilePage: React.FC = () => {
               </Card>
             </Col>
 
-            <Col span={12}>
+            <Col xs={24} sm={24} md={12} lg={12} xl={12}>
               <Card title="登录安全" extra={<LockOutlined />}>
                 <List
                   size="small"
@@ -785,10 +863,10 @@ const ProfilePage: React.FC = () => {
               </Card>
             </Col>
 
-            <Col span={24}>
+            <Col xs={24} sm={24} md={24} lg={24} xl={24}>
               <Card title="通知设置" extra={<BellOutlined />}>
                 <Row gutter={[16, 16]}>
-                  <Col span={8}>
+                  <Col xs={24} sm={8} md={8} lg={8} xl={8}>
                     <div style={{ textAlign: "center" }}>
                       <Switch
                         checked={profileData?.email_notifications}
@@ -812,7 +890,7 @@ const ProfilePage: React.FC = () => {
                       </div>
                     </div>
                   </Col>
-                  <Col span={8}>
+                  <Col xs={24} sm={8} md={8} lg={8} xl={8}>
                     <div style={{ textAlign: "center" }}>
                       <Switch
                         checked={profileData?.sms_notifications}
@@ -836,7 +914,7 @@ const ProfilePage: React.FC = () => {
                       </div>
                     </div>
                   </Col>
-                  <Col span={8}>
+                  <Col xs={24} sm={8} md={8} lg={8} xl={8}>
                     <div style={{ textAlign: "center" }}>
                       <Switch
                         checked={profileData?.push_notifications}
@@ -872,7 +950,7 @@ const ProfilePage: React.FC = () => {
       label: (
         <span>
           <HistoryOutlined />
-          活动记录
+          <span className="tab-label-text">活动记录</span>
         </span>
       ),
       children: (
@@ -1119,7 +1197,7 @@ const ProfilePage: React.FC = () => {
                   </div>
                   <div style={{ textAlign: "center" }}>
                     <Image
-                      src="data:image/png;base64,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"
+                      src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAQAAAAEACAYAAABccqhmAAAAAklEQVR4AewaftIAAAlUSURBVO3BQZIcQXIEQbeU/v+XjbjxwCiRTbAaA2y4Kv6SqlrppKrWOqmqtU6qaq2TqlrrpKrWOqmqtU6qaq2TqlrrpKrWOqmqtU6qaq2Tqlrrk98A5F+i5g1A3qLmFpCJmo2APFHzBiD/EjU3TqpqrZOqWuukqtY6qaq1TqpqrU9epOanAPmXALmlZgJkouYtQCZqJkDeoOYJkDeoeYuaCZAnaiZAJmo2OqmqtU6qaq2TqlrrpKrWOqmqtT75A9T8S9RMgPy3UzMB8hY1EyATIBM1T4BM1Hybmn/FSVWtdVJVa51U1VonVbXWSVWtdVJVa51U1Vqf/AYgEzU/BcgtIDfUPAFyQ80EyLcBeaLmBpC3qJkAeQuQiZqfAuSWmjecVNVaJ1W11klVrXVSVWudVNVaJ1W11ie/Qc1/MyATNU+ATNR8m5oJkG8DcgvIG9R8m5r/ZidVtdZJVa11UlVrnVTVWidVtRb+kktAJmomQH6Smm8D8rdR821AJmqeAPkpam4A+UlqvumkqtY6qaq1TqpqrZOqWuukqtb65DeomQC5pWYCZKLmpwB5omYCZKJmAuSWmhtAnqiZAJmomQB5omYCZKLmLUBuqPlJQCZq3nBSVWudVNVaJ1W11klVrXVSVWt98iI1EyBPgEzU3ADyFjW3gEzUTIC8BchbgEzU/EuAvAHIEzUTIDfU3AIyUXPjpKrWOqmqtU6qaq2TqlrrpKrWOqmqtfCXvATIRM0TIBM13wbkhponQN6g5gmQiZobQP5Gat4C5A1qngCZqJkAmai5BWSi5sZJVa11UlVrnVTVWidVtdZJVa2Fv+QHAZmouQHklpoJkFtqJkAmaiZAvk3NEyA31EyAPFFzA8hb1EyAfJuaCZC3qLlxUlVrnVTVWidVtdZJVa11UlVr4S/5CwGZqLkF5A1qngC5oWYC5ImaNwC5peYGkFtqvg3IDTVPgEzUvAXIRM0bTqpqrZOqWuukqtY6qaq1TqpqLfwll4BM1HwbkLeo+SlAJmqeALmhZgLkiZoJkImaCZAnar4NyL9CzS0gEzU3TqpqrZOqWuukqtY6qaq1TqpqrZOqWuuT36DmBpAnaiZAJmpuAbkB5JaaCZAbQG6puaHm29TcAjJRMwFyS80NIG9RcwvIN51U1VonVbXWSVWtdVJVa51U1Vqf/AYgEzU/BcgtIDfUPAFyQ80EyLcBeaLmBpC3qJkAeQuQiZqfAuSWmjecVNVaJ1W11klVrXVSVWudVNVaJ1W11ie/Qc1/MyATNU+ATNR8m5oJkG8DcgvIG9R8m5r/ZidVtdZJVa11UlVrnVTVWidVtRb+kktAJmomQH6Smm8D8rdR821AJmqeAPkpam4A+UlqvumkqtY6qaq1TqpqrZOqWuukqtb65A9Q8zdSMwEyUfM3AjJRMwHyRM1EzQTIBMhb1EyAvAXIRM0tIG9RMwHyhpOqWuukqtY6qaq1TqpqrZOqWuuTFwH5lwD52wB5omaiZgLk29S8BcgEyETNEyATNRMgEyBP1LwByE85qaq1TqpqrZOqWuukqtY6qaq18JdU1UonVbXWSVWtdVJVa51U1VonVbXWSVWtdVJVa51U1VonVbXWSVWtdVJVa/0Px+3HSu2LEGcAAAAASUVORK5CYII="
                       alt="支付二维码"
                       width={120}
                       height={120}
@@ -1211,8 +1289,15 @@ const ProfilePage: React.FC = () => {
   }
 
   return (
-    <div>
-      <Title level={2} style={{ marginBottom: "24px" }}>
+    <div className="profile-container" style={{ padding: "24px" }}>
+      <Title
+        level={2}
+        className="profile-title"
+        style={{
+          marginBottom: "24px",
+          fontSize: "24px",
+        }}
+      >
         个人中心
       </Title>
 
@@ -1234,6 +1319,7 @@ const ProfilePage: React.FC = () => {
             size="large"
             tabPosition="top"
             style={{ minHeight: "600px" }}
+            className="profile-tabs-responsive"
           />
         </Card>
       </Spin>
