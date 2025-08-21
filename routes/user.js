@@ -55,7 +55,16 @@ router.put(
   logUserActivity("update_profile"),
   async (req, res) => {
     try {
-      const { username, email, current_password, new_password } = req.body;
+      const {
+        username,
+        email,
+        phone,
+        country,
+        timezone,
+        language,
+        current_password,
+        new_password,
+      } = req.body;
       const user = await User.findByPk(req.user.id);
 
       // 如果要修改密码，验证当前密码
@@ -101,6 +110,12 @@ router.put(
         }
         user.email = email;
       }
+
+      // 更新其他字段
+      if (phone !== undefined) user.phone = phone;
+      if (country !== undefined) user.country = country;
+      if (timezone !== undefined) user.timezone = timezone;
+      if (language !== undefined) user.language = language;
 
       await user.save();
 
@@ -684,35 +699,177 @@ router.post("/change-password", authenticateToken, async (req, res) => {
  * 更新通知设置
  * PUT /api/user/notifications
  */
-router.put("/notifications", authenticateToken, async (req, res) => {
+router.put("/notifications", logUserActivity("update_notifications"), async (req, res) => {
   try {
     const userId = req.user.id;
-    const { email_login, email_payment, email_rental, push_notifications, sms_notifications } =
-      req.body;
+    const { email_notifications, sms_notifications, push_notifications } = req.body;
 
-    // 这里可以将通知设置保存到数据库
-    // 目前暂时返回成功，实际项目中应该有专门的通知设置表
+    const user = await User.findByPk(userId);
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        error: "用户不存在",
+      });
+    }
+
+    // 更新通知设置
+    if (email_notifications !== undefined) user.email_notifications = email_notifications;
+    if (sms_notifications !== undefined) user.sms_notifications = sms_notifications;
+    if (push_notifications !== undefined) user.push_notifications = push_notifications;
+
+    await user.save();
 
     logger.info("用户更新通知设置:", {
       userId,
       settings: {
-        email_login,
-        email_payment,
-        email_rental,
-        push_notifications,
+        email_notifications,
         sms_notifications,
+        push_notifications,
       },
     });
 
     res.json({
       success: true,
       message: "通知设置已更新",
+      data: {
+        email_notifications: user.email_notifications,
+        sms_notifications: user.sms_notifications,
+        push_notifications: user.push_notifications,
+      },
     });
   } catch (error) {
     logger.error("更新通知设置失败:", error);
     res.status(500).json({
       success: false,
       error: "更新通知设置失败",
+    });
+  }
+});
+
+/**
+ * 获取用户活动日志
+ * GET /api/user/activity-logs
+ */
+router.get("/activity-logs", logUserActivity("view_activity_logs"), async (req, res) => {
+  try {
+    const { page = 1, limit = 20 } = req.query;
+    const offset = (page - 1) * limit;
+
+    // 这里应该从用户活动日志表获取数据
+    // 目前返回模拟数据，实际项目中应该有专门的活动日志表
+    const mockActivityLogs = [
+      {
+        id: 1,
+        action: "login",
+        description: "用户登录成功",
+        ip_address: "192.168.1.1",
+        user_agent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+        created_at: new Date().toISOString(),
+        status: "success",
+      },
+      {
+        id: 2,
+        action: "profile_update",
+        description: "更新个人资料",
+        ip_address: "192.168.1.1",
+        user_agent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+        created_at: new Date(Date.now() - 86400000).toISOString(), // 1 day ago
+        status: "success",
+      },
+      {
+        id: 3,
+        action: "password_change",
+        description: "修改密码",
+        ip_address: "192.168.1.1",
+        user_agent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+        created_at: new Date(Date.now() - 172800000).toISOString(), // 2 days ago
+        status: "success",
+      },
+    ];
+
+    res.json({
+      success: true,
+      data: mockActivityLogs,
+      pagination: {
+        current_page: parseInt(page),
+        per_page: parseInt(limit),
+        total_count: mockActivityLogs.length,
+        total_pages: Math.ceil(mockActivityLogs.length / limit),
+      },
+    });
+  } catch (error) {
+    logger.error("获取用户活动日志失败:", error);
+    res.status(500).json({
+      success: false,
+      error: "获取用户活动日志失败",
+    });
+  }
+});
+
+/**
+ * 获取用户安全设置
+ * GET /api/user/security-settings
+ */
+router.get("/security-settings", logUserActivity("view_security_settings"), async (req, res) => {
+  try {
+    const user = await User.findByPk(req.user.id, {
+      attributes: ["id", "created_at", "updated_at"],
+    });
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        error: "用户不存在",
+      });
+    }
+
+    // 这里应该从安全设置表获取数据
+    // 目前返回模拟数据，实际项目中应该有专门的安全设置表
+    const mockSecuritySettings = {
+      password_changed_at: user.updated_at,
+      last_password_reset: null,
+      failed_login_attempts: 0,
+      account_locked_until: null,
+      trusted_devices: 1,
+      api_keys_count: 0,
+    };
+
+    res.json({
+      success: true,
+      data: mockSecuritySettings,
+    });
+  } catch (error) {
+    logger.error("获取用户安全设置失败:", error);
+    res.status(500).json({
+      success: false,
+      error: "获取用户安全设置失败",
+    });
+  }
+});
+
+/**
+ * 更新用户头像
+ * PUT /api/user/avatar
+ */
+router.put("/avatar", logUserActivity("update_avatar"), async (req, res) => {
+  try {
+    // 这里应该处理头像上传
+    // 实际项目中应该有文件上传中间件和头像处理逻辑
+
+    logger.info("用户更新头像:", { userId: req.user.id });
+
+    res.json({
+      success: true,
+      message: "头像更新成功",
+      data: {
+        avatar_url: "/uploads/avatars/default.jpg", // 这里应该是实际的头像URL
+      },
+    });
+  } catch (error) {
+    logger.error("更新用户头像失败:", error);
+    res.status(500).json({
+      success: false,
+      error: "更新用户头像失败",
     });
   }
 });

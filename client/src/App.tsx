@@ -7,10 +7,12 @@ import AppHeader from "./components/Layout/AppHeader";
 import AppSidebar from "./components/Layout/AppSidebar";
 import ProtectedRoute from "./components/Common/ProtectedRoute";
 import LoadingSpinner from "./components/Common/LoadingSpinner";
+import ErrorBoundary from "./components/Common/ErrorBoundary";
 
 // 页面组件
 import LoginPage from "./pages/Auth/LoginPage";
 import RegisterPage from "./pages/Auth/RegisterPage";
+import EmailVerificationPage from "./pages/Auth/EmailVerificationPage";
 import DashboardPage from "./pages/Dashboard/DashboardPage";
 import GetNumberPage from "./pages/Services/GetNumberPage";
 import RentNumberPage from "./pages/Services/RentNumberPage";
@@ -20,6 +22,9 @@ import TransactionsPage from "./pages/Transactions/TransactionsPage";
 import ProfilePage from "./pages/Profile/ProfilePage";
 import SettingsPage from "./pages/Settings/SettingsPage";
 import AdminDashboard from "./pages/Admin/AdminDashboard";
+import AdminUsersPage from "./pages/Admin/AdminUsersPage";
+import AdminSystemPage from "./pages/Admin/AdminSystemPage";
+import AdminTransactionsPage from "./pages/Admin/AdminTransactionsPage";
 import NotFoundPage from "./pages/Error/NotFoundPage";
 
 const { Content } = Layout;
@@ -80,6 +85,7 @@ const App: React.FC = () => {
           path="/register"
           element={isAuthenticated ? <Navigate to="/dashboard" replace /> : <RegisterPage />}
         />
+        <Route path="/verify-email" element={<EmailVerificationPage />} />
 
         {/* 受保护的路由 */}
         <Route
@@ -110,32 +116,69 @@ const App: React.FC = () => {
                       transition: "margin-left 0.2s",
                     }}
                   >
-                    <Routes>
-                      {/* 默认重定向到仪表板 */}
-                      <Route path="/" element={<Navigate to="/dashboard" replace />} />
+                    <ErrorBoundary>
+                      <Routes>
+                        {/* 默认重定向到仪表板 */}
+                        <Route path="/" element={<Navigate to="/dashboard" replace />} />
 
-                      {/* 仪表板 */}
-                      <Route path="/dashboard" element={<DashboardPage />} />
+                        {/* 仪表板 */}
+                        <Route path="/dashboard" element={<DashboardPage />} />
 
-                      {/* 服务相关页面 */}
-                      <Route path="/get-number" element={<GetNumberPage />} />
-                      <Route path="/rent-number" element={<RentNumberPage />} />
+                        {/* 服务相关页面 */}
+                        <Route path="/get-number" element={<GetNumberPage />} />
+                        <Route path="/rent-number" element={<RentNumberPage />} />
 
-                      {/* 记录查看页面 */}
-                      <Route path="/activations" element={<ActivationsPage />} />
-                      <Route path="/rentals" element={<RentalsPage />} />
-                      <Route path="/transactions" element={<TransactionsPage />} />
+                        {/* 记录查看页面 */}
+                        <Route path="/activations" element={<ActivationsPage />} />
+                        <Route path="/rentals" element={<RentalsPage />} />
+                        <Route path="/transactions" element={<TransactionsPage />} />
 
-                      {/* 用户相关页面 */}
-                      <Route path="/profile" element={<ProfilePage />} />
-                      <Route path="/settings" element={<SettingsPage />} />
+                        {/* 用户相关页面 */}
+                        <Route path="/profile" element={<ProfilePage />} />
+                        <Route path="/settings" element={<SettingsPage />} />
 
-                      {/* 管理员页面 */}
-                      {user?.id === 1 && <Route path="/admin/*" element={<AdminDashboard />} />}
+                        {/* 管理员页面 */}
+                        {user?.id === 1 && (
+                          <>
+                            <Route
+                              path="/admin/dashboard"
+                              element={
+                                <ProtectedRoute requireAdmin>
+                                  <AdminDashboard />
+                                </ProtectedRoute>
+                              }
+                            />
+                            <Route
+                              path="/admin/users"
+                              element={
+                                <ProtectedRoute requireAdmin>
+                                  <AdminUsersPage />
+                                </ProtectedRoute>
+                              }
+                            />
+                            <Route
+                              path="/admin/system"
+                              element={
+                                <ProtectedRoute requireAdmin>
+                                  <AdminSystemPage />
+                                </ProtectedRoute>
+                              }
+                            />
+                            <Route
+                              path="/admin/transactions"
+                              element={
+                                <ProtectedRoute requireAdmin>
+                                  <AdminTransactionsPage />
+                                </ProtectedRoute>
+                              }
+                            />
+                          </>
+                        )}
 
-                      {/* 404 页面 */}
-                      <Route path="*" element={<NotFoundPage />} />
-                    </Routes>
+                        {/* 404 页面 */}
+                        <Route path="*" element={<NotFoundPage />} />
+                      </Routes>
+                    </ErrorBoundary>
                   </Content>
                 </Layout>
               </Layout>

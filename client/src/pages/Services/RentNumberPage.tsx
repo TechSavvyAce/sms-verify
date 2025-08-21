@@ -21,8 +21,9 @@ import {
 import { PhoneOutlined, ArrowRightOutlined, ClockCircleOutlined } from "@ant-design/icons";
 import { useAuthStore } from "../../stores/authStore";
 import { useNavigate } from "react-router-dom";
-import api from "../../services/api";
+import { rentalApi } from "../../services/api";
 import countriesData from "../../data/countries.json";
+import { getApiErrorMessage } from "../../utils/errorHelpers";
 
 const { Title, Paragraph, Text } = Typography;
 
@@ -58,11 +59,11 @@ const RentNumberPage: React.FC = () => {
     const fetchData = async () => {
       try {
         setDataLoading(true);
-        const servicesRes = await api.get("/rental/services");
+        const servicesRes = await rentalApi.getServices();
 
-        if (servicesRes.data?.success && servicesRes.data.data) {
+        if (servicesRes.success && servicesRes.data) {
           // Transform the API response to match our expected format
-          const apiData = servicesRes.data.data;
+          const apiData = servicesRes.data;
 
           // Transform services
           const transformedServices = Object.entries(apiData.services || {}).map(
@@ -75,12 +76,6 @@ const RentNumberPage: React.FC = () => {
               base_price: parseFloat(data?.cost) || 5.0,
               success_rate: 95,
               available: parseInt(data?.quant) || 20,
-              features: ["Support all platforms", "Stable and reliable"],
-              features_cn: ["支持所有平台", "稳定可靠"],
-              best_for: "Individual users",
-              best_for_cn: "个人用户",
-              popularity: "high",
-              difficulty: "low",
             })
           );
 
@@ -117,8 +112,8 @@ const RentNumberPage: React.FC = () => {
           setServices(transformedServices);
           setCountries(transformedCountries);
         }
-      } catch (error) {
-        message.error("Failed to fetch services data");
+      } catch (error: any) {
+        message.error("获取服务数据失败");
         console.error("Error fetching services:", error);
         // Set default empty arrays to prevent crashes
         setServices([]);
@@ -193,16 +188,14 @@ const RentNumberPage: React.FC = () => {
 
     setLoading(true);
     try {
-      const response = await api.post("/rental/order", {
+      const response = await rentalApi.create({
         service: selectedService.code,
         time: selectedDuration,
         country: selectedCountry,
         operator: "any",
-        incomingCall: false,
-        webhook_url: "",
       });
 
-      if (response.data?.success) {
+      if (response.success) {
         message.success("租用订单创建成功！");
         setModalVisible(false);
         setCurrentStep(0);
@@ -216,11 +209,11 @@ const RentNumberPage: React.FC = () => {
         // 跳转到租用记录页面
         navigate("/rentals");
       } else {
-        throw new Error(response.data?.error || "租用失败");
+        throw new Error("租用失败");
       }
     } catch (error: any) {
       console.error("租用失败:", error);
-      message.error(error.response?.data?.error || error.message || "租用订单创建失败，请重试");
+      message.error(getApiErrorMessage(error.response?.data?.error, "租用订单创建失败，请重试"));
     } finally {
       setLoading(false);
     }
@@ -359,10 +352,10 @@ const RentNumberPage: React.FC = () => {
                 // 搜索结果
                 <div>
                   <div style={{ marginBottom: "16px" }}>
-                    <Text type="secondary">找到 {filteredServices.length} 个相关服务</Text>
+                    <Text type="secondary">找到 {filteredServices?.length || 0} 个相关服务</Text>
                   </div>
                   <Row gutter={[16, 16]}>
-                    {filteredServices.map((service) => (
+                    {filteredServices?.map((service) => (
                       <Col xs={24} sm={12} lg={8} key={service.code}>
                         <Card
                           hoverable
@@ -449,17 +442,6 @@ const RentNumberPage: React.FC = () => {
                             >
                               <Text type="secondary">可用数量:</Text>
                               <Text>{service.available || 0}</Text>
-                            </div>
-                          </div>
-
-                          <div>
-                            <Text type="secondary">特色功能:</Text>
-                            <div style={{ marginTop: "8px" }}>
-                              {(service.features || []).map((feature: string, index: number) => (
-                                <Tag key={index} color="green" style={{ marginBottom: "4px" }}>
-                                  {feature || "Feature"}
-                                </Tag>
-                              ))}
                             </div>
                           </div>
                         </Card>
@@ -471,10 +453,10 @@ const RentNumberPage: React.FC = () => {
                 // 显示所有服务
                 <div>
                   <div style={{ marginBottom: "16px" }}>
-                    <Text type="secondary">共 {services.length} 个租用服务</Text>
+                    <Text type="secondary">共 {services?.length || 0} 个租用服务</Text>
                   </div>
                   <Row gutter={[16, 16]}>
-                    {services.map((service) => (
+                    {services?.map((service) => (
                       <Col xs={24} sm={12} lg={8} key={service.code}>
                         <Card
                           hoverable
@@ -561,17 +543,6 @@ const RentNumberPage: React.FC = () => {
                             >
                               <Text type="secondary">可用数量:</Text>
                               <Text>{service.available || 0}</Text>
-                            </div>
-                          </div>
-
-                          <div>
-                            <Text type="secondary">特色功能:</Text>
-                            <div style={{ marginTop: "8px" }}>
-                              {(service.features || []).map((feature: string, index: number) => (
-                                <Tag key={index} color="green" style={{ marginBottom: "4px" }}>
-                                  {feature || "Feature"}
-                                </Tag>
-                              ))}
                             </div>
                           </div>
                         </Card>
@@ -776,7 +747,7 @@ const RentNumberPage: React.FC = () => {
               </div>
 
               <Row gutter={[16, 16]}>
-                {filteredCountries.slice(0, visibleCountries).map((country) => (
+                {filteredCountries?.slice(0, visibleCountries).map((country) => (
                   <Col xs={24} sm={12} lg={8} key={country.id}>
                     <Card
                       hoverable
@@ -871,10 +842,10 @@ const RentNumberPage: React.FC = () => {
               <div style={{ textAlign: "center", marginTop: "16px" }}>
                 <Text type="secondary">
                   {countrySearch
-                    ? `找到 ${filteredCountries.length} 个国家`
-                    : `共 ${countries.length} 个国家，显示 ${Math.min(
+                    ? `找到 ${filteredCountries?.length || 0} 个国家`
+                    : `共 ${countries?.length || 0} 个国家，显示 ${Math.min(
                         visibleCountries,
-                        filteredCountries.length
+                        filteredCountries?.length || 0
                       )} 个`}
                 </Text>
               </div>

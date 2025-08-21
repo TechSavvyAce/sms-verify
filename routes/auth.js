@@ -17,7 +17,6 @@ const {
   AuthenticationError,
   NotFoundError,
 } = require("../middleware/errorHandler");
-const { authLimiter, emailLimiter } = require("../middleware/rateLimiter");
 const router = express.Router();
 
 const emailService = new EmailService();
@@ -91,11 +90,16 @@ router.post("/register", createValidationMiddleware(validateUserRegistration), a
       ip: req.ip,
     });
 
+    // 生成JWT令牌（自动登录）
+    const tokens = generateTokens(user.id);
+
     res.status(201).json({
       success: true,
       message: "注册成功，请检查您的邮箱并点击验证链接激活账户",
       data: {
         user: user.toJSON(),
+        accessToken: tokens.accessToken,
+        refreshToken: tokens.refreshToken,
         requires_verification: true,
       },
     });
@@ -382,7 +386,7 @@ router.post("/reset-password", async (req, res) => {
 });
 
 /**
- * 验证邮箱
+ * 邮箱验证
  * POST /api/auth/verify-email
  */
 router.post("/verify-email", async (req, res) => {
@@ -409,34 +413,25 @@ router.post("/verify-email", async (req, res) => {
     if (!user) {
       return res.status(400).json({
         success: false,
-        error: "验证链接无效或已过期",
-      });
-    }
-
-    if (user.email_verified) {
-      return res.status(400).json({
-        success: false,
-        error: "邮箱已验证",
+        error: "验证令牌无效或已过期",
       });
     }
 
     // 验证邮箱
     await user.verifyEmail();
 
-    // 生成令牌
-    const tokens = generateTokens(user.id);
-
-    logger.info("用户邮箱验证成功:", {
+    // 记录验证活动
+    logger.info("邮箱验证成功:", {
       userId: user.id,
       email: user.email,
+      ip: req.ip,
     });
 
     res.json({
       success: true,
-      message: "邮箱验证成功",
+      message: "邮箱验证成功！您的账户已激活。",
       data: {
         user: user.toJSON(),
-        ...tokens,
       },
     });
   } catch (error) {
@@ -478,7 +473,7 @@ router.post("/resend-verification", async (req, res) => {
     if (user.email_verified) {
       return res.status(400).json({
         success: false,
-        error: "邮箱已验证",
+        error: "邮箱已验证，无需重新发送",
       });
     }
 
@@ -487,22 +482,26 @@ router.post("/resend-verification", async (req, res) => {
     await user.save();
 
     // 发送验证邮件
-    await emailService.sendEmailVerification(email, user.username, verificationToken);
-
-    logger.info("重新发送验证邮件:", {
-      userId: user.id,
-      email,
-    });
+    try {
+      await emailService.sendEmailVerification(email, user.username, verificationToken);
+      logger.info("重新发送验证邮件成功:", { userId: user.id, email });
+    } catch (emailError) {
+      logger.error("重新发送验证邮件失败:", emailError);
+      return res.status(500).json({
+        success: false,
+        error: "邮件发送失败，请稍后重试",
+      });
+    }
 
     res.json({
       success: true,
-      message: "验证邮件已重新发送",
+      message: "验证邮件已重新发送，请检查您的邮箱",
     });
   } catch (error) {
     logger.error("重新发送验证邮件失败:", error);
     res.status(500).json({
       success: false,
-      error: "发送失败，请稍后重试",
+      error: "操作失败，请稍后重试",
     });
   }
 });

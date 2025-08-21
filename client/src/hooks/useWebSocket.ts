@@ -119,6 +119,25 @@ export const useWebSocket = () => {
       useAuthStore.getState().updateUser({ balance: data.new_balance });
     });
 
+    // 支付成功事件
+    socket.on("payment_success", (data) => {
+      console.log("收到支付成功通知:", data);
+
+      // 更新用户余额
+      const currentUser = useAuthStore.getState().user;
+      if (currentUser) {
+        useAuthStore.getState().updateUser({
+          ...currentUser,
+          balance: data.new_balance,
+          total_recharged: (currentUser.total_recharged || 0) + data.amount,
+        });
+      }
+
+      // 发送自定义事件到页面组件
+      const event = new CustomEvent("payment_success", { detail: data });
+      window.dispatchEvent(event);
+    });
+
     // 系统通知
     socket.on("system_notification", (data) => {
       const { type, message: msg, duration = 5 } = data;

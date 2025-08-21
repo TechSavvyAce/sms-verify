@@ -35,6 +35,13 @@ export interface RegisterRequest {
   password: string;
 }
 
+export interface RegisterResponse {
+  user: User;
+  accessToken: string;
+  refreshToken: string;
+  requires_verification: boolean;
+}
+
 // 服务相关类型
 export interface Service {
   key: string;
@@ -105,8 +112,7 @@ export interface CreateActivationRequest {
   userId?: string; // 用户ID
 }
 
-export interface CreateActivationFreePriceRequest
-  extends CreateActivationRequest {
+export interface CreateActivationFreePriceRequest extends CreateActivationRequest {
   maxPrice: number;
 }
 
@@ -150,11 +156,12 @@ export interface SMSMessage {
 // 交易相关类型
 export interface Transaction {
   id: number;
-  type: "recharge" | "activation" | "rental" | "refund";
-  type_display: string;
+  user_id?: number;
+  type: "recharge" | "activation" | "rental" | "refund" | "adjustment";
+  type_display?: string;
   amount: number;
-  balance_before: number;
-  balance_after: number;
+  balance_before?: number;
+  balance_after?: number;
   reference_id?: string;
   description?: string;
   created_at: string;
@@ -164,7 +171,16 @@ export interface Transaction {
 export interface ApiResponse<T = any> {
   success: boolean;
   message?: string;
-  error?: string;
+  error?:
+    | string
+    | {
+        message: string;
+        code?: string;
+        statusCode?: number;
+        timestamp?: string;
+        stack?: string;
+        details?: any;
+      };
   data?: T;
 }
 
@@ -211,10 +227,7 @@ export interface SystemStats {
     total_revenue: number;
     total_refunds: number;
     net_revenue: number;
-    transactions_by_type: Record<
-      string,
-      { count: number; total_amount: number }
-    >;
+    transactions_by_type: Record<string, { count: number; total_amount: number }>;
   };
 }
 
@@ -238,7 +251,7 @@ export interface AuthState {
   isLoading: boolean;
   initializeAuth: () => Promise<void>;
   login: (credentials: LoginRequest) => Promise<void>;
-  register: (userData: RegisterRequest) => Promise<void>;
+  register: (userData: RegisterRequest) => Promise<RegisterResponse | undefined>;
   logout: () => void;
   refreshAuth: () => Promise<void>;
   updateUser: (userData: Partial<User>) => void;

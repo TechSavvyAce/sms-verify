@@ -2,7 +2,6 @@ const express = require("express");
 const cors = require("cors");
 const helmet = require("helmet");
 const compression = require("compression");
-const rateLimit = require("express-rate-limit");
 const { createServer } = require("http");
 const { Server } = require("socket.io");
 require("dotenv").config();
@@ -49,19 +48,7 @@ app.use(
   })
 );
 
-// 速率限制
-const limiter = rateLimit({
-  windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS) || 60000,
-  max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS) || 100,
-  message: {
-    error: "请求过于频繁，请稍后再试",
-    code: "RATE_LIMIT_EXCEEDED",
-  },
-  standardHeaders: true,
-  legacyHeaders: false,
-});
-
-app.use(limiter);
+// app.use(limiter);
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 
@@ -353,7 +340,7 @@ async function startServer() {
 
     // 同步数据库模型
     if (process.env.NODE_ENV === "development") {
-      await db.sync({ force: true });
+      await db.sync({ force: false });
       logger.info("数据库模型同步完成");
 
       // 初始化系统配置

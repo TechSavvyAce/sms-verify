@@ -72,7 +72,7 @@ const ActivationsPage: React.FC = () => {
         });
         setTimers(newTimers);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("获取激活列表失败:", error);
       message.error("获取激活列表失败");
     } finally {
@@ -108,7 +108,7 @@ const ActivationsPage: React.FC = () => {
         // 最后再次刷新列表以显示最新状态
         await fetchActivations(false);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("批量检查状态失败:", error);
       message.error("批量检查状态失败");
       // 即使检查失败，也尝试刷新列表
@@ -218,7 +218,7 @@ const ActivationsPage: React.FC = () => {
         message.success("激活已取消");
         fetchActivations(false);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("取消激活失败:", error);
       message.error("取消激活失败");
     }
@@ -232,7 +232,7 @@ const ActivationsPage: React.FC = () => {
         message.success("激活已确认完成！");
         fetchActivations(false);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("确认激活失败:", error);
       message.error("确认激活失败");
     }
@@ -246,7 +246,7 @@ const ActivationsPage: React.FC = () => {
         message.success("已请求重发短信，请稍候...");
         fetchActivations(false);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("请求重发短信失败:", error);
       message.error("请求重发短信失败");
     }

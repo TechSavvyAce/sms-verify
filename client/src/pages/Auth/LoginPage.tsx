@@ -1,7 +1,7 @@
-import React, { useState } from "react";
-import { Form, Input, Button, Card, Typography, Divider, message, Space } from "antd";
+import React, { useState, useEffect } from "react";
+import { Form, Input, Button, Card, Typography, Divider, message, Space, Alert } from "antd";
 import { UserOutlined, LockOutlined, MobileOutlined } from "@ant-design/icons";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useAuthStore } from "../../stores/authStore";
 import { LoginRequest } from "../../types";
 
@@ -12,6 +12,16 @@ const LoginPage: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const { login } = useAuthStore();
   const navigate = useNavigate();
+  const location = useLocation();
+
+  // 检查是否有来自邮箱验证的成功消息
+  useEffect(() => {
+    if (location.state?.message) {
+      message.success(location.state.message);
+      // 清除state，避免重复显示
+      navigate(location.pathname, { replace: true });
+    }
+  }, [location.state, navigate, location.pathname]);
 
   const handleSubmit = async (values: LoginRequest) => {
     setLoading(true);

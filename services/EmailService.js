@@ -13,64 +13,128 @@ class EmailService {
    * 创建邮件传输器
    */
   createTransporter() {
-    if (process.env.NODE_ENV === "development") {
-      // 开发环境使用Ethereal测试邮箱
-      return nodemailer.createTransport({
-        host: "smtp.ethereal.email",
-        port: 587,
-        secure: false,
+    // 生产环境或明确指定SMTP时使用SMTP配置
+    const email_provider = process.env.EMAIL_PROVIDER || "hostinger";
+
+    // 尝试不同的SMTP配置
+    const smtpConfigs = [
+      {
+        host: process.env.SMTP_HOST || "smtp.hostinger.com",
+        port: parseInt(process.env.SMTP_PORT) || 465,
+        secure: true, // SSL
         auth: {
-          user: process.env.ETHEREAL_USER || "test@ethereal.email",
-          pass: process.env.ETHEREAL_PASS || "test123",
+          user: process.env.SMTP_USER,
+          pass: process.env.SMTP_PASS,
         },
-      });
-    } else {
-      // 生产环境配置，支持多种邮件服务
-      const emailProvider = process.env.EMAIL_PROVIDER || "smtp";
+        tls: {
+          rejectUnauthorized: false,
+          ciphers: "SSLv3",
+        },
+      },
+      {
+        host: process.env.SMTP_HOST || "smtp.hostinger.com",
+        port: 587,
+        secure: false, // STARTTLS
+        auth: {
+          user: process.env.SMTP_USER,
+          pass: process.env.SMTP_PASS,
+        },
+        tls: {
+          rejectUnauthorized: false,
+          ciphers: "TLSv1.2",
+        },
+      },
+      {
+        host: process.env.SMTP_HOST || "smtp.hostinger.com",
+        port: 25,
+        secure: false, // No encryption
+        auth: {
+          user: process.env.SMTP_USER,
+          pass: process.env.SMTP_PASS,
+        },
+        tls: {
+          rejectUnauthorized: false,
+        },
+      },
+    ];
 
-      switch (emailProvider) {
-        case "gmail":
-          return nodemailer.createTransport({
-            service: "gmail",
-            auth: {
-              user: process.env.GMAIL_USER,
-              pass: process.env.GMAIL_APP_PASSWORD,
-            },
-          });
+    // 返回第一个配置，如果失败会自动尝试下一个
+    return nodemailer.createTransport(smtpConfigs[0]);
+  }
 
-        case "sendgrid":
-          return nodemailer.createTransport({
-            host: "smtp.sendgrid.net",
-            port: 587,
-            secure: false,
-            auth: {
-              user: "apikey",
-              pass: process.env.SENDGRID_API_KEY,
-            },
-          });
+  /**
+   * 测试SMTP连接
+   */
+  async testConnection() {
+    const smtpConfigs = [
+      {
+        host: process.env.SMTP_HOST || "smtp.hostinger.com",
+        port: parseInt(process.env.SMTP_PORT) || 465,
+        secure: true, // SSL
+        auth: {
+          user: process.env.SMTP_USER,
+          pass: process.env.SMTP_PASS,
+        },
+        tls: {
+          rejectUnauthorized: false,
+          ciphers: "SSLv3",
+        },
+      },
+      {
+        host: process.env.SMTP_HOST || "smtp.hostinger.com",
+        port: 587,
+        secure: false, // STARTTLS
+        auth: {
+          user: process.env.SMTP_USER,
+          pass: process.env.SMTP_PASS,
+        },
+        tls: {
+          rejectUnauthorized: false,
+          ciphers: "TLSv1.2",
+        },
+      },
+      {
+        host: process.env.SMTP_HOST || "smtp.hostinger.com",
+        port: 25,
+        secure: false, // No encryption
+        auth: {
+          user: process.env.SMTP_USER,
+          pass: process.env.SMTP_PASS,
+        },
+        tls: {
+          rejectUnauthorized: false,
+        },
+      },
+    ];
 
-        case "mailgun":
-          return nodemailer.createTransport({
-            host: "smtp.mailgun.org",
-            port: 587,
-            secure: false,
-            auth: {
-              user: process.env.MAILGUN_USERNAME,
-              pass: process.env.MAILGUN_PASSWORD,
-            },
-          });
+    for (let i = 0; i < smtpConfigs.length; i++) {
+      try {
+        const config = smtpConfigs[i];
+        logger.info(
+          `测试SMTP配置 ${i + 1}: ${config.host}:${config.port} (secure: ${config.secure})`
+        );
 
-        case "smtp":
-        default:
-          return nodemailer.createTransport({
-            host: process.env.SMTP_HOST,
-            port: parseInt(process.env.SMTP_PORT) || 587,
-            secure: process.env.SMTP_SECURE === "true",
-            auth: {
-              user: process.env.SMTP_USER,
-              pass: process.env.SMTP_PASS,
-            },
-          });
+        const transporter = nodemailer.createTransport(config);
+        await transporter.verify();
+
+        logger.info(`SMTP配置 ${i + 1} 连接成功: ${config.host}:${config.port}`);
+        return {
+          success: true,
+          message: `SMTP连接成功: ${config.host}:${config.port}`,
+          config: config,
+        };
+      } catch (error) {
+        logger.warn(`SMTP配置 ${i + 1} 连接失败: ${config.host}:${config.port} - ${error.message}`);
+
+        if (i === smtpConfigs.length - 1) {
+          // 所有配置都失败了
+          logger.error("所有SMTP配置都失败了");
+          return {
+            success: false,
+            error: error.message,
+            details: "请检查SMTP配置，确保主机、端口、用户名和密码正确",
+          };
+        }
       }
     }
   }
@@ -79,36 +143,125 @@ class EmailService {
    * 发送邮件
    */
   async sendMail(to, subject, html, text = null) {
-    try {
-      const mailOptions = {
-        from: `"${this.fromName}" <${this.fromEmail}>`,
-        to,
-        subject,
-        html,
-        text: text || this.stripHtml(html),
-      };
+    const mailOptions = {
+      from: `"${this.fromName}" <${this.fromEmail}>`,
+      to,
+      subject,
+      html,
+      text: text || this.stripHtml(html),
+    };
 
-      const result = await this.transporter.sendMail(mailOptions);
+    // 尝试不同的SMTP配置
+    const smtpConfigs = [
+      {
+        host: process.env.SMTP_HOST || "smtp.hostinger.com",
+        port: parseInt(process.env.SMTP_PORT) || 465,
+        secure: true, // SSL
+        auth: {
+          user: process.env.SMTP_USER,
+          pass: process.env.SMTP_PASS,
+        },
+        tls: {
+          rejectUnauthorized: false,
+          ciphers: "SSLv3",
+        },
+      },
+      {
+        host: process.env.SMTP_HOST || "smtp.hostinger.com",
+        port: 587,
+        secure: false, // STARTTLS
+        auth: {
+          user: process.env.SMTP_USER,
+          pass: process.env.SMTP_PASS,
+        },
+        tls: {
+          rejectUnauthorized: false,
+          ciphers: "TLSv1.2",
+        },
+      },
+      {
+        host: process.env.SMTP_HOST || "smtp.hostinger.com",
+        port: 25,
+        secure: false, // No encryption
+        auth: {
+          user: process.env.SMTP_USER,
+          pass: process.env.SMTP_PASS,
+        },
+        tls: {
+          rejectUnauthorized: false,
+        },
+      },
+    ];
 
-      logger.info("邮件发送成功:", {
-        to,
-        subject,
-        messageId: result.messageId,
-      });
+    let lastError = null;
 
-      // 开发环境显示预览链接
-      if (process.env.NODE_ENV === "development" && result.messageUrl) {
-        logger.info("邮件预览链接:", result.messageUrl);
+    for (let i = 0; i < smtpConfigs.length; i++) {
+      try {
+        const config = smtpConfigs[i];
+        logger.info(
+          `尝试SMTP配置 ${i + 1}: ${config.host}:${config.port} (secure: ${config.secure})`
+        );
+
+        const transporter = nodemailer.createTransport(config);
+        const result = await transporter.sendMail(mailOptions);
+
+        logger.info("邮件发送成功:", {
+          to,
+          subject,
+          messageId: result.messageId,
+          config: `${config.host}:${config.port}`,
+        });
+
+        // 开发环境显示预览链接
+        if (process.env.NODE_ENV === "development" && result.messageUrl) {
+          logger.info("邮件预览链接:", result.messageUrl);
+        }
+
+        return {
+          success: true,
+          messageId: result.messageId,
+          previewUrl: result.messageUrl,
+        };
+      } catch (error) {
+        lastError = error;
+        logger.warn(`SMTP配置 ${i + 1} 失败: ${config.host}:${config.port} - ${error.message}`);
+
+        if (i === smtpConfigs.length - 1) {
+          // 最后一个配置也失败了，尝试使用Ethereal作为后备
+          logger.warn("所有SMTP配置都失败了，尝试使用Ethereal作为后备");
+
+          try {
+            const etherealTransporter = nodemailer.createTransport({
+              host: "smtp.ethereal.email",
+              port: 587,
+              secure: false,
+              auth: {
+                user: process.env.ETHEREAL_USER || "test@ethereal.email",
+                pass: process.env.ETHEREAL_PASS || "test123",
+              },
+            });
+
+            const result = await etherealTransporter.sendMail(mailOptions);
+
+            logger.info("邮件通过Ethereal发送成功:", {
+              to,
+              subject,
+              messageId: result.messageId,
+              previewUrl: result.messageUrl,
+            });
+
+            return {
+              success: true,
+              messageId: result.messageId,
+              previewUrl: result.messageUrl,
+              fallback: "ethereal",
+            };
+          } catch (etherealError) {
+            logger.error("Ethereal也失败了:", etherealError);
+            throw lastError; // 抛出原始错误
+          }
+        }
       }
-
-      return {
-        success: true,
-        messageId: result.messageId,
-        previewUrl: result.messageUrl,
-      };
-    } catch (error) {
-      logger.error("邮件发送失败:", error);
-      throw error;
     }
   }
 
@@ -125,7 +278,7 @@ class EmailService {
   async sendEmailVerification(email, username, token) {
     const verificationUrl = `${
       process.env.FRONTEND_URL || "http://localhost:3000"
-    }/verify-email?token=${token}`;
+    }/verify-email?token=${token}&email=${encodeURIComponent(email)}`;
 
     const subject = "验证您的邮箱地址 - SMS验证平台";
 
@@ -582,20 +735,6 @@ class EmailService {
       .replace(/<[^>]*>/g, "")
       .replace(/\s+/g, " ")
       .trim();
-  }
-
-  /**
-   * 测试邮件服务连接
-   */
-  async testConnection() {
-    try {
-      await this.transporter.verify();
-      logger.info("邮件服务连接测试成功");
-      return { success: true, message: "邮件服务连接正常" };
-    } catch (error) {
-      logger.error("邮件服务连接测试失败:", error);
-      return { success: false, error: error.message };
-    }
   }
 }
 

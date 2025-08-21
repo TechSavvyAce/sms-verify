@@ -26,28 +26,14 @@ import {
   MessageOutlined,
 } from "@ant-design/icons";
 import { useAuthStore } from "../../stores/authStore";
-import api from "../../services/api";
+import { rentalApi } from "../../services/api";
 import countriesData from "../../data/countries.json";
+import { getApiErrorMessage } from "../../utils/errorHelpers";
 import type { ColumnsType } from "antd/es/table";
 import moment from "moment";
+import { Rental } from "../../types";
 
 const { Title, Text, Paragraph } = Typography;
-
-interface Rental {
-  id: string;
-  external_id: string;
-  phone: string;
-  service: string;
-  country_id: number;
-  operator: string;
-  time_hours: number;
-  price: number;
-  status: "active" | "expired" | "cancelled" | "completed";
-  start_time: string;
-  end_time: string;
-  is_expired: boolean;
-  created_at: string;
-}
 
 interface RentalMessage {
   phoneFrom: string;
@@ -94,19 +80,25 @@ const RentalsPage: React.FC = () => {
         if (filters.service) params.append("service", filters.service);
         if (filters.country) params.append("country", filters.country.toString());
 
-        const response = await api.get(`/rental/list?${params}`);
+        const response = await rentalApi.getList({
+          page: parseInt(page.toString()),
+          limit: parseInt(pageSize.toString()),
+          status: filters.status || undefined,
+          service: filters.service || undefined,
+          country: filters.country || undefined,
+        });
 
-        if (response.data?.success) {
-          setRentals(response.data.rentals);
+        if (response.success && response.data) {
+          setRentals(response.data.data || []);
           setPagination({
-            current: response.data.pagination.current_page,
-            pageSize: response.data.pagination.per_page,
-            total: response.data.pagination.total_count,
+            current: response.data.pagination.page,
+            pageSize: response.data.pagination.limit,
+            total: response.data.pagination.total,
           });
         }
       } catch (error: any) {
         console.error("获取租用列表失败:", error);
-        message.error("获取租用列表失败");
+        message.error(getApiErrorMessage(error.response?.data?.error, "获取租用列表失败"));
       } finally {
         setLoading(false);
       }
@@ -118,7 +110,7 @@ const RentalsPage: React.FC = () => {
   const fetchRentalMessages = async (rental: Rental) => {
     setMessagesLoading(true);
     try {
-      const response = await api.get(`/rental/${rental.id}/status`);
+      const response = await rentalApi.getSMS(rental.id);
 
       if (response.data?.success) {
         const messagesData = response.data.messages.values || {};
@@ -127,7 +119,7 @@ const RentalsPage: React.FC = () => {
       }
     } catch (error: any) {
       console.error("获取消息失败:", error);
-      message.error("获取消息失败");
+      message.error(getApiErrorMessage(error.response?.data?.error, "获取消息失败"));
     } finally {
       setMessagesLoading(false);
     }
@@ -136,7 +128,7 @@ const RentalsPage: React.FC = () => {
   // 获取延长信息
   const fetchExtendInfo = async (rental: Rental, hours: number) => {
     try {
-      const response = await api.get(`/rental/${rental.id}/extend-info?hours=${hours}`);
+      const response = await rentalApi.getExtendInfo(rental.id, hours);
 
       if (response.data?.success) {
         setExtendPrice(response.data.markup_price);
@@ -152,20 +144,18 @@ const RentalsPage: React.FC = () => {
 
     setExtendLoading(true);
     try {
-      const response = await api.post(`/rental/${selectedRental.id}/extend`, {
-        time: extendHours,
-      });
+      const response = await rentalApi.extend(selectedRental.id, extendHours);
 
       if (response.data?.success) {
         message.success("租用延长成功");
         setExtendModalVisible(false);
         fetchRentals(pagination.current, pagination.pageSize);
       } else {
-        throw new Error(response.data?.error || "延长失败");
+        throw new Error(getApiErrorMessage(response.data?.error, "延长失败"));
       }
     } catch (error: any) {
       console.error("延长租用失败:", error);
-      message.error(error.response?.data?.error || error.message || "延长租用失败");
+      message.error(getApiErrorMessage(error.response?.data?.error, "延长租用失败"));
     } finally {
       setExtendLoading(false);
     }
@@ -178,7 +168,7 @@ const RentalsPage: React.FC = () => {
       content: (
         <div>
           <p>您确定要取消这个租用吗？</p>
-          <p>号码: {rental.phone}</p>
+          <p>号码: {rental.phone_number}</p>
           <p style={{ color: "#ff4d4f" }}>
             注意：租用超过20分钟后不能取消，取消后将收取10%的手续费。
           </p>
@@ -186,17 +176,17 @@ const RentalsPage: React.FC = () => {
       ),
       onOk: async () => {
         try {
-          const response = await api.post(`/rental/${rental.id}/cancel`);
+          const response = await rentalApi.cancel(rental.id);
 
           if (response.data?.success) {
             message.success("租用已取消");
             fetchRentals(pagination.current, pagination.pageSize);
           } else {
-            throw new Error(response.data?.error || "取消失败");
+            throw new Error(getApiErrorMessage(response.data?.error, "取消失败"));
           }
         } catch (error: any) {
           console.error("取消租用失败:", error);
-          message.error(error.response?.data?.error || error.message || "取消租用失败");
+          message.error(getApiErrorMessage(error.response?.data?.error, "取消租用失败"));
         }
       },
     });
@@ -209,23 +199,23 @@ const RentalsPage: React.FC = () => {
       content: (
         <div>
           <p>您确定要完成这个租用吗？</p>
-          <p>号码: {rental.phone}</p>
+          <p>号码: {rental.phone_number}</p>
           <p>完成后将无法继续接收短信。</p>
         </div>
       ),
       onOk: async () => {
         try {
-          const response = await api.post(`/rental/${rental.id}/finish`);
+          const response = await rentalApi.finish(rental.id);
 
           if (response.data?.success) {
             message.success("租用已完成");
             fetchRentals(pagination.current, pagination.pageSize);
           } else {
-            throw new Error(response.data?.error || "完成失败");
+            throw new Error(getApiErrorMessage(response.data?.error, "完成失败"));
           }
         } catch (error: any) {
           console.error("完成租用失败:", error);
-          message.error(error.response?.data?.error || error.message || "完成租用失败");
+          message.error(getApiErrorMessage(error.response?.data?.error, "完成租用失败"));
         }
       },
     });
@@ -248,7 +238,7 @@ const RentalsPage: React.FC = () => {
 
   // 获取国家名称
   const getCountryName = (countryId: number) => {
-    const country = countriesData.find((c) => c.id === countryId);
+    const country = countriesData?.find((c) => c.id === countryId);
     return country?.name_cn || country?.name || `国家 ${countryId}`;
   };
 
@@ -350,8 +340,8 @@ const RentalsPage: React.FC = () => {
         if (record.status !== "active" || record.is_expired) {
           return "-";
         }
-        const remaining = getRemainingTime(record.end_time);
-        const progress = getTimeProgress(record.start_time, record.end_time);
+        const remaining = getRemainingTime(record.expires_at);
+        const progress = getTimeProgress(record.created_at, record.expires_at);
 
         return (
           <div>
@@ -431,10 +421,10 @@ const RentalsPage: React.FC = () => {
 
   // 统计数据
   const stats = {
-    total: rentals.length,
-    active: rentals.filter((r) => r.status === "active" && !r.is_expired).length,
-    expired: rentals.filter((r) => r.status === "expired" || r.is_expired).length,
-    completed: rentals.filter((r) => r.status === "completed").length,
+    total: rentals?.length || 0,
+    active: rentals?.filter((r) => r.status === "active" && !r.is_expired)?.length || 0,
+    expired: rentals?.filter((r) => r.status === "expired" || r.is_expired)?.length || 0,
+    cancelled: rentals?.filter((r) => r.status === "cancelled")?.length || 0,
   };
 
   return (
@@ -477,8 +467,8 @@ const RentalsPage: React.FC = () => {
         <Col span={6}>
           <Card>
             <Statistic
-              title="已完成"
-              value={stats.completed}
+              title="已取消"
+              value={stats.cancelled}
               valueStyle={{ color: "#1890ff" }}
               prefix={<PlayCircleOutlined />}
             />
@@ -527,7 +517,7 @@ const RentalsPage: React.FC = () => {
                 return result || false;
               }}
             >
-              {countriesData.map((country) => (
+              {countriesData?.map((country) => (
                 <Select.Option key={country.id} value={country.id}>
                   {country.name_cn || country.name}
                 </Select.Option>
@@ -549,7 +539,7 @@ const RentalsPage: React.FC = () => {
       <Card>
         <Table
           columns={columns}
-          dataSource={rentals}
+          dataSource={rentals || []}
           rowKey="id"
           loading={loading}
           pagination={{
@@ -568,7 +558,7 @@ const RentalsPage: React.FC = () => {
         title={
           <div>
             <MessageOutlined style={{ marginRight: 8 }} />
-            {selectedRental?.phone} - 短信记录
+            {selectedRental?.phone_number} - 短信记录
           </div>
         }
         open={messagesModalVisible}
@@ -594,10 +584,10 @@ const RentalsPage: React.FC = () => {
             <ReloadOutlined spin style={{ fontSize: "24px" }} />
             <div style={{ marginTop: "16px" }}>加载中...</div>
           </div>
-        ) : messages.length > 0 ? (
+        ) : messages?.length > 0 ? (
           <List
             itemLayout="vertical"
-            dataSource={messages}
+            dataSource={messages || []}
             renderItem={(message, index) => (
               <List.Item key={index}>
                 <List.Item.Meta
@@ -646,7 +636,7 @@ const RentalsPage: React.FC = () => {
         title={
           <div>
             <ClockCircleOutlined style={{ marginRight: 8 }} />
-            延长租用 - {selectedRental?.phone}
+            延长租用 - {selectedRental?.phone_number}
           </div>
         }
         open={extendModalVisible}

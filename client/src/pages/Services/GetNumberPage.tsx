@@ -24,6 +24,7 @@ import { useAuthStore } from "../../stores/authStore";
 import { useNavigate, useLocation } from "react-router-dom";
 import { serviceCategories, countries, calculatePrice } from "../../data/services";
 import { activationApi } from "../../services/api";
+import { getApiErrorMessage } from "../../utils/errorHelpers";
 
 const { Title, Paragraph, Text } = Typography;
 
@@ -304,7 +305,7 @@ const GetNumberPage: React.FC = () => {
       let errorMessage = "订单创建失败，请重试";
       if (error.response?.data?.error) {
         const backendError = error.response.data.error;
-        errorMessage = backendError;
+        errorMessage = getApiErrorMessage(backendError, "订单创建失败，请重试");
       }
       message.error(errorMessage);
     } finally {

@@ -23,8 +23,21 @@ const RegisterPage: React.FC = () => {
   const handleSubmit = async (values: RegisterRequest) => {
     setLoading(true);
     try {
-      await register(values);
-      navigate("/dashboard");
+      const result = await register(values);
+
+      if (result?.requires_verification) {
+        // Store email for verification page
+        localStorage.setItem("registrationEmail", values.email);
+        // Show success message and redirect to verification page
+        navigate("/verify-email", {
+          state: {
+            message: "注册成功！请检查您的邮箱并点击验证链接激活账户。",
+            email: values.email,
+          },
+        });
+      } else {
+        navigate("/dashboard");
+      }
     } catch (error) {
       console.error("Registration error:", error);
       // 错误已在 store 中处理

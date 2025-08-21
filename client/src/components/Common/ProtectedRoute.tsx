@@ -2,16 +2,14 @@ import React from "react";
 import { Navigate } from "react-router-dom";
 import { useAuthStore } from "../../stores/authStore";
 import LoadingSpinner from "./LoadingSpinner";
+import EmailVerificationPrompt from "./EmailVerificationPrompt";
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
   requireAdmin?: boolean;
 }
 
-const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
-  children,
-  requireAdmin = false,
-}) => {
+const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, requireAdmin = false }) => {
   const { isAuthenticated, isLoading, user } = useAuthStore();
 
   // 如果正在加载，显示加载状态
@@ -22,6 +20,11 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   // 如果未认证，重定向到登录页
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
+  }
+
+  // 如果用户存在但状态不是active，显示邮箱验证提示
+  if (user && user.status !== "active") {
+    return <EmailVerificationPrompt />;
   }
 
   // 如果需要管理员权限但用户不是管理员

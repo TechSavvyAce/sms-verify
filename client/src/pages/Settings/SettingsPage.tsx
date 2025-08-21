@@ -40,6 +40,7 @@ import {
 } from "@ant-design/icons";
 import { useAuthStore } from "../../stores/authStore";
 import api from "../../services/api";
+import { getApiErrorMessage } from "../../utils/errorHelpers";
 import type { ColumnsType } from "antd/es/table";
 
 const { Title, Text, Paragraph } = Typography;
@@ -96,6 +97,7 @@ const SettingsPage: React.FC = () => {
     try {
       const response = await api.post("/user/api-keys", values);
       if (response.data?.success) {
+        const apiKey = response.data.data?.key;
         message.success("API密钥创建成功");
         setCreateKeyModalVisible(false);
         createKeyForm.resetFields();
@@ -112,7 +114,7 @@ const SettingsPage: React.FC = () => {
                 style={{ marginBottom: 16 }}
               />
               <Input.TextArea
-                value={response.data.key}
+                value={apiKey}
                 readOnly
                 autoSize={{ minRows: 3 }}
                 style={{ fontFamily: "monospace" }}
@@ -120,7 +122,7 @@ const SettingsPage: React.FC = () => {
               <Button
                 icon={<CopyOutlined />}
                 onClick={() => {
-                  navigator.clipboard.writeText(response.data.key);
+                  navigator.clipboard.writeText(apiKey);
                   message.success("已复制到剪贴板");
                 }}
                 style={{ marginTop: 8 }}
@@ -133,7 +135,7 @@ const SettingsPage: React.FC = () => {
         });
       }
     } catch (error: any) {
-      message.error(error.response?.data?.error || "创建API密钥失败");
+      message.error(getApiErrorMessage(error.response?.data?.error, "创建API密钥失败"));
     } finally {
       setLoading(false);
     }
@@ -148,7 +150,7 @@ const SettingsPage: React.FC = () => {
         fetchApiKeys();
       }
     } catch (error: any) {
-      message.error(error.response?.data?.error || "删除API密钥失败");
+      message.error(getApiErrorMessage(error.response?.data?.error, "删除API密钥失败"));
     }
   };
 
@@ -162,7 +164,7 @@ const SettingsPage: React.FC = () => {
         updateUser(response.data.data?.user);
       }
     } catch (error: any) {
-      message.error(error.response?.data?.error || "更新失败");
+      message.error(getApiErrorMessage(error.response?.data?.error, "更新失败"));
     } finally {
       setLoading(false);
     }
@@ -178,7 +180,7 @@ const SettingsPage: React.FC = () => {
         passwordForm.resetFields();
       }
     } catch (error: any) {
-      message.error(error.response?.data?.error || "密码修改失败");
+      message.error(getApiErrorMessage(error.response?.data?.error, "密码修改失败"));
     } finally {
       setPasswordLoading(false);
     }
@@ -220,7 +222,7 @@ const SettingsPage: React.FC = () => {
       setWebhookConfigs(configs);
     } catch (error: any) {
       console.error("获取Webhook配置失败:", error);
-      message.error("获取Webhook配置失败");
+      message.error(getApiErrorMessage(error.response?.data?.error, "获取Webhook配置失败"));
     } finally {
       setWebhookLoading(false);
     }
@@ -265,7 +267,7 @@ const SettingsPage: React.FC = () => {
       }
     } catch (error: any) {
       console.error("测试Webhook失败:", error);
-      message.error("测试Webhook失败");
+      message.error(getApiErrorMessage(error.response?.data?.error, "测试Webhook失败"));
     }
   };
 

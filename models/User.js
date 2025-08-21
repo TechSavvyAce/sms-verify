@@ -91,6 +91,61 @@ const User = sequelize.define(
       allowNull: false,
       defaultValue: 0,
     },
+    phone: {
+      type: DataTypes.STRING(20),
+      allowNull: true,
+      validate: {
+        len: [0, 20],
+      },
+    },
+    country: {
+      type: DataTypes.STRING(50),
+      allowNull: true,
+      validate: {
+        len: [0, 50],
+      },
+    },
+    timezone: {
+      type: DataTypes.STRING(50),
+      allowNull: true,
+      validate: {
+        len: [0, 50],
+      },
+    },
+    language: {
+      type: DataTypes.STRING(10),
+      allowNull: true,
+      validate: {
+        len: [0, 10],
+      },
+    },
+    avatar: {
+      type: DataTypes.STRING(255),
+      allowNull: true,
+      validate: {
+        len: [0, 255],
+      },
+    },
+    two_factor_enabled: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: false,
+    },
+    email_notifications: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: true,
+    },
+    sms_notifications: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: false,
+    },
+    push_notifications: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: true,
+    },
     created_at: {
       type: DataTypes.DATE,
       allowNull: false,
@@ -147,8 +202,9 @@ User.prototype.updateLoginInfo = async function () {
 User.prototype.toJSON = function () {
   const values = Object.assign({}, this.get());
   delete values.password_hash;
-  delete values.email_verification_token;
   delete values.password_reset_token;
+  delete values.email_verification_token;
+  delete values.email_verification_expires;
   return values;
 };
 

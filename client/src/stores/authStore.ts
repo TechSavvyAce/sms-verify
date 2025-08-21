@@ -1,20 +1,16 @@
 import { create } from "zustand";
 import { message } from "antd";
-import { AuthState, User, LoginRequest, RegisterRequest } from "../types";
+import { AuthState, User, LoginRequest, RegisterRequest, RegisterResponse } from "../types";
 import { authApi } from "../services/api";
+import { getApiErrorMessage } from "../utils/errorHelpers";
 
 // 数据标准化函数
 const normalizeUserData = (user: any): User => {
   return {
     ...user,
-    balance:
-      typeof user.balance === "number"
-        ? user.balance
-        : parseFloat(user.balance) || 0,
+    balance: typeof user.balance === "number" ? user.balance : parseFloat(user.balance) || 0,
     total_spent:
-      typeof user.total_spent === "number"
-        ? user.total_spent
-        : parseFloat(user.total_spent) || 0,
+      typeof user.total_spent === "number" ? user.total_spent : parseFloat(user.total_spent) || 0,
     total_recharged:
       typeof user.total_recharged === "number"
         ? user.total_recharged
@@ -38,18 +34,46 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       return;
     }
 
+    // 验证token格式
+    if (typeof token !== "string" || token.trim() === "") {
+      localStorage.removeItem("token");
+      localStorage.removeItem("refreshToken");
+      set({
+        user: null,
+        token: null,
+        refreshToken: null,
+        isAuthenticated: false,
+        isLoading: false,
+      });
+      return;
+    }
+
     set({ isLoading: true });
     try {
       const response = await authApi.getProfile();
       if (response.success && response.data) {
         const normalizedUser = normalizeUserData(response.data);
+
+        // 检查用户状态 - 只有active状态的用户才算完全认证
+        const isFullyAuthenticated = normalizedUser.status === "active";
+
         set({
           user: normalizedUser,
-          isAuthenticated: true,
+          isAuthenticated: isFullyAuthenticated,
           isLoading: false,
         });
       } else {
-        await get().refreshAuth();
+        // 不要自动刷新token，直接清除认证状态
+        console.log("用户资料获取失败，清除认证状态");
+        localStorage.removeItem("token");
+        localStorage.removeItem("refreshToken");
+        set({
+          user: null,
+          token: null,
+          refreshToken: null,
+          isAuthenticated: false,
+          isLoading: false,
+        });
       }
     } catch (error) {
       console.error("初始化认证失败:", error);
@@ -80,17 +104,24 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         localStorage.setItem("token", accessToken);
         localStorage.setItem("refreshToken", refreshToken);
 
+        // 检查用户状态 - 只有active状态的用户才算完全认证
+        const isFullyAuthenticated = normalizedUser.status === "active";
+
         set({
           user: normalizedUser,
           token: accessToken,
           refreshToken,
-          isAuthenticated: true,
+          isAuthenticated: isFullyAuthenticated,
           isLoading: false,
         });
 
-        message.success(`欢迎回来，${normalizedUser.username}！`);
+        if (isFullyAuthenticated) {
+          message.success(`欢迎回来，${normalizedUser.username}！`);
+        } else {
+          message.warning(`登录成功，但账户状态为 ${normalizedUser.status}，请完成邮箱验证。`);
+        }
       } else {
-        throw new Error(response.error || "登录失败");
+        throw new Error(getApiErrorMessage(response.error, "登录失败"));
       }
     } catch (error: any) {
       set({ isLoading: false });
@@ -105,7 +136,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       const response = await authApi.register(userData);
 
       if (response.success && response.data) {
-        const { user, accessToken, refreshToken } = response.data;
+        const { user, accessToken, refreshToken, requires_verification } = response.data;
 
         // 标准化用户数据
         const normalizedUser = normalizeUserData(user);
@@ -114,17 +145,27 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         localStorage.setItem("token", accessToken);
         localStorage.setItem("refreshToken", refreshToken);
 
+        // 检查用户状态 - 只有active状态的用户才算完全认证
+        const isFullyAuthenticated = normalizedUser.status === "active";
+
         set({
           user: normalizedUser,
           token: accessToken,
           refreshToken,
-          isAuthenticated: true,
+          isAuthenticated: isFullyAuthenticated, // 只有active状态才算认证
           isLoading: false,
         });
 
-        message.success(`注册成功，欢迎加入 ${normalizedUser.username}！`);
+        if (requires_verification) {
+          message.success(`注册成功！请检查您的邮箱并点击验证链接激活账户。`);
+        } else {
+          message.success(`注册成功，欢迎加入 ${normalizedUser.username}！`);
+        }
+
+        // Return the response data so the component can access requires_verification
+        return response.data as RegisterResponse;
       } else {
-        throw new Error(response.error || "注册失败");
+        throw new Error(getApiErrorMessage(response.error, "注册失败"));
       }
     } catch (error: any) {
       set({ isLoading: false });
@@ -156,6 +197,20 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       throw new Error("没有刷新令牌");
     }
 
+    // 验证refreshToken格式
+    if (typeof refreshToken !== "string" || refreshToken.trim() === "") {
+      localStorage.removeItem("token");
+      localStorage.removeItem("refreshToken");
+      set({
+        user: null,
+        token: null,
+        refreshToken: null,
+        isAuthenticated: false,
+        isLoading: false,
+      });
+      throw new Error("刷新令牌格式无效");
+    }
+
     set({ isLoading: true });
     try {
       const response = await authApi.refresh({ refreshToken });
@@ -175,18 +230,21 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           // 标准化用户数据
           const normalizedUser = normalizeUserData(userResponse.data);
 
+          // 检查用户状态 - 只有active状态的用户才算完全认证
+          const isFullyAuthenticated = normalizedUser.status === "active";
+
           set({
             user: normalizedUser,
             token: accessToken,
             refreshToken: newRefreshToken || refreshToken,
-            isAuthenticated: true,
+            isAuthenticated: isFullyAuthenticated,
             isLoading: false,
           });
         } else {
           throw new Error("获取用户信息失败");
         }
       } else {
-        throw new Error(response.error || "刷新令牌失败");
+        throw new Error(getApiErrorMessage(response.error, "刷新令牌失败"));
       }
     } catch (error: any) {
       // 刷新失败，清除认证状态
@@ -220,8 +278,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   updateBalance: (changeAmount: number, newBalance?: number) => {
     const { user } = get();
     if (user) {
-      const updatedBalance =
-        newBalance !== undefined ? newBalance : user.balance + changeAmount;
+      const updatedBalance = newBalance !== undefined ? newBalance : user.balance + changeAmount;
 
       const updatedUser = normalizeUserData({
         ...user,
@@ -233,9 +290,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       });
 
       console.log(
-        `余额更新: ${
-          changeAmount > 0 ? "+" : ""
-        }${changeAmount}, 新余额: ${updatedBalance}`
+        `余额更新: ${changeAmount > 0 ? "+" : ""}${changeAmount}, 新余额: ${updatedBalance}`
       );
     }
   },

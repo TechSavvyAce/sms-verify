@@ -46,11 +46,12 @@ class ConflictError extends AppError {
   }
 }
 
-class RateLimitError extends AppError {
-  constructor(message = "请求频率过高") {
-    super(message, 429, "RATE_LIMIT_ERROR");
-  }
-}
+// DISABLED - Rate limiting removed
+// class RateLimitError extends AppError {
+//   constructor(message = "请求频率过高") {
+//     super(message, 429, "RATE_LIMIT_ERROR");
+//   }
+// }
 
 class ExternalServiceError extends AppError {
   constructor(message, service = null, originalError = null) {
@@ -229,23 +230,24 @@ const validateRequest = (schema, property = "body") => {
   };
 };
 
-/**
- * 速率限制错误处理
- */
-const rateLimitHandler = (req, res) => {
-  const error = new RateLimitError("请求频率过高，请稍后重试");
+// DISABLED - Rate limiting removed
+// /**
+//  * 速率限制错误处理
+//  */
+// const rateLimitHandler = (req, res) => {
+//   const error = new RateLimitError("请求频率过高，请稍后重试");
 
-  res.status(error.statusCode).json({
-    success: false,
-    error: {
-      message: error.message,
-      code: error.errorCode,
-      statusCode: error.statusCode,
-      timestamp: error.timestamp,
-      retryAfter: Math.round(req.rateLimit?.resetTime / 1000) || 60,
-    },
-  });
-};
+//   res.status(error.statusCode).json({
+//     success: false,
+//     error: {
+//       message: error.message,
+//       code: error.errorCode,
+//       statusCode: error.statusCode,
+//       timestamp: error.timestamp,
+//       retryAfter: Math.round(req.rateLimit?.resetTime / 1000) || 60,
+//     },
+//   });
+// };
 
 /**
  * 安全错误处理 - 防止信息泄露
@@ -322,7 +324,6 @@ module.exports = {
   AuthorizationError,
   NotFoundError,
   ConflictError,
-  RateLimitError,
   ExternalServiceError,
   DatabaseError,
 
@@ -331,7 +332,6 @@ module.exports = {
   notFoundHandler,
   asyncHandler,
   validateRequest,
-  rateLimitHandler,
 
   // 工具函数
   sanitizeError,

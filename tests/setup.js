@@ -21,8 +21,7 @@ beforeAll(async () => {
     await db.authenticate();
     console.log("✅ 测试数据库连接成功");
 
-    // 同步数据库表（仅在测试环境）
-    await db.sync({ force: true });
+    await db.sync({ force: false });
     console.log("✅ 测试数据库表同步完成");
   } catch (error) {
     console.error("❌ 测试数据库设置失败:", error);

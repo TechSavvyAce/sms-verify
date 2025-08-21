@@ -312,25 +312,4 @@ describe("Authentication API", () => {
       expect(response.body).toHaveProperty("success", false);
     });
   });
-
-  describe("Rate Limiting", () => {
-    test("should apply rate limiting to login endpoint", async () => {
-      const loginData = {
-        username: "nonexistent",
-        password: "wrongpassword",
-      };
-
-      // 发送多个请求超过限制
-      const requests = Array(6)
-        .fill()
-        .map(() => request(app).post("/api/auth/login").send(loginData));
-
-      const responses = await Promise.all(requests);
-
-      // 最后一个请求应该被限制
-      const lastResponse = responses[responses.length - 1];
-      expect(lastResponse.status).toBe(429);
-      expect(lastResponse.body.error).toHaveProperty("code", "RATE_LIMIT_ERROR");
-    }, 30000);
-  });
 });

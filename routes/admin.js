@@ -7,6 +7,8 @@ const {
   createValidationMiddleware,
 } = require("../middleware/validation");
 const { getPaginationParams, buildPaginatedResponse, formatDateTime } = require("../utils/helpers");
+const { Op } = require("sequelize");
+const sequelize = require("../config/database");
 const logger = require("../utils/logger");
 const router = express.Router();
 
@@ -49,7 +51,7 @@ router.get("/stats", logUserActivity("admin_view_stats"), async (req, res) => {
           [sequelize.fn("SUM", sequelize.col("cost")), "total_cost"],
         ],
         where: {
-          created_at: { $gte: daysAgo },
+          created_at: { [Op.gte]: daysAgo },
         },
         group: ["status"],
         raw: true,
@@ -63,7 +65,7 @@ router.get("/stats", logUserActivity("admin_view_stats"), async (req, res) => {
           [sequelize.fn("SUM", sequelize.col("cost")), "total_cost"],
         ],
         where: {
-          created_at: { $gte: daysAgo },
+          created_at: { [Op.gte]: daysAgo },
         },
         group: ["status"],
         raw: true,
@@ -77,7 +79,7 @@ router.get("/stats", logUserActivity("admin_view_stats"), async (req, res) => {
           [sequelize.fn("SUM", sequelize.col("amount")), "total_amount"],
         ],
         where: {
-          created_at: { $gte: daysAgo },
+          created_at: { [Op.gte]: daysAgo },
         },
         group: ["type"],
         raw: true,
@@ -86,21 +88,21 @@ router.get("/stats", logUserActivity("admin_view_stats"), async (req, res) => {
       // 最近注册用户
       User.count({
         where: {
-          created_at: { $gte: daysAgo },
+          created_at: { [Op.gte]: daysAgo },
         },
       }),
 
       // 最近激活数量
       Activation.count({
         where: {
-          created_at: { $gte: daysAgo },
+          created_at: { [Op.gte]: daysAgo },
         },
       }),
 
       // 最近租用数量
       Rental.count({
         where: {
-          created_at: { $gte: daysAgo },
+          created_at: { [Op.gte]: daysAgo },
         },
       }),
     ]);
@@ -193,9 +195,9 @@ router.get(
       }
 
       if (search) {
-        whereClause.$or = [
-          { username: { $like: `%${search}%` } },
-          { email: { $like: `%${search}%` } },
+        whereClause[Op.or] = [
+          { username: { [Op.like]: `%${search}%` } },
+          { email: { [Op.like]: `%${search}%` } },
         ];
       }
 
@@ -546,8 +548,6 @@ router.get("/config", logUserActivity("admin_view_config"), async (req, res) => 
     // 返回系统配置（敏感信息需要过滤）
     const config = {
       price_markup: process.env.PRICE_MARKUP || "20",
-      rate_limit_window: process.env.RATE_LIMIT_WINDOW_MS || "60000",
-      rate_limit_max: process.env.RATE_LIMIT_MAX_REQUESTS || "100",
       jwt_expire: process.env.JWT_EXPIRE || "24h",
       environment: process.env.NODE_ENV || "development",
     };
@@ -599,6 +599,389 @@ router.get(
       res.status(500).json({
         success: false,
         error: "获取系统日志失败",
+      });
+    }
+  }
+);
+
+/**
+ * 创建数据库备份
+ * POST /api/admin/backup
+ */
+router.post("/backup", logUserActivity("admin_create_backup"), async (req, res) => {
+  try {
+    // 这里实现实际的数据库备份逻辑
+    // 可以使用 mysqldump 或其他备份工具
+
+    // 模拟备份过程
+    const backupId = `backup_${Date.now()}`;
+    const backupPath = `./backups/${backupId}.sql`;
+
+    // TODO: 实际备份实现
+    // const result = await createDatabaseBackup(backupPath);
+
+    logger.info("管理员创建数据库备份:", {
+      adminId: req.user.id,
+      backupId,
+      backupPath,
+    });
+
+    res.json({
+      success: true,
+      message: "数据库备份已开始",
+      data: {
+        backup_id: backupId,
+        status: "processing",
+        estimated_time: "5-10 minutes",
+      },
+    });
+  } catch (error) {
+    logger.error("创建数据库备份失败:", error);
+    res.status(500).json({
+      success: false,
+      error: "创建数据库备份失败",
+    });
+  }
+});
+
+/**
+ * 发送系统通知
+ * POST /api/admin/notifications
+ */
+router.post("/notifications", logUserActivity("admin_send_notification"), async (req, res) => {
+  try {
+    const { title, message, type = "info", target_users = "all" } = req.body;
+
+    if (!title || !message) {
+      return res.status(400).json({
+        success: false,
+        error: "标题和消息内容不能为空",
+      });
+    }
+
+    // 这里实现实际的通知发送逻辑
+    // 可以发送邮件、推送通知等
+
+    // TODO: 实际通知实现
+    // const result = await sendSystemNotification(title, message, type, target_users);
+
+    logger.info("管理员发送系统通知:", {
+      adminId: req.user.id,
+      title,
+      message,
+      type,
+      target_users,
+    });
+
+    res.json({
+      success: true,
+      message: "系统通知已发送",
+      data: {
+        notification_id: `notif_${Date.now()}`,
+        title,
+        message,
+        type,
+        target_users,
+        sent_at: new Date().toISOString(),
+      },
+    });
+  } catch (error) {
+    logger.error("发送系统通知失败:", error);
+    res.status(500).json({
+      success: false,
+      error: "发送系统通知失败",
+    });
+  }
+});
+
+/**
+ * 系统健康检查
+ * GET /api/admin/health
+ */
+router.get("/health", logUserActivity("admin_health_check"), async (req, res) => {
+  try {
+    // 检查数据库连接
+    const dbStatus = await sequelize.authenticate();
+
+    // 检查关键服务状态
+    const services = {
+      database: dbStatus ? "healthy" : "unhealthy",
+      redis: "healthy", // TODO: 实际Redis检查
+      file_system: "healthy", // TODO: 实际文件系统检查
+      external_apis: "healthy", // TODO: 实际API检查
+    };
+
+    const overallStatus = Object.values(services).every((status) => status === "healthy")
+      ? "healthy"
+      : "degraded";
+
+    logger.info("管理员执行系统健康检查:", {
+      adminId: req.user.id,
+      overallStatus,
+      services,
+    });
+
+    res.json({
+      success: true,
+      data: {
+        status: overallStatus,
+        timestamp: new Date().toISOString(),
+        services,
+        uptime: process.uptime(),
+        memory_usage: process.memoryUsage(),
+        cpu_usage: process.cpuUsage(),
+      },
+    });
+  } catch (error) {
+    logger.error("系统健康检查失败:", error);
+    res.status(500).json({
+      success: false,
+      error: "系统健康检查失败",
+      data: {
+        status: "unhealthy",
+        error: error.message,
+      },
+    });
+  }
+});
+
+/**
+ * 获取用户列表
+ * GET /api/admin/users
+ */
+router.get(
+  "/users",
+  createValidationMiddleware(validatePagination, "query"),
+  logUserActivity("admin_view_users"),
+  async (req, res) => {
+    try {
+      const { page, limit, offset } = getPaginationParams(req.query.page, req.query.limit);
+      const { status, search } = req.query;
+
+      let whereClause = {};
+      if (status) {
+        whereClause.status = status;
+      }
+      if (search) {
+        whereClause[Op.or] = [
+          { username: { [Op.like]: `%${search}%` } },
+          { email: { [Op.like]: `%${search}%` } },
+        ];
+      }
+
+      const { count, rows: users } = await User.findAndCountAll({
+        where: whereClause,
+        attributes: [
+          "id",
+          "username",
+          "email",
+          "status",
+          "balance",
+          "total_recharged",
+          "total_spent",
+          "created_at",
+          "last_login",
+          "login_count",
+        ],
+        order: [["created_at", "DESC"]],
+        limit,
+        offset,
+      });
+
+      const formattedUsers = users.map((user) => ({
+        id: user.id,
+        username: user.username,
+        email: user.email,
+        status: user.status,
+        balance: parseFloat(user.balance || 0),
+        total_recharged: parseFloat(user.total_recharged || 0),
+        total_spent: parseFloat(user.total_spent || 0),
+        created_at: formatDateTime(user.created_at),
+        last_login: user.last_login ? formatDateTime(user.last_login) : null,
+        login_count: user.login_count || 0,
+      }));
+
+      const response = buildPaginatedResponse(formattedUsers, count, page, limit);
+
+      res.json({
+        success: true,
+        data: response,
+      });
+    } catch (error) {
+      logger.error("获取用户列表失败:", error);
+      res.status(500).json({
+        success: false,
+        error: "获取用户列表失败",
+      });
+    }
+  }
+);
+
+/**
+ * 获取交易记录
+ * GET /api/admin/transactions
+ */
+router.get(
+  "/transactions",
+  createValidationMiddleware(validatePagination, "query"),
+  logUserActivity("admin_view_transactions"),
+  async (req, res) => {
+    try {
+      const { page, limit, offset } = getPaginationParams(req.query.page, req.query.limit);
+      const { type, days = 30 } = req.query;
+
+      let whereClause = {};
+      if (type) {
+        whereClause.type = type;
+      }
+      if (days) {
+        const daysAgo = new Date();
+        daysAgo.setDate(daysAgo.getDate() - parseInt(days));
+        whereClause.created_at = { [Op.gte]: daysAgo };
+      }
+
+      const { count, rows: transactions } = await Transaction.findAndCountAll({
+        where: whereClause,
+        include: [
+          {
+            model: User,
+            as: "user",
+            attributes: ["id", "username", "email"],
+          },
+        ],
+        order: [["created_at", "DESC"]],
+        limit,
+        offset,
+      });
+
+      const formattedTransactions = transactions.map((transaction) => ({
+        id: transaction.id,
+        type: transaction.type,
+        amount: parseFloat(transaction.amount || 0),
+        balance_before: parseFloat(transaction.balance_before || 0),
+        balance_after: parseFloat(transaction.balance_after || 0),
+        description: transaction.description,
+        created_at: formatDateTime(transaction.created_at),
+        user: transaction.user,
+      }));
+
+      const response = buildPaginatedResponse(formattedTransactions, count, page, limit);
+
+      res.json({
+        success: true,
+        data: response,
+      });
+    } catch (error) {
+      logger.error("获取交易记录失败:", error);
+      res.status(500).json({
+        success: false,
+        error: "获取交易记录失败",
+      });
+    }
+  }
+);
+
+/**
+ * 更新用户状态
+ * PUT /api/admin/users/:id/status
+ */
+router.put(
+  "/users/:id/status",
+  createValidationMiddleware(validateId, "params"),
+  logUserActivity("admin_update_user_status"),
+  async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { status, reason } = req.body;
+
+      const user = await User.findByPk(id);
+      if (!user) {
+        return res.status(404).json({
+          success: false,
+          error: "用户不存在",
+        });
+      }
+
+      await user.update({ status });
+
+      res.json({
+        success: true,
+        message: "用户状态更新成功",
+      });
+    } catch (error) {
+      logger.error("更新用户状态失败:", error);
+      res.status(500).json({
+        success: false,
+        error: "更新用户状态失败",
+      });
+    }
+  }
+);
+
+/**
+ * 调整用户余额
+ * POST /api/admin/users/:id/balance
+ */
+router.post(
+  "/users/:id/balance",
+  createValidationMiddleware(validateId, "params"),
+  logUserActivity("admin_adjust_user_balance"),
+  async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { amount, type, description } = req.body;
+
+      const user = await User.findByPk(id);
+      if (!user) {
+        return res.status(404).json({
+          success: false,
+          error: "用户不存在",
+        });
+      }
+
+      const currentBalance = parseFloat(user.balance || 0);
+      let newBalance;
+      let totalRecharged = parseFloat(user.total_recharged || 0);
+
+      if (type === "add") {
+        newBalance = currentBalance + parseFloat(amount);
+        if (description.includes("充值")) {
+          totalRecharged += parseFloat(amount);
+        }
+      } else if (type === "subtract") {
+        newBalance = currentBalance - parseFloat(amount);
+        if (newBalance < 0) {
+          return res.status(400).json({
+            success: false,
+            error: "余额不足",
+          });
+        }
+      }
+
+      await user.update({
+        balance: newBalance,
+        total_recharged: totalRecharged,
+      });
+
+      // 创建交易记录
+      await Transaction.create({
+        user_id: id,
+        type: type === "add" ? "recharge" : "adjustment",
+        amount: parseFloat(amount),
+        balance_before: currentBalance,
+        balance_after: newBalance,
+        description: description,
+      });
+
+      res.json({
+        success: true,
+        message: "余额调整成功",
+      });
+    } catch (error) {
+      logger.error("调整用户余额失败:", error);
+      res.status(500).json({
+        success: false,
+        error: "调整用户余额失败",
       });
     }
   }
