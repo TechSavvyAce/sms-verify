@@ -26,6 +26,12 @@ const AddFundsModal: React.FC<AddFundsModalProps> = ({
 
   const predefinedAmounts = [10, 25, 50, 100, 200, 500];
 
+  // Fix malformed URLs with double slashes
+  const sanitizeUrl = (url: string): string => {
+    if (!url) return url;
+    return url.replace(/(https?:\/\/[^\/]+)\/\//, "$1/");
+  };
+
   const handleAmountSelect = (amount: number) => {
     setSelectedAmount(amount);
   };
@@ -57,7 +63,7 @@ const AddFundsModal: React.FC<AddFundsModalProps> = ({
           service_name: "SMS Verification Service",
           description: `账户充值 - $${selectedAmount.toFixed(2)}`,
           amount: selectedAmount,
-          webhook_url: `${window.location.origin}/api/webhooks/payment`,
+          webhook_url: `${process.env.REACT_APP_PRODUCTION_URL || window.location.origin}/api/webhooks/payment`,
           language: "zh-CN",
         }),
       });
@@ -68,7 +74,7 @@ const AddFundsModal: React.FC<AddFundsModalProps> = ({
 
       const paymentData = await response.json();
 
-      setPaymentUrl(paymentData.payment_url);
+      setPaymentUrl(sanitizeUrl(paymentData.payment_url));
       setQrCode(paymentData.qr_code);
       setPaymentId(paymentData.payment_id);
       setPaymentStatus("created");
