@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
-import { Form, Input, Button, Card, Typography, Divider, message } from "antd";
-import { MailOutlined, SafetyOutlined, UserOutlined } from "@ant-design/icons";
+import { Form, Input, Button, Card, Typography, Divider, message, Radio } from "antd";
+import { MailOutlined, SafetyOutlined, UserOutlined, MobileOutlined } from "@ant-design/icons";
 import { useLocation, useNavigate } from "react-router-dom";
 import { authApi } from "../../services/api";
 import { useAuthStore } from "../../stores/authStore";
@@ -12,7 +12,9 @@ const VerificationPage: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [sendingCode, setSendingCode] = useState(false);
   const [countdown, setCountdown] = useState(0);
+  const [verificationMethod, setVerificationMethod] = useState<"email" | "phone">("email");
   const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
   const [codeSent, setCodeSent] = useState(false);
   const [verificationCode, setVerificationCode] = useState("");
 
@@ -82,8 +84,8 @@ const VerificationPage: React.FC = () => {
   }, [countdown]);
 
   const handleVerifyCode = async () => {
-    if (verificationCode.length !== 8) {
-      message.error("请输入完整的8位验证码");
+    if (!verificationCode || verificationCode.length !== 8) {
+      message.error("请输入8位验证码");
       return;
     }
 
@@ -107,20 +109,63 @@ const VerificationPage: React.FC = () => {
       }, 2000);
     } catch (error: any) {
       console.error("VerificationPage - Verification failed:", error);
-      const errorMessage = error.response?.data?.error || error.message || "验证失败，请重试";
-      message.error(errorMessage);
+      const errorMsg =
+        typeof error.error === "string" ? error.error : error.error?.message || "验证失败";
+      message.error(errorMsg);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-      // 清空验证码，让用户重新输入
-      setVerificationCode("");
+  const handlePhoneVerification = async () => {
+    if (!phone) {
+      message.error("请输入手机号码");
+      return;
+    }
 
-      // 提供具体的错误指导
-      if (errorMessage.includes("过期") || errorMessage.includes("expired")) {
-        message.info("验证码已过期，请重新发送");
-      } else if (errorMessage.includes("无效") || errorMessage.includes("invalid")) {
-        message.info("验证码无效，请检查后重新输入");
-      } else if (error.code === "NETWORK_ERROR" || error.message.includes("Network Error")) {
-        message.info("网络连接异常，请检查网络后重试");
+    // 简单的手机号格式验证（支持国际格式）
+    const phoneRegex = /^\+[1-9]\d{1,14}$/;
+    if (!phoneRegex.test(phone)) {
+      message.error("请输入有效的国际手机号码格式（如：+8613800138000）");
+      return;
+    }
+
+    try {
+      setLoading(true);
+
+      // 调用后端API验证手机号并激活账户
+      const response = await authApi.verifyPhone(phone);
+
+      if (response.success) {
+        message.success("手机号码验证成功！账户已激活，正在跳转到仪表板...");
+
+        // 更新本地存储的用户状态
+        const currentUserData = JSON.parse(localStorage.getItem("user") || "{}");
+        currentUserData.status = "active";
+        currentUserData.phone_verified = true;
+        currentUserData.phone = phone;
+        localStorage.setItem("user", JSON.stringify(currentUserData));
+
+        // 延迟跳转到仪表板
+        setTimeout(() => {
+          navigate("/dashboard");
+        }, 2000);
+      } else {
+        throw new Error(response.error || "手机验证失败");
       }
+    } catch (error: any) {
+      console.error("VerificationPage - Phone verification failed:", error);
+      let errorMsg = "手机验证失败，请稍后重试";
+
+      if (typeof error === "string") {
+        errorMsg = error;
+      } else if (error?.error) {
+        errorMsg = error.error;
+      } else if (error?.message) {
+        errorMsg = error.message;
+      }
+
+      message.error(errorMsg);
     } finally {
       setLoading(false);
     }
@@ -322,45 +367,87 @@ const VerificationPage: React.FC = () => {
 
         {/* 验证方式选择 */}
         <div style={{ marginBottom: "32px" }}>
-          <Text
-            strong
-            style={{ fontSize: "16px", color: "#262626", textAlign: "center", display: "block" }}
+          <Radio.Group
+            value={verificationMethod}
+            onChange={(e) => setVerificationMethod(e.target.value)}
+            buttonStyle="solid"
+            size="large"
           >
-            邮箱验证
-          </Text>
+            <Radio.Button value="email">
+              <MailOutlined /> 邮箱验证
+            </Radio.Button>
+            <Radio.Button value="phone">
+              <MobileOutlined /> 手机验证
+            </Radio.Button>
+          </Radio.Group>
         </div>
 
-        {/* 邮箱输入 */}
-        <Form.Item label="邮箱地址" style={{ marginBottom: "24px" }}>
-          <Input
-            prefix={<MailOutlined />}
-            placeholder="请输入邮箱地址"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            size="large"
-            disabled={codeSent && countdown > 0}
-          />
-        </Form.Item>
+        {/* 邮箱/手机输入 */}
+        {verificationMethod === "email" ? (
+          <Form.Item label="邮箱地址" style={{ marginBottom: "24px" }}>
+            <Input
+              prefix={<MailOutlined />}
+              placeholder="请输入邮箱地址"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              size="large"
+              disabled={codeSent && countdown > 0}
+            />
+          </Form.Item>
+        ) : (
+          <Form.Item label="手机号码" style={{ marginBottom: "24px" }}>
+            <Input
+              prefix={<MobileOutlined />}
+              placeholder="请输入国际手机号码（如：+8613800138000）"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              size="large"
+            />
+          </Form.Item>
+        )}
 
-        {/* 发送验证码按钮 */}
-        <Button
-          type="primary"
-          icon={<MailOutlined />}
-          onClick={handleSendVerificationCode}
-          loading={sendingCode}
-          disabled={countdown > 0}
-          size="large"
-          block
-          style={{
-            marginBottom: "24px",
-            height: "48px",
-            borderRadius: "8px",
-            fontSize: "16px",
-            fontWeight: "500",
-          }}
-        >
-          {countdown > 0 ? `${countdown}s` : `发送邮箱验证码`}
-        </Button>
+        {/* 发送验证码按钮 - 仅邮箱验证需要 */}
+        {verificationMethod === "email" && (
+          <Button
+            type="primary"
+            icon={<MailOutlined />}
+            onClick={handleSendVerificationCode}
+            loading={sendingCode}
+            disabled={countdown > 0}
+            size="large"
+            block
+            style={{
+              marginBottom: "24px",
+              height: "48px",
+              borderRadius: "8px",
+              fontSize: "16px",
+              fontWeight: "500",
+            }}
+          >
+            {countdown > 0 ? `${countdown}s` : `发送邮箱验证码`}
+          </Button>
+        )}
+
+        {/* 手机验证按钮 - 立即验证 */}
+        {verificationMethod === "phone" && (
+          <Button
+            type="primary"
+            icon={<MobileOutlined />}
+            onClick={handlePhoneVerification}
+            loading={loading}
+            size="large"
+            block
+            style={{
+              marginBottom: "24px",
+              height: "48px",
+              borderRadius: "8px",
+              fontSize: "16px",
+              fontWeight: "500",
+            }}
+          >
+            验证手机号码并激活账户
+          </Button>
+        )}
 
         {/* 验证码输入表单 - 只在发送验证码后显示 */}
         {codeSent && (

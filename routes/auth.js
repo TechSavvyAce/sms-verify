@@ -619,6 +619,96 @@ router.post("/resend-verification", async (req, res) => {
 });
 
 /**
+ * 手机号码验证（无需发送SMS）
+ * POST /api/auth/verify-phone
+ */
+router.post("/verify-phone", async (req, res) => {
+  try {
+    const { phone } = req.body;
+
+    if (!phone) {
+      return res.status(400).json({
+        success: false,
+        error: "手机号码不能为空",
+      });
+    }
+
+    // 验证手机号码格式（支持国际格式）
+    const phoneRegex = /^\+[1-9]\d{1,14}$/;
+    if (!phoneRegex.test(phone)) {
+      return res.status(400).json({
+        success: false,
+        error: "请输入有效的国际手机号码格式（如：+8613800138000）",
+      });
+    }
+
+    // 查找用户（这里需要从token中获取用户ID）
+    const token = req.headers.authorization?.replace("Bearer ", "");
+    if (!token) {
+      return res.status(401).json({
+        success: false,
+        error: "未授权访问",
+      });
+    }
+
+    try {
+      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      const user = await User.findByPk(decoded.userId);
+
+      if (!user) {
+        return res.status(404).json({
+          success: false,
+          error: "用户不存在",
+        });
+      }
+
+      if (user.phone_verified) {
+        return res.status(400).json({
+          success: false,
+          error: "手机已验证，无需重新验证",
+        });
+      }
+
+      // 更新用户手机号码并激活账户
+      user.phone = phone;
+      user.phone_verified = true;
+      user.status = "active";
+      await user.save();
+
+      logger.info("手机号码验证成功:", {
+        userId: user.id,
+        phone: phone,
+      });
+
+      res.json({
+        success: true,
+        message: "手机号码验证成功！账户已激活",
+        data: {
+          user: {
+            id: user.id,
+            username: user.username,
+            phone: user.phone,
+            phone_verified: true,
+            status: "active",
+          },
+        },
+      });
+    } catch (jwtError) {
+      return res.status(401).json({
+        success: false,
+        error: "Token无效",
+      });
+    }
+  } catch (error) {
+    logger.error("手机号码验证失败:", error);
+    res.status(500).json({
+      success: false,
+      error: "验证失败，请稍后重试",
+    });
+  }
+});
+
+/**
  * 设置初始密码
  * POST /api/auth/set-password
  */

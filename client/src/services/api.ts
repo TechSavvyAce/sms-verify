@@ -168,6 +168,10 @@ export const authApi = {
   resendVerificationEmail: (email: string): Promise<ApiResponse> =>
     request({ method: "POST", url: "/auth/resend-verification", data: { email } }),
 
+  // 手机号码验证（无需发送SMS）
+  verifyPhone: (phone: string): Promise<ApiResponse> =>
+    request({ method: "POST", url: "/auth/verify-phone", data: { phone } }),
+
   // 刷新 token
   refresh: (data: { refreshToken: string }): Promise<ApiResponse> =>
     request({ method: "POST", url: "/auth/refresh", data }),
