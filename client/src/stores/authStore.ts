@@ -152,6 +152,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       if (response.success && response.data) {
         const { user, accessToken, refreshToken } = response.data;
         console.log("AuthStore - Extracted data:", { user, accessToken, refreshToken });
+        console.log("AuthStore - Full response.data:", response.data);
+        console.log("AuthStore - Has redirect_to:", !!response.data.redirect_to);
+        console.log("AuthStore - redirect_to value:", response.data.redirect_to);
 
         // 标准化用户数据
         const normalizedUser = normalizeUserData(user);

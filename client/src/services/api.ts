@@ -13,6 +13,7 @@ import {
   SystemStats,
   LoginRequest,
   RegisterRequest,
+  RegisterResponse,
   CreateActivationRequest,
   CreateActivationFreePriceRequest,
   CreateRentalRequest,
@@ -153,7 +154,7 @@ export const authApi = {
     request({ method: "POST", url: "/auth/login", data: credentials }),
 
   // 用户注册
-  register: (userData: RegisterRequest): Promise<ApiResponse> =>
+  register: (userData: RegisterRequest): Promise<ApiResponse<RegisterResponse>> =>
     request({ method: "POST", url: "/auth/register", data: userData }),
 
   // 邮箱验证

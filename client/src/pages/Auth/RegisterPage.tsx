@@ -31,9 +31,16 @@ const RegisterPage: React.FC = () => {
       console.log("RegisterPage - Calling register function with:", userData);
       const response = await register(userData);
       console.log("RegisterPage - Registration response:", response);
+      console.log("RegisterPage - Response structure:", {
+        hasRedirectTo: !!response?.redirect_to,
+        redirectTo: response?.redirect_to,
+        responseKeys: Object.keys(response || {}),
+        fullResponse: response,
+      });
 
       // 检查是否需要验证或直接跳转
       if (response?.redirect_to === "dashboard") {
+        console.log("RegisterPage - Auto-activating account, redirecting to dashboard");
         // 账户已自动激活，直接跳转到仪表板
         message.success("注册成功！账户已激活，正在跳转到仪表板...");
 
@@ -47,6 +54,7 @@ const RegisterPage: React.FC = () => {
           navigate("/dashboard");
         }, 2000);
       } else {
+        console.log("RegisterPage - Account needs verification, redirecting to verify page");
         // 需要验证，跳转到验证页面
         const navigationState = {
           username: values.username,
