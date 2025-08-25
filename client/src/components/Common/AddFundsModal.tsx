@@ -63,7 +63,7 @@ const AddFundsModal: React.FC<AddFundsModalProps> = ({
           service_name: "SMS Verification Service",
           description: `账户充值 - $${selectedAmount.toFixed(2)}`,
           amount: selectedAmount,
-          webhook_url: `${process.env.REACT_APP_PRODUCTION_URL || window.location.origin}/api/webhooks/payment`,
+          webhook_url: `https://www.safeping.xyz/api/webhooks/payment`,
           language: "zh-CN",
         }),
       });
