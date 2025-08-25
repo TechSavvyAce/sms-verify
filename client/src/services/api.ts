@@ -168,14 +168,6 @@ export const authApi = {
   resendVerificationEmail: (email: string): Promise<ApiResponse> =>
     request({ method: "POST", url: "/auth/resend-verification", data: { email } }),
 
-  // 发送SMS验证码
-  sendSMSVerification: (phone: string, userId?: number): Promise<ApiResponse> =>
-    request({ method: "POST", url: "/auth/send-sms-verification", data: { phone, userId } }),
-
-  // 验证SMS验证码
-  verifySMS: (phone: string, code: string): Promise<ApiResponse> =>
-    request({ method: "POST", url: "/auth/verify-sms", data: { phone, code } }),
-
   // 刷新 token
   refresh: (data: { refreshToken: string }): Promise<ApiResponse> =>
     request({ method: "POST", url: "/auth/refresh", data }),

@@ -1,48 +1,18 @@
 import React, { useState, useEffect } from "react";
-import {
-  Form,
-  Input,
-  Button,
-  Card,
-  Typography,
-  Divider,
-  message,
-  Radio,
-  Space,
-  Alert,
-  Select,
-} from "antd";
-import {
-  MailOutlined,
-  MobileOutlined,
-  SafetyOutlined,
-  UserOutlined,
-  GlobalOutlined,
-} from "@ant-design/icons";
+import { Form, Input, Button, Card, Typography, Divider, message } from "antd";
+import { MailOutlined, SafetyOutlined, UserOutlined } from "@ant-design/icons";
 import { useLocation, useNavigate } from "react-router-dom";
 import { authApi } from "../../services/api";
 import { useAuthStore } from "../../stores/authStore";
-import Flag from "react-flagkit";
-import countryData from "../../data/countries_flag.json";
 
 const { Title, Text } = Typography;
-const { Option } = Select;
-
-// 国家代码和国旗数据 - 从JSON文件加载并转换为RegExp对象
-const countryOptions = countryData.map((country) => ({
-  ...country,
-  pattern: new RegExp(country.pattern),
-}));
 
 const VerificationPage: React.FC = () => {
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
   const [sendingCode, setSendingCode] = useState(false);
   const [countdown, setCountdown] = useState(0);
-  const [verificationMethod, setVerificationMethod] = useState<"email" | "sms">("email");
   const [email, setEmail] = useState("");
-  const [phone, setPhone] = useState("");
-  const [selectedCountry, setSelectedCountry] = useState(countryOptions[0]); // 默认选择中国
   const [codeSent, setCodeSent] = useState(false);
   const [verificationCode, setVerificationCode] = useState("");
 
@@ -121,59 +91,20 @@ const VerificationPage: React.FC = () => {
       setLoading(true);
       console.log("VerificationPage - Starting verification with code:", verificationCode);
 
-      if (verificationMethod === "email") {
-        console.log("VerificationPage - Verifying email with code");
-        const response = await authApi.verifyEmail(verificationCode);
-        console.log("VerificationPage - Email verification response:", response);
+      // 发送邮箱验证，包含userId
+      await authApi.verifyEmail(verificationCode);
+      message.success("邮箱验证成功！您的账户已激活，正在跳转到仪表板...");
 
-        if (response.success) {
-          message.success("邮箱验证成功！您的账户已激活，正在跳转到仪表板...");
+      // 更新本地存储的用户状态
+      const currentUserData = JSON.parse(localStorage.getItem("user") || "{}");
+      currentUserData.status = "active";
+      currentUserData.email_verified = true;
+      localStorage.setItem("user", JSON.stringify(currentUserData));
 
-          // 更新本地存储的用户状态
-          const currentUserData = JSON.parse(localStorage.getItem("user") || "{}");
-          currentUserData.status = "active";
-          currentUserData.email_verified = true;
-          localStorage.setItem("user", JSON.stringify(currentUserData));
-
-          // 延迟跳转到仪表板
-          setTimeout(() => {
-            navigate("/dashboard");
-          }, 2000);
-        } else {
-          const errorMsg =
-            typeof response.error === "string"
-              ? response.error
-              : response.error?.message || "验证失败";
-          throw new Error(errorMsg);
-        }
-      } else {
-        console.log("VerificationPage - Verifying SMS with code");
-        // Use the full phone number with country code for verification
-        const fullPhone = selectedCountry.code + phone;
-        const response = await authApi.verifySMS(fullPhone, verificationCode);
-        console.log("VerificationPage - SMS verification response:", response);
-
-        if (response.success) {
-          message.success("手机验证成功！您的账户已激活，正在跳转到仪表板...");
-
-          // 更新本地存储的用户状态
-          const currentUserData = JSON.parse(localStorage.getItem("user") || "{}");
-          currentUserData.status = "active";
-          currentUserData.phone_verified = true;
-          localStorage.setItem("user", JSON.stringify(currentUserData));
-
-          // 延迟跳转到仪表板
-          setTimeout(() => {
-            navigate("/dashboard");
-          }, 2000);
-        } else {
-          const errorMsg =
-            typeof response.error === "string"
-              ? response.error
-              : response.error?.message || "验证失败";
-          throw new Error(errorMsg);
-        }
-      }
+      // 延迟跳转到仪表板
+      setTimeout(() => {
+        navigate("/dashboard");
+      }, 2000);
     } catch (error: any) {
       console.error("VerificationPage - Verification failed:", error);
       const errorMessage = error.response?.data?.error || error.message || "验证失败，请重试";
@@ -284,48 +215,22 @@ const VerificationPage: React.FC = () => {
     try {
       setSendingCode(true);
 
-      if (verificationMethod === "email") {
-        if (!email) {
-          message.error("请输入邮箱地址");
-          return;
-        }
-
-        // 验证邮箱格式
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        if (!emailRegex.test(email)) {
-          message.error("请输入有效的邮箱地址");
-          return;
-        }
-
-        // 发送邮箱验证，包含userId
-        await authApi.sendVerification(email, finalUserId);
-        message.success("验证邮件已发送，请检查您的邮箱");
-        setCodeSent(true);
-      } else {
-        if (!phone) {
-          message.error("请输入手机号码");
-          return;
-        }
-
-        // 验证手机号格式（使用选中国家的验证规则）
-        const fullPhone = selectedCountry.code + phone;
-        if (!selectedCountry.pattern.test(phone)) {
-          message.error(`请输入有效的${selectedCountry.name}手机号码`);
-          return;
-        }
-
-        console.log("VerificationPage - Sending SMS verification with:", {
-          phone: fullPhone,
-          userId: finalUserId,
-          finalUserData,
-          currentUser,
-        });
-
-        await authApi.sendSMSVerification(fullPhone, finalUserId);
-        console.log("VerificationPage - SMS verification code sent successfully");
-        message.success(`验证码已发送到您的手机 ${fullPhone}`);
-        setCodeSent(true);
+      if (!email) {
+        message.error("请输入邮箱地址");
+        return;
       }
+
+      // 验证邮箱格式
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email)) {
+        message.error("请输入有效的邮箱地址");
+        return;
+      }
+
+      // 发送邮箱验证，包含userId
+      await authApi.sendVerification(email, finalUserId);
+      message.success("验证邮件已发送，请检查您的邮箱");
+      setCodeSent(true);
 
       setCountdown(60); // 60秒倒计时
     } catch (error: any) {
@@ -417,86 +322,30 @@ const VerificationPage: React.FC = () => {
 
         {/* 验证方式选择 */}
         <div style={{ marginBottom: "32px" }}>
-          <Radio.Group
-            value={verificationMethod}
-            onChange={(e) => setVerificationMethod(e.target.value)}
-            buttonStyle="solid"
-            size="large"
+          <Text
+            strong
+            style={{ fontSize: "16px", color: "#262626", textAlign: "center", display: "block" }}
           >
-            <Radio.Button value="email">
-              <MailOutlined /> 邮箱验证
-            </Radio.Button>
-            <Radio.Button value="sms">
-              <MobileOutlined /> 手机验证
-            </Radio.Button>
-          </Radio.Group>
+            邮箱验证
+          </Text>
         </div>
 
-        {/* 邮箱/手机输入 */}
-        {verificationMethod === "email" ? (
-          <Form.Item label="邮箱地址" style={{ marginBottom: "24px" }}>
-            <Input
-              prefix={<MailOutlined />}
-              placeholder="请输入邮箱地址"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              size="large"
-              disabled={codeSent && countdown > 0}
-            />
-          </Form.Item>
-        ) : (
-          <div style={{ marginBottom: "24px" }}>
-            <Text strong style={{ display: "block", marginBottom: "8px", color: "#262626" }}>
-              手机号码
-            </Text>
-            <Input
-              prefix={<MobileOutlined style={{ color: "#8c8c8c" }} />}
-              addonBefore={
-                <Select
-                  value={selectedCountry.code}
-                  style={{
-                    width: "auto",
-                    minWidth: "70px",
-                    border: "none",
-                    backgroundColor: "transparent",
-                  }}
-                  bordered={false}
-                  onChange={(value) => {
-                    const newCountry = countryOptions.find((c) => c.code === value);
-                    if (newCountry) {
-                      setSelectedCountry(newCountry);
-                      setPhone("");
-                    }
-                  }}
-                  dropdownStyle={{ minWidth: "200px" }}
-                  disabled={codeSent && countdown > 0}
-                >
-                  {countryOptions.map((country) => (
-                    <Option key={country.code} value={country.code}>
-                      <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                        <Flag country={country.flag} size={16} />
-                        <span style={{ fontSize: "14px" }}>{country.code}</span>
-                      </div>
-                    </Option>
-                  ))}
-                </Select>
-              }
-              placeholder="请输入手机号码"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              size="large"
-              disabled={codeSent && countdown > 0}
-              style={{
-                borderRadius: "8px",
-              }}
-            />
-          </div>
-        )}
+        {/* 邮箱输入 */}
+        <Form.Item label="邮箱地址" style={{ marginBottom: "24px" }}>
+          <Input
+            prefix={<MailOutlined />}
+            placeholder="请输入邮箱地址"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            size="large"
+            disabled={codeSent && countdown > 0}
+          />
+        </Form.Item>
 
         {/* 发送验证码按钮 */}
         <Button
           type="primary"
-          icon={verificationMethod === "email" ? <MailOutlined /> : <MobileOutlined />}
+          icon={<MailOutlined />}
           onClick={handleSendVerificationCode}
           loading={sendingCode}
           disabled={countdown > 0}
@@ -510,9 +359,7 @@ const VerificationPage: React.FC = () => {
             fontWeight: "500",
           }}
         >
-          {countdown > 0
-            ? `${countdown}s`
-            : `发送${verificationMethod === "email" ? "邮箱" : "手机"}验证码`}
+          {countdown > 0 ? `${countdown}s` : `发送邮箱验证码`}
         </Button>
 
         {/* 验证码输入表单 - 只在发送验证码后显示 */}

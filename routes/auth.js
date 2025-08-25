@@ -23,16 +23,6 @@ const router = express.Router();
 const emailService = new EmailService();
 
 /**
- * 手机号码脱敏处理
- */
-function maskPhoneNumber(phone) {
-  if (!phone) return phone;
-  const cleaned = phone.replace(/\D/g, "");
-  if (cleaned.length <= 4) return phone;
-  return phone.replace(/(\+\d{1,3})(\d{3})(\d{3})(\d{4})/, "$1$2***$4");
-}
-
-/**
  * 生成JWT令牌
  */
 function generateTokens(userId) {
@@ -624,109 +614,6 @@ router.post("/resend-verification", async (req, res) => {
     res.status(500).json({
       success: false,
       error: "操作失败，请稍后重试",
-    });
-  }
-});
-
-/**
- * 发送SMS验证码
- * POST /api/auth/send-sms-verification
- */
-router.post("/send-sms-verification", async (req, res) => {
-  try {
-    const { phone, userId } = req.body;
-
-    console.log("SMS verification request received:", { phone, userId, body: req.body });
-
-    if (!phone) {
-      return res.status(400).json({
-        success: false,
-        error: "手机号码不能为空",
-      });
-    }
-
-    // 验证手机号码格式（支持国际格式）
-    const phoneRegex = /^\+[1-9]\d{1,14}$/;
-    if (!phoneRegex.test(phone)) {
-      return res.status(400).json({
-        success: false,
-        error: "请输入有效的国际手机号码格式（如：+8613800138000）",
-      });
-    }
-
-    let user;
-
-    // 如果提供了userId，优先使用userId查找用户
-    if (userId) {
-      console.log("Looking up user by userId:", userId);
-      user = await User.findByPk(userId);
-      console.log("User lookup result:", user ? `Found user ID ${user.id}` : "User not found");
-
-      if (!user) {
-        return res.status(404).json({
-          success: false,
-          error: "用户不存在",
-        });
-      }
-
-      // 更新用户的手机号码
-      user.phone = phone;
-      await user.save();
-    } else {
-      console.log("No userId provided, looking up user by phone:", phone);
-      // 否则尝试通过手机号码查找用户
-      user = await User.findOne({
-        where: { phone },
-      });
-      console.log(
-        "User lookup by phone result:",
-        user ? `Found user ID ${user.id}` : "User not found"
-      );
-
-      if (!user) {
-        return res.status(404).json({
-          success: false,
-          error: "用户不存在",
-        });
-      }
-    }
-
-    if (user.phone_verified) {
-      return res.status(400).json({
-        success: false,
-        error: "手机已验证，无需重新发送",
-      });
-    }
-
-    // 直接验证手机号码格式，无需发送SMS
-    logger.info("手机号码验证成功:", {
-      phone: maskPhoneNumber(phone),
-      userId: user.id,
-    });
-
-    // 直接激活手机验证
-    user.phone_verified = true;
-    user.status = "active";
-    await user.save();
-
-    res.json({
-      success: true,
-      message: "手机号码验证成功！账户已激活",
-      data: {
-        user: {
-          id: user.id,
-          username: user.username,
-          phone: user.phone,
-          phone_verified: true,
-          status: "active",
-        },
-      },
-    });
-  } catch (error) {
-    logger.error("手机号码验证失败:", error);
-    res.status(500).json({
-      success: false,
-      error: "验证失败，请稍后重试",
     });
   }
 });
