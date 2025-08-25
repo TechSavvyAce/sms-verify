@@ -60,108 +60,6 @@
     "pattern": "^\\d{9}$"
   },
   {
-    "code": "+49",
-    "flag": "DE",
-    "name": "德国",
-    "pattern": "^\\d{10,12}$"
-  },
-  {
-    "code": "+33",
-    "flag": "FR",
-    "name": "法国",
-    "pattern": "^\\d{10}$"
-  },
-  {
-    "code": "+39",
-    "flag": "IT",
-    "name": "意大利",
-    "pattern": "^\\d{10,12}$"
-  },
-  {
-    "code": "+34",
-    "flag": "ES",
-    "name": "西班牙",
-    "pattern": "^\\d{9}$"
-  },
-  {
-    "code": "+31",
-    "flag": "NL",
-    "name": "荷兰",
-    "pattern": "^\\d{9}$"
-  },
-  {
-    "code": "+91",
-    "flag": "IN",
-    "name": "印度",
-    "pattern": "^\\d{10}$"
-  },
-  {
-    "code": "+7",
-    "flag": "RU",
-    "name": "俄罗斯",
-    "pattern": "^\\d{10}$"
-  },
-  {
-    "code": "+55",
-    "flag": "BR",
-    "name": "巴西",
-    "pattern": "^\\d{10,11}$"
-  },
-  {
-    "code": "+61",
-    "flag": "AU",
-    "name": "澳大利亚",
-    "pattern": "^\\d{9}$"
-  },
-  {
-    "code": "+52",
-    "flag": "MX",
-    "name": "墨西哥",
-    "pattern": "^\\d{10}$"
-  },
-  {
-    "code": "+81",
-    "flag": "JP",
-    "name": "日本",
-    "pattern": "^\\d{10,11}$"
-  },
-  {
-    "code": "+82",
-    "flag": "KR",
-    "name": "韩国",
-    "pattern": "^\\d{10,11}$"
-  },
-  {
-    "code": "+65",
-    "flag": "SG",
-    "name": "新加坡",
-    "pattern": "^\\d{8}$"
-  },
-  {
-    "code": "+852",
-    "flag": "HK",
-    "name": "香港",
-    "pattern": "^\\d{8}$"
-  },
-  {
-    "code": "+886",
-    "flag": "TW",
-    "name": "台湾",
-    "pattern": "^\\d{9}$"
-  },
-  {
-    "code": "+60",
-    "flag": "MY",
-    "name": "马来西亚",
-    "pattern": "^\\d{9,10}$"
-  },
-  {
-    "code": "+66",
-    "flag": "TH",
-    "name": "泰国",
-    "pattern": "^\\d{9}$"
-  },
-  {
     "code": "+84",
     "flag": "VN",
     "name": "越南",
@@ -258,6 +156,36 @@
     "pattern": "^\\d{10}$"
   },
   {
+    "code": "+49",
+    "flag": "DE",
+    "name": "德国",
+    "pattern": "^\\d{10,12}$"
+  },
+  {
+    "code": "+33",
+    "flag": "FR",
+    "name": "法国",
+    "pattern": "^\\d{10}$"
+  },
+  {
+    "code": "+39",
+    "flag": "IT",
+    "name": "意大利",
+    "pattern": "^\\d{10,12}$"
+  },
+  {
+    "code": "+34",
+    "flag": "ES",
+    "name": "西班牙",
+    "pattern": "^\\d{9}$"
+  },
+  {
+    "code": "+31",
+    "flag": "NL",
+    "name": "荷兰",
+    "pattern": "^\\d{9}$"
+  },
+  {
     "code": "+36",
     "flag": "HU",
     "name": "匈牙利",
@@ -300,51 +228,39 @@
     "pattern": "^\\d{9}$"
   },
   {
-    "code": "+46",
-    "flag": "SE",
-    "name": "瑞典",
+    "code": "+381",
+    "flag": "RS",
+    "name": "塞尔维亚",
+    "pattern": "^\\d{8,9}$"
+  },
+  {
+    "code": "+91",
+    "flag": "IN",
+    "name": "印度",
+    "pattern": "^\\d{10}$"
+  },
+  {
+    "code": "+7",
+    "flag": "RU",
+    "name": "俄罗斯",
+    "pattern": "^\\d{10}$"
+  },
+  {
+    "code": "+55",
+    "flag": "BR",
+    "name": "巴西",
+    "pattern": "^\\d{10,11}$"
+  },
+  {
+    "code": "+61",
+    "flag": "AU",
+    "name": "澳大利亚",
     "pattern": "^\\d{9}$"
   },
   {
-    "code": "+47",
-    "flag": "NO",
-    "name": "挪威",
-    "pattern": "^\\d{8}$"
-  },
-  {
-    "code": "+45",
-    "flag": "DK",
-    "name": "丹麦",
-    "pattern": "^\\d{8}$"
-  },
-  {
-    "code": "+358",
-    "flag": "FI",
-    "name": "芬兰",
-    "pattern": "^\\d{9}$"
-  },
-  {
-    "code": "+46",
-    "flag": "SE",
-    "name": "瑞典",
-    "pattern": "^\\d{9}$"
-  },
-  {
-    "code": "+47",
-    "flag": "NO",
-    "name": "挪威",
-    "pattern": "^\\d{8}$"
-  },
-  {
-    "code": "+45",
-    "flag": "DK",
-    "name": "丹麦",
-    "pattern": "^\\d{8}$"
-  },
-  {
-    "code": "+358",
-    "flag": "FI",
-    "name": "芬兰",
-    "pattern": "^\\d{9}$"
+    "code": "+52",
+    "flag": "MX",
+    "name": "墨西哥",
+    "pattern": "^\\d{10}$"
   }
 ]

@@ -148,7 +148,9 @@ const VerificationPage: React.FC = () => {
         }
       } else {
         console.log("VerificationPage - Verifying SMS with code");
-        const response = await authApi.verifySMS(phone, verificationCode);
+        // Use the full phone number with country code for verification
+        const fullPhone = selectedCountry.code + phone;
+        const response = await authApi.verifySMS(fullPhone, verificationCode);
         console.log("VerificationPage - SMS verification response:", response);
 
         if (response.success) {
@@ -311,6 +313,13 @@ const VerificationPage: React.FC = () => {
           message.error(`请输入有效的${selectedCountry.name}手机号码`);
           return;
         }
+
+        console.log("VerificationPage - Sending SMS verification with:", {
+          phone: fullPhone,
+          userId: finalUserId,
+          finalUserData,
+          currentUser,
+        });
 
         await authApi.sendSMSVerification(fullPhone, finalUserId);
         console.log("VerificationPage - SMS verification code sent successfully");

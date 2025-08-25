@@ -628,6 +628,8 @@ router.post("/send-sms-verification", async (req, res) => {
   try {
     const { phone, userId } = req.body;
 
+    console.log("SMS verification request received:", { phone, userId, body: req.body });
+
     if (!phone) {
       return res.status(400).json({
         success: false,
@@ -648,7 +650,10 @@ router.post("/send-sms-verification", async (req, res) => {
 
     // 如果提供了userId，优先使用userId查找用户
     if (userId) {
+      console.log("Looking up user by userId:", userId);
       user = await User.findByPk(userId);
+      console.log("User lookup result:", user ? `Found user ID ${user.id}` : "User not found");
+
       if (!user) {
         return res.status(404).json({
           success: false,
@@ -660,10 +665,15 @@ router.post("/send-sms-verification", async (req, res) => {
       user.phone = phone;
       await user.save();
     } else {
+      console.log("No userId provided, looking up user by phone:", phone);
       // 否则尝试通过手机号码查找用户
       user = await User.findOne({
         where: { phone },
       });
+      console.log(
+        "User lookup by phone result:",
+        user ? `Found user ID ${user.id}` : "User not found"
+      );
 
       if (!user) {
         return res.status(404).json({
@@ -740,6 +750,8 @@ router.post("/verify-sms", async (req, res) => {
   try {
     const { phone, code } = req.body;
 
+    console.log("SMS verification request received:", { phone, code, body: req.body });
+
     if (!phone || !code) {
       return res.status(400).json({
         success: false,
@@ -755,6 +767,8 @@ router.post("/verify-sms", async (req, res) => {
       });
     }
 
+    console.log("Looking for user with phone:", phone, "and verification code:", code);
+
     // 查找用户并验证验证码
     const user = await User.findOne({
       where: {
@@ -765,6 +779,8 @@ router.post("/verify-sms", async (req, res) => {
         },
       },
     });
+
+    console.log("User lookup result:", user ? `Found user ID ${user.id}` : "User not found");
 
     if (!user) {
       return res.status(400).json({
