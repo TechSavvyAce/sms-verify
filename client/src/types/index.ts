@@ -47,6 +47,7 @@ export interface RegisterResponse {
     email?: string;
     phone?: string;
   };
+  redirect_to?: "dashboard" | "verify"; // 注册后的跳转目标
 }
 
 // 服务相关类型

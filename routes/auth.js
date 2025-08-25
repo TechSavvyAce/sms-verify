@@ -57,7 +57,7 @@ router.post("/register", createValidationMiddleware(validateUserRegistration), a
     const userData = {
       username,
       password_hash: password, // 密码将在User模型中自动哈希
-      status: "pending", // 设置为pending，必须验证后才能激活
+      status: "active", // 直接设置为active，无需验证
       balance: 0.0,
       total_spent: 0.0,
       total_recharged: 0.0,
@@ -76,18 +76,18 @@ router.post("/register", createValidationMiddleware(validateUserRegistration), a
 
     res.status(201).json({
       success: true,
-      message: "注册成功！请选择验证方式完成账户激活。",
+      message: "注册成功！账户已自动激活，正在跳转到仪表板。",
       data: {
         user: {
           id: user.id,
           username: user.username,
           status: user.status,
-          email_verified: user.email_verified,
+          email_verified: false, // 邮箱未验证，但账户已激活
           created_at: user.createdAt,
         },
         accessToken: tokens.accessToken,
         refreshToken: tokens.refreshToken,
-        verification_methods: ["email", "sms"],
+        redirect_to: "dashboard", // 指示前端直接跳转到仪表板
       },
     });
   } catch (error) {

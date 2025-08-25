@@ -32,20 +32,34 @@ const RegisterPage: React.FC = () => {
       const response = await register(userData);
       console.log("RegisterPage - Registration response:", response);
 
-      // 注册成功，直接跳转到验证页面（不显示消息）
-      const navigationState = {
-        username: values.username,
-        userId: response?.user?.id,
-        accessToken: response?.accessToken,
-        refreshToken: response?.refreshToken,
-        verificationMethods: response?.verification_methods || ["email", "sms"],
-      };
+      // 检查是否需要验证或直接跳转
+      if (response?.redirect_to === "dashboard") {
+        // 账户已自动激活，直接跳转到仪表板
+        message.success("注册成功！账户已激活，正在跳转到仪表板...");
 
-      console.log("RegisterPage - Navigating to /verify with state:", navigationState);
+        // 存储用户信息和token
+        localStorage.setItem("token", response.accessToken);
+        localStorage.setItem("refreshToken", response.refreshToken);
+        localStorage.setItem("user", JSON.stringify(response.user));
 
-      // 使用 window.location.href 确保页面实际跳转
-      const encodedState = btoa(JSON.stringify(navigationState));
-      window.location.href = `/verify?state=${encodedState}`;
+        // 延迟跳转到仪表板
+        setTimeout(() => {
+          navigate("/dashboard");
+        }, 2000);
+      } else {
+        // 需要验证，跳转到验证页面
+        const navigationState = {
+          username: values.username,
+          userId: response?.user?.id,
+          accessToken: response?.accessToken,
+          refreshToken: response?.refreshToken,
+          verificationMethods: response?.verification_methods || ["email", "sms"],
+        };
+
+        console.log("RegisterPage - Navigating to /verify with state:", navigationState);
+        const encodedState = btoa(JSON.stringify(navigationState));
+        window.location.href = `/verify?state=${encodedState}`;
+      }
     } catch (error: any) {
       console.error("RegisterPage - Registration failed:", error);
       // 错误已在 store 中处理，这里可以添加额外的错误处理逻辑
