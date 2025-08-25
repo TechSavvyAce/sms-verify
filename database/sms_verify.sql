@@ -11,7 +11,7 @@
  Target Server Version : 100432 (10.4.32-MariaDB)
  File Encoding         : 65001
 
- Date: 22/08/2025 10:04:26
+ Date: 24/08/2025 22:01:07
 */
 
 SET NAMES utf8mb4;
@@ -117,7 +117,7 @@ CREATE TABLE `system_config`  (
   PRIMARY KEY (`id`) USING BTREE,
   UNIQUE INDEX `config_key`(`config_key` ASC) USING BTREE,
   UNIQUE INDEX `system_config_config_key`(`config_key` ASC) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 1471 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 11 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Table structure for transactions
@@ -168,45 +168,37 @@ DROP TABLE IF EXISTS `users`;
 CREATE TABLE `users`  (
   `id` int NOT NULL AUTO_INCREMENT,
   `username` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
-  `email` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL COMMENT '邮箱 (可选)',
-  `password_hash` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL COMMENT '密码哈希 (可选)',
-  `phone` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL COMMENT '手机号码 (可选)',
-  `phone_verified` tinyint(1) NOT NULL DEFAULT 0 COMMENT '手机是否已验证',
-  `phone_verified_at` datetime NULL DEFAULT NULL COMMENT '手机验证时间',
-
-  `country` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL COMMENT '国家/地区',
-  `timezone` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL COMMENT '时区',
-  `language` varchar(10) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT 'zh-CN' COMMENT '语言偏好',
-  `avatar` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL COMMENT '头像URL',
-  `two_factor_enabled` tinyint(1) NOT NULL DEFAULT 0 COMMENT '是否启用双因素认证',
-  `email_notifications` tinyint(1) NOT NULL DEFAULT 1 COMMENT '邮件通知设置',
-  `sms_notifications` tinyint(1) NOT NULL DEFAULT 1 COMMENT '短信通知设置',
-  `push_notifications` tinyint(1) NOT NULL DEFAULT 1 COMMENT '推送通知设置',
+  `email` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL,
+  `password_hash` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL,
   `balance` decimal(10, 2) NOT NULL DEFAULT 0.00,
   `total_spent` decimal(10, 2) NOT NULL DEFAULT 0.00,
   `total_recharged` decimal(10, 2) NOT NULL DEFAULT 0.00,
   `status` enum('active','suspended','pending') CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'pending',
   `email_verified` tinyint(1) NOT NULL DEFAULT 0,
-  `email_verification_token` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL,
+  `email_verification_token` varchar(8) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL,
   `email_verification_expires` datetime NULL DEFAULT NULL,
   `password_reset_token` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL,
   `password_reset_expires` datetime NULL DEFAULT NULL,
   `last_login` datetime NULL DEFAULT NULL,
   `login_count` int NOT NULL DEFAULT 0,
+  `phone` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL,
+  `phone_verified` tinyint(1) NOT NULL DEFAULT 0,
+  `phone_verified_at` datetime NULL DEFAULT NULL,
+  `country` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL,
+  `timezone` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL,
+  `language` varchar(10) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL,
+  `avatar` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL,
+  `two_factor_enabled` tinyint(1) NOT NULL DEFAULT 0,
+  `email_notifications` tinyint(1) NOT NULL DEFAULT 1,
+  `sms_notifications` tinyint(1) NOT NULL DEFAULT 0,
+  `push_notifications` tinyint(1) NOT NULL DEFAULT 1,
   `created_at` datetime NOT NULL,
   `updated_at` datetime NOT NULL,
   PRIMARY KEY (`id`) USING BTREE,
   UNIQUE INDEX `username`(`username` ASC) USING BTREE,
-  UNIQUE INDEX `email`(`email` ASC) USING BTREE,
-  UNIQUE INDEX `phone`(`phone` ASC) USING BTREE,
-
   INDEX `users_status`(`status` ASC) USING BTREE,
-  INDEX `users_created_at`(`created_at` ASC) USING BTREE,
-  INDEX `users_phone_verified`(`phone_verified` ASC) USING BTREE,
-
-  INDEX `users_country`(`country` ASC) USING BTREE,
-  INDEX `users_two_factor_enabled`(`two_factor_enabled` ASC) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 3 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci ROW_FORMAT = Dynamic;
+  INDEX `users_created_at`(`created_at` ASC) USING BTREE
+) ENGINE = InnoDB AUTO_INCREMENT = 2 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- View structure for country_stats_view
@@ -254,9 +246,9 @@ CREATE ALGORITHM = UNDEFINED SQL SECURITY DEFINER VIEW `user_stats_view` AS SELE
     u.username,
     u.email,
     u.phone,
-
+    u.telegram_username,
     u.phone_verified,
-
+    u.telegram_verified,
     u.country,
     u.language,
     u.two_factor_enabled,
