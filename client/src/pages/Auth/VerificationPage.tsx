@@ -151,7 +151,9 @@ const VerificationPage: React.FC = () => {
           navigate("/dashboard");
         }, 2000);
       } else {
-        throw new Error(response.error || "手机验证失败");
+        // 处理错误响应
+        const errorMessage = typeof response.error === "string" ? response.error : "手机验证失败";
+        throw new Error(errorMessage);
       }
     } catch (error: any) {
       console.error("VerificationPage - Phone verification failed:", error);
