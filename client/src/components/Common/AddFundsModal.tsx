@@ -53,20 +53,23 @@ const AddFundsModal: React.FC<AddFundsModalProps> = ({
 
       // Create payment using our backend API endpoint
       const token = localStorage.getItem("token");
-      const response = await fetch(`https://www.safeping.xyz/api/payment/create`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          service_name: "SMS Verification Service",
-          description: `账户充值 - $${selectedAmount.toFixed(2)}`,
-          amount: selectedAmount,
-          webhook_url: `https://www.safeping.xyz/api/webhooks/payment`,
-          language: "zh-CN",
-        }),
-      });
+      const response = await fetch(
+        `${process.env.REACT_APP_API_URL || window.location.origin}/payment/create`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            service_name: "SMS Verification Service",
+            description: `账户充值 - $${selectedAmount.toFixed(2)}`,
+            amount: selectedAmount,
+            webhook_url: `${process.env.REACT_SAFEPING_API_URL || process.env.REACT_APP_API_URL || "http://localhost:5001"}/webhook/safeping`,
+            language: "zh-CN",
+          }),
+        }
+      );
 
       if (!response.ok) {
         throw new Error(`Payment creation failed: ${response.status}`);
@@ -74,9 +77,14 @@ const AddFundsModal: React.FC<AddFundsModalProps> = ({
 
       const paymentData = await response.json();
 
-      setPaymentUrl(sanitizeUrl(paymentData.payment_url));
-      setQrCode(paymentData.qr_code);
-      setPaymentId(paymentData.payment_id);
+      console.log("Payment creation response:", paymentData);
+
+      // Access data from the nested structure returned by the backend
+      const { payment_url, qr_code, payment_id } = paymentData.data || paymentData;
+
+      setPaymentUrl(sanitizeUrl(payment_url));
+      setQrCode(qr_code);
+      setPaymentId(payment_id);
       setPaymentStatus("created");
 
       message.success("支付订单创建成功！");
@@ -99,17 +107,20 @@ const AddFundsModal: React.FC<AddFundsModalProps> = ({
 
       // Call the payment confirmation API
       const token = localStorage.getItem("token");
-      const response = await fetch(`https://www.safeping.xyz/api/payment/confirm`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          payment_id: paymentId,
-          amount: selectedAmount,
-        }),
-      });
+      const response = await fetch(
+        `${process.env.REACT_APP_API_URL || window.location.origin}/payment/confirm`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            payment_id: paymentId,
+            amount: selectedAmount,
+          }),
+        }
+      );
 
       if (!response.ok) {
         const errorData = await response.json();

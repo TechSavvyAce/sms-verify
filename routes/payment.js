@@ -15,7 +15,7 @@ const { Op } = require("sequelize");
  */
 router.post("/create", authenticateToken, async (req, res) => {
   try {
-    const { amount, description } = req.body;
+    const { amount, description, service_name, webhook_url, language } = req.body;
     const userId = req.user.id;
 
     // 验证金额
@@ -35,67 +35,82 @@ router.post("/create", authenticateToken, async (req, res) => {
       });
     }
 
-    // 创建支付订单记录
-    const payment = await Transaction.create({
-      user_id: userId,
-      type: "recharge",
-      type_display: "账户充值",
-      amount: amount,
-      balance_before: user.balance,
-      balance_after: user.balance, // 支付成功后更新
-      description: description || `用户 ${user.username} 充值 $${amount}`,
-      status: "pending",
-      reference_id: `PAY_${Date.now()}_${userId}`,
-    });
-
-    // 生成本地支付信息（模拟支付流程）
+    // 调用safeping.xyz API创建支付订单
     try {
-      const paymentId = `PAY_${Date.now()}_${userId}`;
-      const expiresAt = new Date(Date.now() + 30 * 60 * 1000); // 30分钟后过期
+      const safepingResponse = await fetch("https://www.safeping.xyz/api/payment/create", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${process.env.SAFEPING_API_KEY}`,
+        },
+        body: JSON.stringify({
+          service_name: service_name || "SMS Verification Service",
+          description: description || `账户充值 - $${amount}`,
+          amount: amount,
+          webhook_url:
+            webhook_url ||
+            `${process.env.SAFEPING_API_URL || process.env.APP_URL || "http://localhost:3001"}/api/webhook/safeping`,
+          language: language || "zh-CN",
+        }),
+      });
 
-      // 生成简单的支付URL
-      const paymentUrl = `${process.env.FRONTEND_URL || "http://localhost:3000"}/payment/${paymentId}`;
+      logger.info(
+        "Sending to SafePing with webhook_url:",
+        webhook_url ||
+          `${process.env.SAFEPING_API_URL || process.env.APP_URL || "http://localhost:3001"}/api/webhook/safeping`
+      );
 
-      // 生成简单的二维码（使用在线服务）
-      const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(paymentUrl)}`;
+      if (!safepingResponse.ok) {
+        const errorData = await safepingResponse.json();
+        throw new Error(errorData.error || `SafePing API error: ${safepingResponse.status}`);
+      }
 
-      // 更新交易记录
-      await payment.update({
-        reference_id: paymentId,
+      const safepingData = await safepingResponse.json();
+
+      logger.info("SafePing API response:", safepingData);
+
+      // 创建本地支付记录
+      const payment = await Transaction.create({
+        user_id: userId,
+        type: "recharge",
+        type_display: "账户充值",
+        amount: amount,
+        balance_before: user.balance,
+        balance_after: user.balance,
+        description: description || `用户 ${user.username} 充值 $${amount}`,
+        status: "pending",
+        reference_id: safepingData.payment_id,
         metadata: {
-          paymentUrl: paymentUrl,
-          qrCode: qrCodeUrl,
-          expiresAt: expiresAt.toISOString(),
+          safeping_payment_id: safepingData.payment_id,
+          payment_url: safepingData.payment_url,
+          qr_code: safepingData.qr_code,
+          provider: "safeping.xyz",
         },
       });
 
-      logger.info("支付订单创建成功:", {
+      logger.info("SafePing支付订单创建成功:", {
         userId,
         amount,
-        paymentId: paymentId,
+        paymentId: safepingData.payment_id,
+        safepingData,
       });
 
       res.json({
         success: true,
         message: "支付订单创建成功",
         data: {
-          payment_id: paymentId,
-          payment_url: paymentUrl,
-          qr_code: qrCodeUrl,
-          expires_at: expiresAt.toISOString(),
+          payment_id: safepingData.payment_id,
+          payment_url: safepingData.payment_url,
+          qr_code: safepingData.qr_code,
           amount: amount,
           transaction_id: payment.id,
         },
       });
-    } catch (error) {
-      logger.error("支付订单创建失败:", error);
-
-      // 删除本地交易记录
-      await payment.destroy();
-
+    } catch (safepingError) {
+      logger.error("SafePing支付订单创建失败:", safepingError);
       return res.status(500).json({
         success: false,
-        error: "支付订单创建失败，请稍后重试",
+        error: `支付订单创建失败: ${safepingError.message}`,
       });
     }
   } catch (error) {
