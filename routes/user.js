@@ -32,9 +32,15 @@ router.get("/profile", logUserActivity("view_profile"), async (req, res) => {
       });
     }
 
+    // Ensure numeric fields are returned as numbers
+    const userData = user.toJSON();
+    userData.balance = parseFloat(userData.balance) || 0;
+    userData.total_spent = parseFloat(userData.total_spent) || 0;
+    userData.total_recharged = parseFloat(userData.total_recharged) || 0;
+
     res.json({
       success: true,
-      data: user,
+      data: userData,
     });
   } catch (error) {
     logger.error("获取用户资料失败:", error);

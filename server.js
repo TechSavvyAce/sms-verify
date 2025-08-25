@@ -19,6 +19,7 @@ const activationRoutes = require("./routes/activations");
 const rentalRoutes = require("./routes/rentals");
 const paymentRoutes = require("./routes/payment");
 const webhookRoutes = require("./routes/webhook");
+
 const healthRoutes = require("./routes/health");
 const adminRoutes = require("./routes/admin");
 
@@ -29,7 +30,9 @@ const server = createServer(app);
 const io = new Server(server, {
   cors: {
     origin:
-      process.env.NODE_ENV === "production" ? ["https://smsyz.online"] : ["http://localhost:3000"],
+      process.env.NODE_ENV === "production"
+        ? ["https://smsyz.online"]
+        : ["http://localhost:3000", "http://localhost:5000"],
     methods: ["GET", "POST"],
   },
 });
@@ -43,7 +46,9 @@ app.use(compression());
 app.use(
   cors({
     origin:
-      process.env.NODE_ENV === "production" ? ["https://smsyz.online"] : ["http://localhost:3000"],
+      process.env.NODE_ENV === "production"
+        ? ["https://smsyz.online"]
+        : ["http://localhost:3000", "http://localhost:5000"],
     credentials: true,
   })
 );
@@ -66,6 +71,7 @@ app.use("/api/activations", activationRoutes);
 app.use("/api/rentals", rentalRoutes);
 app.use("/api/payment", paymentRoutes);
 app.use("/api/webhook", webhookRoutes);
+
 app.use("/api/health", healthRoutes);
 app.use("/api/admin", adminRoutes);
 
@@ -298,6 +304,8 @@ async function checkPendingActivations() {
     }
   } catch (error) {
     logger.error("后台任务检查激活状态失败:", error);
+    // 不要因为后台任务失败而让整个服务器崩溃
+    // 继续运行，下次定时器会再次尝试
   }
 }
 
@@ -315,9 +323,12 @@ function getActivationStatusText(status) {
 
 // 启动后台任务
 function startBackgroundJobs() {
-  // 每10秒检查一次激活状态
-  backgroundJobInterval = setInterval(checkPendingActivations, 10000);
-  logger.info("后台任务已启动：每10秒检查激活状态");
+  // 延迟启动后台任务，确保数据库完全就绪
+  setTimeout(() => {
+    // 每10秒检查一次激活状态
+    backgroundJobInterval = setInterval(checkPendingActivations, 10000);
+    logger.info("后台任务已启动：每10秒检查激活状态");
+  }, 5000); // 延迟5秒启动
 }
 
 // 停止后台任务
@@ -340,7 +351,8 @@ async function startServer() {
 
     // 同步数据库模型
     if (process.env.NODE_ENV === "development") {
-      await db.sync({ force: false });
+      // Use force: false to avoid automatic table alterations that can cause MySQL key limit errors
+      await db.sync({ force: true });
       logger.info("数据库模型同步完成");
 
       // 初始化系统配置

@@ -28,7 +28,7 @@ const authenticateToken = async (req, res, next) => {
       });
     }
 
-    if (user.status !== "active") {
+    if (user.status === "suspended") {
       return res.status(403).json({
         success: false,
         error: "账户已被停用",
@@ -75,7 +75,8 @@ const optionalAuth = async (req, res, next) => {
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
       const user = await User.findByPk(decoded.userId);
 
-      if (user && user.status === "active") {
+      // 允许 pending 和 active 状态的用户
+      if (user && (user.status === "active" || user.status === "pending")) {
         req.user = user;
       }
     }
@@ -101,9 +102,7 @@ const requireAdmin = async (req, res, next) => {
 
     // 这里可以添加更复杂的角色系统
     // 暂时通过用户ID判断（实际项目中应该有专门的角色表）
-    const adminUsers = (process.env.ADMIN_USERS || "1")
-      .split(",")
-      .map((id) => parseInt(id));
+    const adminUsers = (process.env.ADMIN_USERS || "1").split(",").map((id) => parseInt(id));
 
     if (!adminUsers.includes(req.user.id)) {
       return res.status(403).json({

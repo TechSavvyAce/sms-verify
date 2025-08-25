@@ -1,74 +1,57 @@
 import React, { useState } from "react";
-import { Form, Input, Button, Card, Typography, Divider, Progress } from "antd";
-import {
-  UserOutlined,
-  LockOutlined,
-  MailOutlined,
-  MobileOutlined,
-  CheckCircleOutlined,
-} from "@ant-design/icons";
+import { Form, Input, Button, Card, Typography, Divider, message } from "antd";
+import { UserOutlined, LockOutlined, UserAddOutlined } from "@ant-design/icons";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuthStore } from "../../stores/authStore";
-import { RegisterRequest } from "../../types";
 
 const { Title, Text } = Typography;
 
 const RegisterPage: React.FC = () => {
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
-  const [passwordStrength, setPasswordStrength] = useState(0);
+
   const { register } = useAuthStore();
   const navigate = useNavigate();
 
-  const handleSubmit = async (values: RegisterRequest) => {
-    setLoading(true);
+  const handleSubmit = async (values: {
+    username: string;
+    password: string;
+    confirmPassword: string;
+  }) => {
     try {
-      const result = await register(values);
+      setLoading(true);
+      console.log("RegisterPage - Starting registration with:", values);
 
-      if (result?.requires_verification) {
-        // Store email for verification page
-        localStorage.setItem("registrationEmail", values.email);
-        // Show success message and redirect to verification page
-        navigate("/verify-email", {
-          state: {
-            message: "注册成功！请检查您的邮箱并点击验证链接激活账户。",
-            email: values.email,
-          },
-        });
-      } else {
-        navigate("/dashboard");
-      }
-    } catch (error) {
-      console.error("Registration error:", error);
-      // 错误已在 store 中处理
+      // 构建注册数据
+      const userData = {
+        username: values.username,
+        password: values.password,
+      };
+
+      console.log("RegisterPage - Calling register function with:", userData);
+      const response = await register(userData);
+      console.log("RegisterPage - Registration response:", response);
+
+      // 注册成功，直接跳转到验证页面（不显示消息）
+      const navigationState = {
+        username: values.username,
+        userId: response?.user?.id,
+        accessToken: response?.accessToken,
+        refreshToken: response?.refreshToken,
+        verificationMethods: response?.verification_methods || ["email", "sms"],
+      };
+
+      console.log("RegisterPage - Navigating to /verify with state:", navigationState);
+
+      // 使用 window.location.href 确保页面实际跳转
+      const encodedState = btoa(JSON.stringify(navigationState));
+      window.location.href = `/verify?state=${encodedState}`;
+    } catch (error: any) {
+      console.error("RegisterPage - Registration failed:", error);
+      // 错误已在 store 中处理，这里可以添加额外的错误处理逻辑
     } finally {
       setLoading(false);
     }
-  };
-
-  // 密码强度检测
-  const checkPasswordStrength = (password: string) => {
-    let strength = 0;
-    if (password.length >= 6) strength += 25;
-    if (password.length >= 8) strength += 25;
-    if (/[A-Z]/.test(password)) strength += 25;
-    if (/[0-9]/.test(password)) strength += 25;
-
-    setPasswordStrength(strength);
-    return strength;
-  };
-
-  const getPasswordStrengthColor = (strength: number) => {
-    if (strength < 50) return "#ff4d4f";
-    if (strength < 75) return "#faad14";
-    return "#52c41a";
-  };
-
-  const getPasswordStrengthText = (strength: number) => {
-    if (strength < 25) return "弱";
-    if (strength < 50) return "较弱";
-    if (strength < 75) return "中等";
-    return "强";
   };
 
   return (
@@ -85,78 +68,69 @@ const RegisterPage: React.FC = () => {
       <Card
         style={{
           width: "100%",
-          maxWidth: "450px",
-          borderRadius: "16px",
-          boxShadow: "0 20px 40px rgba(0,0,0,0.15)",
+          maxWidth: "480px",
+          borderRadius: "20px",
+          boxShadow: "0 25px 50px rgba(0,0,0,0.15)",
+          border: "none",
         }}
-        bodyStyle={{ padding: "40px 32px" }}
+        bodyStyle={{ padding: "48px 40px" }}
       >
         {/* Logo 和标题 */}
-        <div style={{ textAlign: "center", marginBottom: "32px" }}>
+        <div style={{ textAlign: "center", marginBottom: "40px" }}>
           <div
             style={{
-              width: "64px",
-              height: "64px",
-              background: "#1890ff",
-              borderRadius: "16px",
+              width: "72px",
+              height: "72px",
+              background: "linear-gradient(135deg, #1890ff 0%, #52c41a 100%)",
+              borderRadius: "20px",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              margin: "0 auto 16px",
-              fontSize: "24px",
+              margin: "0 auto 20px",
+              fontSize: "28px",
               color: "#fff",
               fontWeight: "bold",
+              boxShadow: "0 8px 24px rgba(24, 144, 255, 0.3)",
             }}
           >
-            <MobileOutlined />
+            <UserAddOutlined />
           </div>
-          <Title level={2} style={{ margin: 0, color: "#262626" }}>
-            注册账户
+          <Title level={2} style={{ margin: 0, color: "#262626", fontWeight: "600" }}>
+            创建账户
           </Title>
-          <Text style={{ color: "#8c8c8c", fontSize: "14px" }}>
-            加入我们，开始使用专业的短信验证服务
+          <Text style={{ color: "#8c8c8c", fontSize: "16px", marginTop: "8px", display: "block" }}>
+            填写基本信息完成注册
           </Text>
         </div>
 
         {/* 注册表单 */}
         <Form form={form} layout="vertical" onFinish={handleSubmit} size="large" autoComplete="off">
+          {/* 用户名 */}
           <Form.Item
             name="username"
             rules={[
               { required: true, message: "请输入用户名" },
-              { min: 3, max: 50, message: "用户名长度为3-50个字符" },
-              {
-                pattern: /^[a-zA-Z0-9_\u4e00-\u9fa5]+$/,
-                message: "用户名只能包含字母、数字、下划线和中文",
-              },
+              { min: 3, message: "用户名至少3个字符" },
+              { max: 30, message: "用户名最多30个字符" },
+              { pattern: /^[a-zA-Z0-9]+$/, message: "用户名只能包含字母和数字" },
             ]}
           >
             <Input
               prefix={<UserOutlined style={{ color: "#1890ff" }} />}
-              placeholder="用户名 (3-50字符)"
+              placeholder="用户名"
               autoComplete="username"
+              size="large"
+              style={{ height: "48px", fontSize: "16px" }}
             />
           </Form.Item>
 
-          <Form.Item
-            name="email"
-            rules={[
-              { required: true, message: "请输入邮箱地址" },
-              { type: "email", message: "请输入有效的邮箱地址" },
-            ]}
-          >
-            <Input
-              prefix={<MailOutlined style={{ color: "#1890ff" }} />}
-              placeholder="邮箱地址"
-              autoComplete="email"
-            />
-          </Form.Item>
-
+          {/* 密码 */}
           <Form.Item
             name="password"
             rules={[
               { required: true, message: "请输入密码" },
               { min: 6, message: "密码至少6个字符" },
+              { max: 100, message: "密码最多100个字符" },
               {
                 pattern: /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/,
                 message: "密码必须包含大小写字母和数字",
@@ -164,42 +138,15 @@ const RegisterPage: React.FC = () => {
             ]}
           >
             <Input.Password
-              prefix={<LockOutlined style={{ color: "#1890ff" }} />}
-              placeholder="密码 (至少6位，包含大小写字母和数字)"
+              prefix={<LockOutlined style={{ color: "#52c41a" }} />}
+              placeholder="密码"
               autoComplete="new-password"
-              onChange={(e) => checkPasswordStrength(e.target.value)}
+              size="large"
+              style={{ height: "48px", fontSize: "16px" }}
             />
           </Form.Item>
 
-          {/* 密码强度指示器 */}
-          {passwordStrength > 0 && (
-            <div style={{ marginBottom: "16px" }}>
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  marginBottom: "4px",
-                }}
-              >
-                <Text style={{ fontSize: "12px", color: "#8c8c8c" }}>密码强度</Text>
-                <Text
-                  style={{
-                    fontSize: "12px",
-                    color: getPasswordStrengthColor(passwordStrength),
-                  }}
-                >
-                  {getPasswordStrengthText(passwordStrength)}
-                </Text>
-              </div>
-              <Progress
-                percent={passwordStrength}
-                showInfo={false}
-                strokeColor={getPasswordStrengthColor(passwordStrength)}
-                size="small"
-              />
-            </div>
-          )}
-
+          {/* 确认密码 */}
           <Form.Item
             name="confirmPassword"
             dependencies={["password"]}
@@ -216,18 +163,23 @@ const RegisterPage: React.FC = () => {
             ]}
           >
             <Input.Password
-              prefix={<CheckCircleOutlined style={{ color: "#1890ff" }} />}
+              prefix={<LockOutlined style={{ color: "#52c41a" }} />}
               placeholder="确认密码"
               autoComplete="new-password"
+              size="large"
+              style={{ height: "48px", fontSize: "16px" }}
             />
           </Form.Item>
 
+          {/* 注册按钮 */}
           <Form.Item>
             <Button
               type="primary"
               htmlType="submit"
               loading={loading}
               block
+              size="large"
+              icon={<UserAddOutlined />}
               style={{
                 height: "48px",
                 fontSize: "16px",
@@ -235,26 +187,27 @@ const RegisterPage: React.FC = () => {
                 borderRadius: "8px",
               }}
             >
-              立即注册
+              创建账户
             </Button>
           </Form.Item>
         </Form>
 
         {/* 分隔线 */}
-        <Divider>
-          <Text style={{ color: "#8c8c8c", fontSize: "12px" }}>或</Text>
+        <Divider style={{ margin: "32px 0" }}>
+          <Text style={{ color: "#bfbfbf", fontSize: "14px" }}>或</Text>
         </Divider>
 
-        {/* 登录链接 */}
+        {/* 其他选项 */}
         <div style={{ textAlign: "center" }}>
-          <Text style={{ color: "#8c8c8c" }}>
+          <Text style={{ color: "#8c8c8c", fontSize: "16px" }}>
             已有账户？{" "}
             <Link
               to="/login"
               style={{
                 color: "#1890ff",
-                fontWeight: "500",
+                fontWeight: "600",
                 textDecoration: "none",
+                fontSize: "16px",
               }}
             >
               立即登录
@@ -262,35 +215,8 @@ const RegisterPage: React.FC = () => {
           </Text>
         </div>
 
-        {/* 服务优势 */}
-        <div
-          style={{
-            marginTop: "32px",
-            padding: "16px",
-            background: "#f9f9f9",
-            borderRadius: "8px",
-          }}
-        >
-          <Text strong style={{ display: "block", marginBottom: "8px", color: "#262626" }}>
-            为什么选择我们？
-          </Text>
-          <ul
-            style={{
-              margin: 0,
-              paddingLeft: "16px",
-              color: "#8c8c8c",
-              fontSize: "12px",
-            }}
-          >
-            <li>全球多国手机号码资源</li>
-            <li>快速稳定的短信接收</li>
-            <li>透明的定价策略</li>
-            <li>7×24小时技术支持</li>
-          </ul>
-        </div>
-
         {/* 底部信息 */}
-        <div style={{ textAlign: "center", marginTop: "24px" }}>
+        <div style={{ textAlign: "center", marginTop: "40px" }}>
           <Text style={{ color: "#bfbfbf", fontSize: "12px" }}>
             注册即表示同意我们的{" "}
             <span style={{ color: "#1890ff", cursor: "pointer" }}>服务条款</span> 和{" "}

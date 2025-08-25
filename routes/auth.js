@@ -10,6 +10,8 @@ const {
 } = require("../middleware/validation");
 const { logUserActivity } = require("../middleware/auth");
 const EmailService = require("../services/EmailService");
+const TwilioService = require("../services/TwilioService");
+
 const logger = require("../utils/logger");
 const {
   asyncHandler,
@@ -20,6 +22,7 @@ const {
 const router = express.Router();
 
 const emailService = new EmailService();
+const twilioService = new TwilioService();
 
 /**
  * 生成JWT令牌
@@ -42,65 +45,51 @@ function generateTokens(userId) {
  */
 router.post("/register", createValidationMiddleware(validateUserRegistration), async (req, res) => {
   try {
-    const { username, email, password } = req.body;
+    const { username, password } = req.body;
 
     // 检查用户名是否已存在
-    const existingUser = await User.findOne({
-      where: {
-        [Op.or]: [{ username }, { email }],
-      },
-    });
-
+    const existingUser = await User.findOne({ where: { username } });
     if (existingUser) {
       return res.status(400).json({
         success: false,
-        error: existingUser.username === username ? "用户名已存在" : "邮箱已被注册",
+        error: "用户名已被使用",
       });
     }
 
-    // 创建新用户
-    const user = await User.create({
+    const userData = {
       username,
-      email,
-      password_hash: password, // 密码会在模型的钩子中自动加密
-      status: "pending",
-      balance: 0.0, // 确保余额字段被设置
+      password_hash: password, // 密码将在User模型中自动哈希
+      status: "pending", // 设置为pending，必须验证后才能激活
+      balance: 0.0,
       total_spent: 0.0,
       total_recharged: 0.0,
-    });
+    };
 
-    // 生成邮箱验证令牌
-    const verificationToken = user.generateEmailVerificationToken();
-    await user.save();
-
-    // 发送验证邮件
-    try {
-      await emailService.sendEmailVerification(email, username, verificationToken);
-      logger.info("验证邮件发送成功:", { userId: user.id, email });
-    } catch (emailError) {
-      logger.error("验证邮件发送失败:", emailError);
-      // 邮件发送失败不影响注册流程
-    }
+    const user = await User.create(userData);
 
     // 记录注册活动
     logger.info("用户注册成功:", {
       userId: user.id,
       username: user.username,
-      email: user.email,
       ip: req.ip,
     });
 
-    // 生成JWT令牌（自动登录）
     const tokens = generateTokens(user.id);
 
     res.status(201).json({
       success: true,
-      message: "注册成功，请检查您的邮箱并点击验证链接激活账户",
+      message: "注册成功！请选择验证方式完成账户激活。",
       data: {
-        user: user.toJSON(),
+        user: {
+          id: user.id,
+          username: user.username,
+          status: user.status,
+          email_verified: user.email_verified,
+          created_at: user.createdAt,
+        },
         accessToken: tokens.accessToken,
         refreshToken: tokens.refreshToken,
-        requires_verification: true,
+        verification_methods: ["email", "sms"],
       },
     });
   } catch (error) {
@@ -147,11 +136,30 @@ router.post(
         });
       }
 
-      // 检查账户状态
-      if (user.status !== "active") {
+      // 检查账户状态并提供明确的错误信息
+      if (user.status === "pending") {
+        return res.status(403).json({
+          success: false,
+          error: "账户尚未激活，请先完成邮箱或手机验证",
+          code: "ACCOUNT_PENDING",
+          requiresVerification: true,
+          userId: user.id,
+        });
+      }
+
+      if (user.status === "suspended") {
         return res.status(403).json({
           success: false,
           error: "账户已被停用，请联系客服",
+          code: "ACCOUNT_SUSPENDED",
+        });
+      }
+
+      if (user.status !== "active") {
+        return res.status(403).json({
+          success: false,
+          error: "账户状态异常，请联系客服",
+          code: "ACCOUNT_INVALID_STATUS",
         });
       }
 
@@ -169,11 +177,17 @@ router.post(
         userAgent: req.get("User-Agent"),
       });
 
+      // Ensure numeric fields are returned as numbers
+      const userData = user.toJSON();
+      userData.balance = parseFloat(userData.balance) || 0;
+      userData.total_spent = parseFloat(userData.total_spent) || 0;
+      userData.total_recharged = parseFloat(userData.total_recharged) || 0;
+
       res.json({
         success: true,
         message: "登录成功",
         data: {
-          user: user.toJSON(),
+          user: userData,
           ...tokens,
         },
       });
@@ -391,20 +405,20 @@ router.post("/reset-password", async (req, res) => {
  */
 router.post("/verify-email", async (req, res) => {
   try {
-    const { token } = req.body;
+    const { code } = req.body;
 
-    if (!token) {
+    if (!code) {
       return res.status(400).json({
         success: false,
-        error: "验证令牌不能为空",
+        error: "验证码不能为空",
       });
     }
 
     // 查找用户
     const user = await User.findOne({
       where: {
-        email_verification_token: token,
-        email_verification_expires: {
+        verification_code: code,
+        verification_code_expires: {
           [Op.gt]: new Date(),
         },
       },
@@ -413,12 +427,17 @@ router.post("/verify-email", async (req, res) => {
     if (!user) {
       return res.status(400).json({
         success: false,
-        error: "验证令牌无效或已过期",
+        error: "验证码无效或已过期",
       });
     }
 
     // 验证邮箱
     await user.verifyEmail();
+
+    // 清除验证码
+    user.verification_code = null;
+    user.verification_code_expires = null;
+    await user.save();
 
     // 记录验证活动
     logger.info("邮箱验证成功:", {
@@ -427,11 +446,18 @@ router.post("/verify-email", async (req, res) => {
       ip: req.ip,
     });
 
+    // Ensure numeric fields are returned as numbers
+    const userData = user.toJSON();
+    userData.balance = parseFloat(userData.balance) || 0;
+    userData.total_spent = parseFloat(userData.total_spent) || 0;
+    userData.total_recharged = parseFloat(userData.total_recharged) || 0;
+
     res.json({
       success: true,
       message: "邮箱验证成功！您的账户已激活。",
       data: {
-        user: user.toJSON(),
+        user: userData,
+        account_activated: true,
       },
     });
   } catch (error) {
@@ -439,6 +465,90 @@ router.post("/verify-email", async (req, res) => {
     res.status(500).json({
       success: false,
       error: "验证失败，请稍后重试",
+    });
+  }
+});
+
+/**
+ * 发送验证邮件
+ * POST /api/auth/send-email-verification
+ */
+router.post("/send-email-verification", async (req, res) => {
+  try {
+    const { email, userId } = req.body;
+
+    if (!email) {
+      return res.status(400).json({
+        success: false,
+        error: "邮箱地址不能为空",
+      });
+    }
+
+    let user;
+
+    // 如果提供了userId，优先使用userId查找用户
+    if (userId) {
+      user = await User.findByPk(userId);
+      if (!user) {
+        return res.status(404).json({
+          success: false,
+          error: "用户不存在",
+        });
+      }
+
+      // 更新用户的邮箱地址
+      user.email = email;
+      await user.save();
+    } else {
+      // 否则尝试通过邮箱查找用户
+      user = await User.findOne({
+        where: { email },
+      });
+
+      if (!user) {
+        return res.status(404).json({
+          success: false,
+          error: "用户不存在",
+        });
+      }
+    }
+
+    if (user.email_verified) {
+      return res.status(400).json({
+        success: false,
+        error: "邮箱已验证，无需重新发送",
+      });
+    }
+
+    // 生成8位数字验证码
+    const verificationCode = Math.floor(10000000 + Math.random() * 90000000).toString();
+
+    // 保存验证码到用户记录（用于验证）
+    user.verification_code = verificationCode;
+    user.verification_code_expires = new Date(Date.now() + 10 * 60 * 1000); // 10分钟过期
+    await user.save();
+
+    // 发送验证邮件
+    try {
+      await emailService.sendEmailVerification(email, user.username, verificationCode);
+      logger.info("发送验证邮件成功:", { userId: user.id, email, code: verificationCode });
+    } catch (emailError) {
+      logger.error("发送验证邮件失败:", emailError);
+      return res.status(500).json({
+        success: false,
+        error: "邮件发送失败，请稍后重试",
+      });
+    }
+
+    res.json({
+      success: true,
+      message: "验证邮件已发送，请检查您的邮箱",
+    });
+  } catch (error) {
+    logger.error("发送验证邮件失败:", error);
+    res.status(500).json({
+      success: false,
+      error: "操作失败，请稍后重试",
     });
   }
 });
@@ -477,14 +587,18 @@ router.post("/resend-verification", async (req, res) => {
       });
     }
 
-    // 生成新的验证令牌
-    const verificationToken = user.generateEmailVerificationToken();
+    // 生成8位数字验证码
+    const verificationCode = Math.floor(10000000 + Math.random() * 90000000).toString();
+
+    // 保存验证码到用户记录（用于验证）
+    user.verification_code = verificationCode;
+    user.verification_code_expires = new Date(Date.now() + 10 * 60 * 1000); // 10分钟过期
     await user.save();
 
     // 发送验证邮件
     try {
-      await emailService.sendEmailVerification(email, user.username, verificationToken);
-      logger.info("重新发送验证邮件成功:", { userId: user.id, email });
+      await emailService.sendEmailVerification(email, user.username, verificationCode);
+      logger.info("重新发送验证邮件成功:", { userId: user.id, email, code: verificationCode });
     } catch (emailError) {
       logger.error("重新发送验证邮件失败:", emailError);
       return res.status(500).json({
@@ -507,73 +621,215 @@ router.post("/resend-verification", async (req, res) => {
 });
 
 /**
- * 请求密码重置
- * POST /api/auth/forgot-password
+ * 发送SMS验证码
+ * POST /api/auth/send-sms-verification
  */
-router.post("/forgot-password", async (req, res) => {
+router.post("/send-sms-verification", async (req, res) => {
   try {
-    const { email } = req.body;
+    const { phone, userId } = req.body;
 
-    if (!email) {
+    if (!phone) {
       return res.status(400).json({
         success: false,
-        error: "邮箱地址不能为空",
+        error: "手机号码不能为空",
       });
     }
 
-    // 查找用户
-    const user = await User.findOne({
-      where: { email },
-    });
-
-    if (!user) {
-      // 为了安全起见，即使用户不存在也返回成功
-      return res.json({
-        success: true,
-        message: "如果该邮箱已注册，您将收到密码重置邮件",
+    // 验证手机号码格式（支持国际格式）
+    const phoneRegex = /^\+[1-9]\d{1,14}$/;
+    if (!phoneRegex.test(phone)) {
+      return res.status(400).json({
+        success: false,
+        error: "请输入有效的国际手机号码格式（如：+8613800138000）",
       });
     }
 
-    // 生成密码重置令牌
-    const resetToken = user.generatePasswordResetToken();
+    let user;
+
+    // 如果提供了userId，优先使用userId查找用户
+    if (userId) {
+      user = await User.findByPk(userId);
+      if (!user) {
+        return res.status(404).json({
+          success: false,
+          error: "用户不存在",
+        });
+      }
+
+      // 更新用户的手机号码
+      user.phone = phone;
+      await user.save();
+    } else {
+      // 否则尝试通过手机号码查找用户
+      user = await User.findOne({
+        where: { phone },
+      });
+
+      if (!user) {
+        return res.status(404).json({
+          success: false,
+          error: "用户不存在",
+        });
+      }
+    }
+
+    if (user.phone_verified) {
+      return res.status(400).json({
+        success: false,
+        error: "手机已验证，无需重新发送",
+      });
+    }
+
+    // 生成8位数字验证码
+    const verificationCode = Math.floor(10000000 + Math.random() * 90000000).toString();
+
+    // 保存验证码到用户记录（用于验证）
+    user.verification_code = verificationCode;
+    user.verification_code_expires = new Date(Date.now() + 10 * 60 * 1000);
     await user.save();
 
-    // 发送密码重置邮件
-    await emailService.sendPasswordReset(email, user.username, resetToken);
+    // 使用Twilio发送SMS验证码
+    try {
+      const smsResult = await twilioService.sendVerificationCode(phone, verificationCode, user.id);
 
-    logger.info("发送密码重置邮件:", {
-      userId: user.id,
-      email,
-    });
+      if (smsResult.success) {
+        logger.info("SMS验证码发送成功:", {
+          phone: twilioService.maskPhoneNumber(phone),
+          messageId: smsResult.messageId,
+          userId: user.id,
+        });
+      } else {
+        throw new Error("SMS发送失败");
+      }
+    } catch (smsError) {
+      logger.error("Twilio SMS发送失败:", {
+        error: smsError.message,
+        phone: twilioService.maskPhoneNumber(phone),
+        userId: user.id,
+      });
+
+      // 清除已保存的验证码
+      user.verification_code = null;
+      user.verification_code_expires = null;
+      await user.save();
+
+      return res.status(500).json({
+        success: false,
+        error: `SMS发送失败: ${smsError.message}`,
+      });
+    }
 
     res.json({
       success: true,
-      message: "如果该邮箱已注册，您将收到密码重置邮件",
+      message: "验证码已发送到您的手机",
     });
   } catch (error) {
-    logger.error("密码重置请求失败:", error);
+    logger.error("SMS验证码发送失败:", error);
     res.status(500).json({
       success: false,
-      error: "请求失败，请稍后重试",
+      error: "发送失败，请稍后重试",
     });
   }
 });
 
 /**
- * 重置密码
- * POST /api/auth/reset-password
+ * 验证SMS验证码
+ * POST /api/auth/verify-sms
  */
-router.post("/reset-password", async (req, res) => {
+router.post("/verify-sms", async (req, res) => {
   try {
-    const { token, password } = req.body;
+    const { phone, code } = req.body;
 
-    if (!token || !password) {
+    if (!phone || !code) {
       return res.status(400).json({
         success: false,
-        error: "重置令牌和新密码不能为空",
+        error: "手机号码和验证码不能为空",
       });
     }
 
+    // 验证验证码格式
+    if (!/^\d{8}$/.test(code)) {
+      return res.status(400).json({
+        success: false,
+        error: "验证码格式不正确",
+      });
+    }
+
+    // 查找用户并验证验证码
+    const user = await User.findOne({
+      where: {
+        phone,
+        verification_code: code,
+        verification_code_expires: {
+          [Op.gt]: new Date(),
+        },
+      },
+    });
+
+    if (!user) {
+      return res.status(400).json({
+        success: false,
+        error: "验证码无效或已过期",
+      });
+    }
+
+    // 激活用户账户
+    await user.verifySMS();
+
+    // 清除验证码
+    user.verification_code = null;
+    user.verification_code_expires = null;
+    await user.save();
+
+    // 生成JWT令牌
+    const tokens = generateTokens(user.id);
+
+    logger.info("SMS验证成功，用户账户已激活:", {
+      userId: user.id,
+      phone,
+    });
+
+    // Ensure numeric fields are returned as numbers
+    const userData = user.toJSON();
+    userData.balance = parseFloat(userData.balance) || 0;
+    userData.total_spent = parseFloat(userData.total_spent) || 0;
+    userData.total_recharged = parseFloat(userData.total_recharged) || 0;
+
+    res.json({
+      success: true,
+      message: "手机验证成功，账户已激活",
+      data: {
+        user: userData,
+        accessToken: tokens.accessToken,
+        refreshToken: tokens.refreshToken,
+        verification_method: "sms",
+      },
+    });
+  } catch (error) {
+    logger.error("SMS验证失败:", error);
+    res.status(500).json({
+      success: false,
+      error: "验证失败，请稍后重试",
+    });
+  }
+});
+
+/**
+ * 设置初始密码
+ * POST /api/auth/set-password
+ */
+router.post("/set-password", async (req, res) => {
+  try {
+    const { username, password } = req.body;
+
+    if (!username || !password) {
+      return res.status(400).json({
+        success: false,
+        error: "用户名和密码不能为空",
+      });
+    }
+
+    // 验证密码强度
     if (password.length < 6) {
       return res.status(400).json({
         success: false,
@@ -583,38 +839,299 @@ router.post("/reset-password", async (req, res) => {
 
     // 查找用户
     const user = await User.findOne({
-      where: {
-        password_reset_token: token,
-        password_reset_expires: {
-          [Op.gt]: new Date(),
-        },
-      },
+      where: { username },
     });
 
     if (!user) {
-      return res.status(400).json({
+      return res.status(404).json({
         success: false,
-        error: "重置链接无效或已过期",
+        error: "用户不存在",
       });
     }
 
-    // 重置密码
-    await user.resetPassword(password);
+    // 检查用户是否已经设置过密码
+    if (user.password_hash) {
+      return res.status(400).json({
+        success: false,
+        error: "用户已经设置过密码，请使用修改密码功能",
+      });
+    }
 
-    logger.info("用户密码重置成功:", {
+    // 设置密码
+    user.password_hash = password; // 会在模型钩子中自动加密
+    await user.save();
+
+    // 记录活动
+    await logUserActivity(req, {
       userId: user.id,
-      email: user.email,
+      action: "set_password",
+      description: "用户设置了初始密码",
+      ip_address: req.ip,
+      user_agent: req.get("User-Agent"),
     });
+
+    logger.info("用户设置初始密码成功:", {
+      userId: user.id,
+      username: user.username,
+    });
+
+    // Ensure numeric fields are returned as numbers
+    const userData = user.toJSON();
+    userData.balance = parseFloat(userData.balance) || 0;
+    userData.total_spent = parseFloat(userData.total_spent) || 0;
+    userData.total_recharged = parseFloat(userData.total_recharged) || 0;
 
     res.json({
       success: true,
-      message: "密码重置成功，请使用新密码登录",
+      message: "密码设置成功",
+      data: {
+        user: userData,
+      },
     });
   } catch (error) {
-    logger.error("密码重置失败:", error);
+    logger.error("设置初始密码失败:", error);
     res.status(500).json({
       success: false,
-      error: "重置失败，请稍后重试",
+      error: "设置失败，请稍后重试",
+    });
+  }
+});
+
+/**
+ * 统一认证接口（支持所有登录和注册方式）
+ * POST /api/auth/authenticate
+ */
+router.post("/authenticate", async (req, res) => {
+  try {
+    const { identifier, password, verification_code } = req.body;
+
+    if (!identifier) {
+      return res.status(400).json({
+        success: false,
+        error: "请输入用户名、邮箱或手机号",
+      });
+    }
+
+    // 自动检测输入类型
+    let inputType;
+    if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(identifier)) {
+      inputType = "email";
+    } else if (/^(\+86)?1[3-9]\d{9}$/.test(identifier)) {
+      inputType = "phone";
+    } else {
+      inputType = "username";
+    }
+
+    // 情况1: 密码登录（支持用户名、邮箱、手机号）
+    if (password) {
+      const user = await User.findOne({
+        where: {
+          [Op.or]: [{ username: identifier }, { email: identifier }, { phone: identifier }],
+        },
+      });
+
+      if (!user) {
+        return res.status(401).json({
+          success: false,
+          error: "用户名或密码错误",
+        });
+      }
+
+      // 验证密码
+      const isValidPassword = await user.validatePassword(password);
+      if (!isValidPassword) {
+        return res.status(401).json({
+          success: false,
+          error: "用户名或密码错误",
+        });
+      }
+
+      // 检查账户状态
+      if (user.status !== "active") {
+        return res.status(403).json({
+          success: false,
+          error: "账户已被停用，请联系客服",
+        });
+      }
+
+      // 更新登录信息
+      await user.updateLoginInfo();
+
+      // 生成令牌
+      const tokens = generateTokens(user.id);
+
+      logger.info("用户密码登录成功:", {
+        userId: user.id,
+        username: user.username,
+        inputType,
+        ip: req.ip,
+      });
+
+      // Ensure numeric fields are returned as numbers
+      const userData = user.toJSON();
+      userData.balance = parseFloat(userData.balance) || 0;
+      userData.total_spent = parseFloat(userData.total_spent) || 0;
+      userData.total_recharged = parseFloat(userData.total_recharged) || 0;
+
+      return res.json({
+        success: true,
+        message: "登录成功",
+        data: {
+          user: userData,
+          ...tokens,
+        },
+      });
+    }
+
+    // 情况2: 验证码登录/注册（仅支持邮箱和手机号）
+    if (verification_code) {
+      if (inputType === "username") {
+        return res.status(400).json({
+          success: false,
+          error: "验证码登录仅支持邮箱或手机号",
+        });
+      }
+
+      // 查找现有用户
+      let user = await User.findOne({
+        where: inputType === "email" ? { email: identifier } : { phone: identifier },
+      });
+
+      // 如果用户不存在，自动创建账户
+      if (!user) {
+        const userData = {
+          username:
+            inputType === "email"
+              ? identifier.split("@")[0]
+              : identifier.replace(/^\+86/, "").replace(/^86/, ""),
+          status: "active",
+          balance: 0.0,
+          total_spent: 0.0,
+          total_recharged: 0.0,
+        };
+
+        if (inputType === "email") {
+          userData.email = identifier;
+        } else if (inputType === "phone") {
+          userData.phone = identifier;
+        }
+
+        // 确保用户名唯一
+        let finalUsername = userData.username;
+        let existingUser = await User.findOne({ where: { username: finalUsername } });
+        let counter = 1;
+
+        while (existingUser) {
+          finalUsername = `${userData.username}_${counter}`;
+          existingUser = await User.findOne({ where: { username: finalUsername } });
+          counter++;
+        }
+
+        userData.username = finalUsername;
+        user = await User.create(userData);
+
+        logger.info("自动创建用户账户:", {
+          userId: user.id,
+          username: user.username,
+          inputType,
+          ip: req.ip,
+        });
+      }
+
+      // 检查账户状态
+      if (user.status !== "active") {
+        return res.status(403).json({
+          success: false,
+          error: "账户已被停用，请联系客服",
+        });
+      }
+
+      // 更新登录信息
+      await user.updateLoginInfo();
+
+      // 生成令牌
+      const tokens = generateTokens(user.id);
+
+      logger.info("用户验证码登录成功:", {
+        userId: user.id,
+        username: user.username,
+        inputType,
+        ip: req.ip,
+      });
+
+      // Ensure numeric fields are returned as numbers
+      const userData = user.toJSON();
+      userData.balance = parseFloat(userData.balance) || 0;
+      userData.total_spent = parseFloat(userData.total_spent) || 0;
+      userData.total_recharged = parseFloat(userData.total_recharged) || 0;
+
+      return res.json({
+        success: true,
+        message: "登录成功",
+        data: {
+          user: userData,
+          ...tokens,
+        },
+      });
+    }
+
+    // 情况3: 仅输入标识符，返回用户信息（用于前端判断）
+    if (inputType === "username") {
+      return res.json({
+        success: true,
+        message: "请输入密码",
+        data: {
+          requires_password: true,
+          input_type: inputType,
+        },
+      });
+    } else {
+      return res.json({
+        success: true,
+        message: "请选择登录方式",
+        data: {
+          supports_password: true,
+          supports_verification: true,
+          input_type: inputType,
+        },
+      });
+    }
+  } catch (error) {
+    logger.error("统一认证失败:", error);
+    res.status(500).json({
+      success: false,
+      error: "认证失败，请稍后重试",
+    });
+  }
+});
+
+/**
+ * 测试Twilio连接
+ * GET /api/auth/twilio-health
+ */
+router.get("/twilio-health", async (req, res) => {
+  try {
+    const healthStatus = await twilioService.getHealthStatus();
+
+    if (healthStatus.status === "healthy") {
+      res.json({
+        success: true,
+        message: "Twilio服务正常",
+        data: healthStatus,
+      });
+    } else {
+      res.status(503).json({
+        success: false,
+        message: "Twilio服务异常",
+        data: healthStatus,
+      });
+    }
+  } catch (error) {
+    logger.error("Twilio健康检查失败:", error);
+    res.status(500).json({
+      success: false,
+      error: "健康检查失败",
+      details: error.message,
     });
   }
 });

@@ -73,12 +73,8 @@ const commonRules = {
  */
 const validateUserRegistration = Joi.object({
   username: commonRules.username,
-  email: commonRules.email,
   password: commonRules.password,
-  confirmPassword: Joi.string().valid(Joi.ref("password")).required().messages({
-    "any.only": "确认密码必须与密码一致",
-    "any.required": "确认密码不能为空",
-  }),
+  email: commonRules.email.optional(), // 可选，后端会自动生成临时邮箱
 });
 
 /**

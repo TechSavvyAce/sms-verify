@@ -3,6 +3,8 @@ export interface User {
   id: number;
   username: string;
   email: string;
+  phone?: string;
+  verification_method?: "email" | "sms";
   balance: number;
   total_spent: number;
   total_recharged: number;
@@ -11,6 +13,7 @@ export interface User {
   updated_at: string;
   last_login?: string;
   login_count: number;
+  password_hash?: string;
 }
 
 // 认证相关类型
@@ -31,7 +34,6 @@ export interface LoginRequest {
 
 export interface RegisterRequest {
   username: string;
-  email: string;
   password: string;
 }
 
@@ -39,7 +41,12 @@ export interface RegisterResponse {
   user: User;
   accessToken: string;
   refreshToken: string;
-  requires_verification: boolean;
+  verification_methods: string[]; // 支持的验证方式
+  verification_method?: "email" | "sms";
+  verification_data?: {
+    email?: string;
+    phone?: string;
+  };
 }
 
 // 服务相关类型

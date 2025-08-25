@@ -130,3 +130,90 @@ export const generateRandomId = (length: number = 8): string => {
 
   return result;
 };
+
+/**
+ * 检测输入类型（用户名、邮箱或手机号）
+ */
+export const detectInputType = (input: string): "username" | "email" | "phone" => {
+  // 检测邮箱格式
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (emailRegex.test(input)) {
+    return "email";
+  }
+
+  // 检测手机号格式（中国大陆）
+  const phoneRegex = /^(\+86)?1[3-9]\d{9}$/;
+  if (phoneRegex.test(input)) {
+    return "phone";
+  }
+
+  // 默认为用户名
+  return "username";
+};
+
+/**
+ * 验证输入格式
+ */
+export const validateInput = (input: string): { isValid: boolean; message: string } => {
+  const inputType = detectInputType(input);
+
+  switch (inputType) {
+    case "email":
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(input)) {
+        return { isValid: false, message: "请输入有效的邮箱地址" };
+      }
+      break;
+
+    case "phone":
+      const phoneRegex = /^(\+86)?1[3-9]\d{9}$/;
+      if (!phoneRegex.test(input)) {
+        return { isValid: false, message: "请输入有效的中国大陆手机号码" };
+      }
+      break;
+
+    case "username":
+      if (input.length < 3) {
+        return { isValid: false, message: "用户名至少3个字符" };
+      }
+      if (input.length > 30) {
+        return { isValid: false, message: "用户名最多30个字符" };
+      }
+      if (!/^[a-zA-Z0-9_]+$/.test(input)) {
+        return { isValid: false, message: "用户名只能包含字母、数字和下划线" };
+      }
+      break;
+  }
+
+  return { isValid: true, message: "" };
+};
+
+/**
+ * 获取输入字段的占位符文本
+ */
+export const getInputPlaceholder = (inputType: "username" | "email" | "phone"): string => {
+  switch (inputType) {
+    case "email":
+      return "邮箱地址";
+    case "phone":
+      return "手机号码";
+    case "username":
+    default:
+      return "用户名、邮箱或手机号";
+  }
+};
+
+/**
+ * 获取输入字段的图标
+ */
+export const getInputIcon = (inputType: "username" | "email" | "phone") => {
+  switch (inputType) {
+    case "email":
+      return "mail";
+    case "phone":
+      return "mobile";
+    case "username":
+    default:
+      return "user";
+  }
+};

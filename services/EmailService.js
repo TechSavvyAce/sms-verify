@@ -275,11 +275,7 @@ class EmailService {
   /**
    * 发送邮箱验证邮件
    */
-  async sendEmailVerification(email, username, token) {
-    const verificationUrl = `${
-      process.env.FRONTEND_URL || "http://localhost:3000"
-    }/verify-email?token=${token}&email=${encodeURIComponent(email)}`;
-
+  async sendEmailVerification(email, username, verificationCode) {
     const subject = "验证您的邮箱地址 - SMS验证平台";
 
     const html = `
@@ -317,19 +313,21 @@ class EmailService {
           .content {
             margin-bottom: 30px;
           }
-          .button {
-            display: inline-block;
-            background: #1890ff;
-            color: white;
-            padding: 12px 30px;
-            text-decoration: none;
-            border-radius: 6px;
-            font-weight: 500;
+          .verification-code {
+            background: #f0f8ff;
+            border: 2px solid #1890ff;
+            border-radius: 8px;
+            padding: 20px;
             text-align: center;
             margin: 20px 0;
+            font-family: 'Courier New', monospace;
           }
-          .button:hover {
-            background: #40a9ff;
+          .verification-code .code {
+            font-size: 32px;
+            font-weight: bold;
+            color: #1890ff;
+            letter-spacing: 4px;
+            margin: 10px 0;
           }
           .footer {
             text-align: center;
@@ -347,6 +345,14 @@ class EmailService {
             margin: 20px 0;
             color: #ad6800;
           }
+          .instructions {
+            background: #f6ffed;
+            border: 1px solid #b7eb8f;
+            border-radius: 4px;
+            padding: 15px;
+            margin: 20px 0;
+            color: #389e0d;
+          }
         </style>
       </head>
       <body>
@@ -357,21 +363,29 @@ class EmailService {
           
           <div class="content">
             <h2>欢迎 ${username}！</h2>
-            <p>感谢您注册SMS验证平台。为了确保您的账户安全，请点击下面的按钮验证您的邮箱地址。</p>
+            <p>感谢您注册SMS验证平台。为了确保您的账户安全，请使用以下验证码完成邮箱验证。</p>
             
-            <div style="text-align: center;">
-              <a href="${verificationUrl}" class="button">验证邮箱地址</a>
+            <div class="verification-code">
+              <div>您的验证码是：</div>
+              <div class="code">${verificationCode}</div>
+              <div style="font-size: 14px; color: #666;">请在10分钟内完成验证</div>
             </div>
             
-            <p>如果按钮无法点击，请复制以下链接到浏览器中打开：</p>
-            <p style="background: #f5f5f5; padding: 10px; border-radius: 4px; word-break: break-all;">
-              ${verificationUrl}
-            </p>
+            <div class="instructions">
+              <strong>验证步骤：</strong>
+              <ol style="margin: 10px 0; padding-left: 20px;">
+                <li>复制上面的8位验证码</li>
+                <li>返回SMS验证平台</li>
+                <li>在验证页面输入验证码</li>
+                <li>点击"验证邮箱"按钮</li>
+              </ol>
+            </div>
             
             <div class="warning">
-              <strong>注意：</strong>
+              <strong>安全提醒：</strong>
               <ul style="margin: 10px 0;">
-                <li>此验证链接将在24小时后过期</li>
+                <li>此验证码将在10分钟后过期</li>
+                <li>请勿将验证码分享给他人</li>
                 <li>如果这不是您本人的操作，请忽略此邮件</li>
                 <li>验证成功后即可正常使用平台所有功能</li>
               </ul>
@@ -380,7 +394,7 @@ class EmailService {
           
           <div class="footer">
             <p>此邮件由系统自动发送，请勿回复。</p>
-            <p>© 2024 SMS验证平台. 保留所有权利。</p>
+            <p>© 2025 SMS验证平台. 保留所有权利。</p>
           </div>
         </div>
       </body>
@@ -500,7 +514,7 @@ class EmailService {
           
           <div class="footer">
             <p>此邮件由系统自动发送，请勿回复。</p>
-            <p>© 2024 SMS验证平台. 保留所有权利。</p>
+            <p>© 2025 SMS验证平台. 保留所有权利。</p>
           </div>
         </div>
       </body>
@@ -622,7 +636,7 @@ class EmailService {
           
           <div class="footer">
             <p>此邮件由系统自动发送，请勿回复。</p>
-            <p>© 2024 SMS验证平台. 保留所有权利。</p>
+            <p>© 2025 SMS验证平台. 保留所有权利。</p>
           </div>
         </div>
       </body>
@@ -717,7 +731,7 @@ class EmailService {
           
           <div class="footer">
             <p>此邮件由系统自动发送，请勿回复。</p>
-            <p>© 2024 SMS验证平台. 保留所有权利。</p>
+            <p>© 2025 SMS验证平台. 保留所有权利。</p>
           </div>
         </div>
       </body>

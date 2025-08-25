@@ -1,39 +1,57 @@
 import React from "react";
-import { Spin, SpinProps } from "antd";
+import { Spin, Typography, Space } from "antd";
 import { LoadingOutlined } from "@ant-design/icons";
 
-interface LoadingSpinnerProps extends SpinProps {
+const { Text } = Typography;
+
+interface LoadingSpinnerProps {
+  size?: "small" | "default" | "large";
+  text?: string;
+  fullScreen?: boolean;
   tip?: string;
-  overlay?: boolean;
-  className?: string;
 }
 
 const LoadingSpinner: React.FC<LoadingSpinnerProps> = ({
-  size = "default",
-  tip = "加载中...",
-  overlay = false,
-  className = "",
-  ...props
+  size = "large",
+  text = "加载中...",
+  fullScreen = false,
+  tip,
 }) => {
-  const antIcon = (
-    <LoadingOutlined style={{ fontSize: size === "large" ? 24 : 16 }} spin />
-  );
+  const antIcon = <LoadingOutlined style={{ fontSize: size === "large" ? 32 : 24 }} spin />;
 
-  const spinner = (
-    <Spin
-      indicator={antIcon}
-      tip={tip}
-      size={size}
-      className={className}
-      {...props}
-    />
-  );
-
-  if (overlay) {
-    return <div className="loading-overlay">{spinner}</div>;
+  if (fullScreen) {
+    return (
+      <div
+        style={{
+          position: "fixed",
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: "rgba(255, 255, 255, 0.9)",
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          zIndex: 9999,
+        }}
+      >
+        <Spin indicator={antIcon} size={size} />
+        {text && <Text style={{ marginTop: 16, fontSize: 16, color: "#666" }}>{text}</Text>}
+        {tip && <Text style={{ marginTop: 8, fontSize: 14, color: "#999" }}>{tip}</Text>}
+      </div>
+    );
   }
 
-  return <div className="loading-container">{spinner}</div>;
+  return (
+    <div style={{ textAlign: "center", padding: "40px 20px" }}>
+      <Space direction="vertical" size="middle">
+        <Spin indicator={antIcon} size={size} />
+        {text && <Text style={{ fontSize: 16, color: "#666" }}>{text}</Text>}
+        {tip && <Text style={{ fontSize: 14, color: "#999" }}>{tip}</Text>}
+      </Space>
+    </div>
+  );
 };
 
 export default LoadingSpinner;

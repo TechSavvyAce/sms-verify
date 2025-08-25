@@ -48,66 +48,54 @@ router.post("/create", authenticateToken, async (req, res) => {
       reference_id: `PAY_${Date.now()}_${userId}`,
     });
 
-    // 调用 SafePing API 创建支付
+    // 生成本地支付信息（模拟支付流程）
     try {
-      const safePingResponse = await fetch("https://www.safeping.xyz/api/payment/create", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
+      const paymentId = `PAY_${Date.now()}_${userId}`;
+      const expiresAt = new Date(Date.now() + 30 * 60 * 1000); // 30分钟后过期
+
+      // 生成简单的支付URL
+      const paymentUrl = `${process.env.FRONTEND_URL || "http://localhost:3000"}/payment/${paymentId}`;
+
+      // 生成简单的二维码（使用在线服务）
+      const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(paymentUrl)}`;
+
+      // 更新交易记录
+      await payment.update({
+        reference_id: paymentId,
+        metadata: {
+          paymentUrl: paymentUrl,
+          qrCode: qrCodeUrl,
+          expiresAt: expiresAt.toISOString(),
         },
-        body: JSON.stringify({
-          service_name: "SMS验证平台充值",
-          description: `用户 ${user.username} 充值 $${amount}`,
-          amount: amount,
-          webhook_url: `${process.env.BACKEND_URL || "http://localhost:3001"}/api/payment/webhook`,
-          language: "zh-CN",
-        }),
       });
 
-      const safePingData = await safePingResponse.json();
+      logger.info("支付订单创建成功:", {
+        userId,
+        amount,
+        paymentId: paymentId,
+      });
 
-      if (safePingData.payment_id) {
-        // 更新交易记录，保存 SafePing 支付ID
-        await payment.update({
-          reference_id: safePingData.payment_id,
-          metadata: {
-            safePingPaymentId: safePingData.payment_id,
-            paymentUrl: safePingData.payment_url,
-            qrCode: safePingData.qr_code,
-            expiresAt: safePingData.expires_at,
-          },
-        });
-
-        logger.info("支付订单创建成功:", {
-          userId,
-          amount,
-          paymentId: safePingData.payment_id,
-        });
-
-        res.json({
-          success: true,
-          message: "支付订单创建成功",
-          data: {
-            payment_id: safePingData.payment_id,
-            payment_url: safePingData.payment_url,
-            qr_code: safePingData.qr_code,
-            expires_at: safePingData.expires_at,
-            amount: amount,
-            transaction_id: payment.id,
-          },
-        });
-      } else {
-        throw new Error("SafePing API 返回无效数据");
-      }
-    } catch (safePingError) {
-      logger.error("SafePing API 调用失败:", safePingError);
+      res.json({
+        success: true,
+        message: "支付订单创建成功",
+        data: {
+          payment_id: paymentId,
+          payment_url: paymentUrl,
+          qr_code: qrCodeUrl,
+          expires_at: expiresAt.toISOString(),
+          amount: amount,
+          transaction_id: payment.id,
+        },
+      });
+    } catch (error) {
+      logger.error("支付订单创建失败:", error);
 
       // 删除本地交易记录
       await payment.destroy();
 
       return res.status(500).json({
         success: false,
-        error: "支付服务暂时不可用，请稍后重试",
+        error: "支付订单创建失败，请稍后重试",
       });
     }
   } catch (error) {
@@ -367,6 +355,113 @@ router.get("/check-pending", authenticateToken, async (req, res) => {
     res.status(500).json({
       success: false,
       error: "检查待处理支付失败",
+    });
+  }
+});
+
+/**
+ * 手动确认支付完成
+ * POST /api/payment/confirm
+ */
+router.post("/confirm", authenticateToken, async (req, res) => {
+  try {
+    const { payment_id, amount } = req.body;
+    const userId = req.user.id;
+
+    // 验证参数
+    if (!payment_id || !amount) {
+      return res.status(400).json({
+        success: false,
+        error: "缺少必要参数",
+      });
+    }
+
+    // 查找待处理的支付订单
+    const transaction = await Transaction.findOne({
+      where: {
+        reference_id: payment_id,
+        user_id: userId,
+        type: "recharge",
+        status: "pending",
+      },
+    });
+
+    if (!transaction) {
+      return res.status(404).json({
+        success: false,
+        error: "支付订单不存在或已处理",
+      });
+    }
+
+    // 获取用户信息
+    const user = await User.findByPk(userId);
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        error: "用户不存在",
+      });
+    }
+
+    // 更新用户余额
+    const oldBalance = user.balance;
+    const newBalance = oldBalance + parseFloat(amount);
+
+    await user.update({
+      balance: newBalance,
+      total_recharged: user.total_recharged + parseFloat(amount),
+    });
+
+    // 更新交易记录状态
+    await transaction.update({
+      status: "completed",
+      balance_after: newBalance,
+      completed_at: new Date(),
+      metadata: {
+        ...transaction.metadata,
+        manually_confirmed: true,
+        confirmed_at: new Date().toISOString(),
+      },
+    });
+
+    logger.info("手动确认支付成功:", {
+      userId,
+      paymentId: payment_id,
+      amount,
+      oldBalance,
+      newBalance,
+      transactionId: transaction.id,
+    });
+
+    // Send WebSocket notification if available
+    const io = req.app.get("io");
+    if (io) {
+      io.to(`user_${userId}`).emit("payment_success", {
+        payment_id,
+        amount: parseFloat(amount),
+        old_balance: oldBalance,
+        new_balance: newBalance,
+        transaction_id: transaction.id,
+        message: "充值成功！",
+      });
+      logger.info("发送WebSocket通知:", { userId });
+    }
+
+    res.json({
+      success: true,
+      message: "支付确认成功",
+      data: {
+        payment_id,
+        amount: parseFloat(amount),
+        old_balance: oldBalance,
+        new_balance: newBalance,
+        transaction_id: transaction.id,
+      },
+    });
+  } catch (error) {
+    logger.error("手动确认支付失败:", error);
+    res.status(500).json({
+      success: false,
+      error: "支付确认失败，请重试",
     });
   }
 });

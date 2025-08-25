@@ -12,20 +12,21 @@ import ErrorBoundary from "./components/Common/ErrorBoundary";
 // 页面组件
 import LoginPage from "./pages/Auth/LoginPage";
 import RegisterPage from "./pages/Auth/RegisterPage";
-import EmailVerificationPage from "./pages/Auth/EmailVerificationPage";
+
 import DashboardPage from "./pages/Dashboard/DashboardPage";
 import GetNumberPage from "./pages/Services/GetNumberPage";
 import RentNumberPage from "./pages/Services/RentNumberPage";
 import ActivationsPage from "./pages/Activations/ActivationsPage";
 import RentalsPage from "./pages/Rentals/RentalsPage";
 import TransactionsPage from "./pages/Transactions/TransactionsPage";
-import ProfilePage from "./pages/Profile/ProfilePage";
 import SettingsPage from "./pages/Settings/SettingsPage";
 import AdminDashboard from "./pages/Admin/AdminDashboard";
 import AdminUsersPage from "./pages/Admin/AdminUsersPage";
 import AdminSystemPage from "./pages/Admin/AdminSystemPage";
 import AdminTransactionsPage from "./pages/Admin/AdminTransactionsPage";
 import NotFoundPage from "./pages/Error/NotFoundPage";
+import ProfilePage from "./pages/Profile/ProfilePage";
+import VerificationPage from "./pages/Auth/VerificationPage";
 
 const { Content } = Layout;
 
@@ -85,7 +86,7 @@ const App: React.FC = () => {
           path="/register"
           element={isAuthenticated ? <Navigate to="/dashboard" replace /> : <RegisterPage />}
         />
-        <Route path="/verify-email" element={<EmailVerificationPage />} />
+        <Route path="/verify" element={<VerificationPage />} />
 
         {/* 受保护的路由 */}
         <Route

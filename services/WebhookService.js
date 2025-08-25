@@ -34,14 +34,7 @@ class WebhookService {
     try {
       logger.info("处理租用webhook:", payload);
 
-      const {
-        id: externalId,
-        phone,
-        status,
-        endDate,
-        messages = [],
-        action,
-      } = payload;
+      const { id: externalId, phone, status, endDate, messages = [], action } = payload;
 
       if (!externalId) {
         throw new Error("缺少租用ID");
@@ -80,9 +73,7 @@ class WebhookService {
         const mappedStatus = statusMap[status] || rental.status;
         if (mappedStatus !== rental.status) {
           updates.status = mappedStatus;
-          logger.info(
-            `租用 ${rental.id} 状态更新: ${rental.status} -> ${mappedStatus}`
-          );
+          logger.info(`租用 ${rental.id} 状态更新: ${rental.status} -> ${mappedStatus}`);
         }
       }
 
@@ -187,28 +178,20 @@ class WebhookService {
 
         await user.update({
           balance: parseFloat(user.balance) + rechargeAmount,
-          total_recharged:
-            parseFloat(user.total_recharged || 0) + rechargeAmount,
+          total_recharged: parseFloat(user.total_recharged || 0) + rechargeAmount,
         });
 
         logger.info(
-          `用户 ${user.id} 充值成功: $${rechargeAmount}, 新余额: $${
-            user.balance + rechargeAmount
-          }`
+          `用户 ${user.id} 充值成功: $${rechargeAmount}, 新余额: $${user.balance + rechargeAmount}`
         );
 
         // 记录活动日志
-        await this.logUserActivity(
-          user.id,
-          "payment_success",
-          `充值成功 $${rechargeAmount}`,
-          {
-            transaction_id: transaction.id,
-            amount: rechargeAmount,
-            payment_method,
-            external_transaction_id: externalTransactionId,
-          }
-        );
+        await this.logUserActivity(user.id, "payment_success", `充值成功 $${rechargeAmount}`, {
+          transaction_id: transaction.id,
+          amount: rechargeAmount,
+          payment_method,
+          external_transaction_id: externalTransactionId,
+        });
       } else if (status === "failed" || status === "cancelled") {
         // 支付失败或取消
         updates.status = status === "failed" ? "failed" : "cancelled";
@@ -218,9 +201,7 @@ class WebhookService {
           await this.logUserActivity(
             transaction.user.id,
             "payment_failed",
-            `充值${status === "failed" ? "失败" : "取消"} $${
-              transaction.amount
-            }`,
+            `充值${status === "failed" ? "失败" : "取消"} $${transaction.amount}`,
             {
               transaction_id: transaction.id,
               reason: status,
@@ -243,6 +224,133 @@ class WebhookService {
       };
     } catch (error) {
       logger.error("处理支付webhook失败:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * 处理Safeping.xyz支付状态更新webhook
+   */
+  async handleSafepingWebhook(payload) {
+    try {
+      logger.info("处理Safeping.xyz webhook:", payload);
+
+      const {
+        payment_id,
+        status,
+        amount,
+        currency = "USD",
+        transaction_hash,
+        payment_method = "crypto",
+        timestamp,
+        metadata,
+      } = payload;
+
+      if (!payment_id) {
+        throw new Error("缺少支付ID");
+      }
+
+      // 查找对应的交易记录
+      const transaction = await Transaction.findOne({
+        where: {
+          external_id: payment_id,
+          type: "recharge",
+        },
+        include: [
+          {
+            model: User,
+            as: "user",
+            attributes: ["id", "username", "email", "balance"],
+          },
+        ],
+      });
+
+      if (!transaction) {
+        logger.warn(`未找到Safeping.xyz支付订单: ${payment_id}`);
+        return { success: false, message: "支付订单不存在" };
+      }
+
+      // 检查是否已经处理过
+      if (transaction.status === "completed") {
+        logger.info(`Safeping.xyz支付订单 ${payment_id} 已经处理过`);
+        return { success: true, message: "订单已处理" };
+      }
+
+      const updates = {};
+
+      if (status === "success" || status === "completed" || status === "paid") {
+        // 支付成功
+        updates.status = "completed";
+        updates.processed_at = new Date();
+
+        if (transaction_hash) {
+          updates.reference = transaction_hash;
+        }
+
+        // 更新用户余额
+        const user = transaction.user;
+        const rechargeAmount = parseFloat(amount || transaction.amount);
+
+        await user.update({
+          balance: parseFloat(user.balance) + rechargeAmount,
+          total_recharged: parseFloat(user.total_recharged || 0) + rechargeAmount,
+        });
+
+        logger.info(
+          `用户 ${user.id} Safeping.xyz充值成功: $${rechargeAmount}, 新余额: $${
+            user.balance + rechargeAmount
+          }`
+        );
+
+        // 记录活动日志
+        await this.logUserActivity(
+          user.id,
+          "payment_success",
+          `Safeping.xyz充值成功 $${rechargeAmount}`,
+          {
+            transaction_id: transaction.id,
+            amount: rechargeAmount,
+            payment_method,
+            external_transaction_id: transaction_hash,
+            provider: "safeping.xyz",
+          }
+        );
+      } else if (status === "failed" || status === "cancelled" || status === "expired") {
+        // 支付失败、取消或过期
+        updates.status = status === "failed" ? "failed" : "cancelled";
+        updates.processed_at = new Date();
+
+        if (transaction.user) {
+          await this.logUserActivity(
+            transaction.user.id,
+            "payment_failed",
+            `Safeping.xyz充值${status === "failed" ? "失败" : status === "cancelled" ? "取消" : "过期"} $${
+              transaction.amount
+            }`,
+            {
+              transaction_id: transaction.id,
+              reason: status,
+              payment_method,
+              provider: "safeping.xyz",
+            }
+          );
+        }
+      }
+
+      // 执行更新
+      if (Object.keys(updates).length > 0) {
+        await transaction.update(updates);
+      }
+
+      return {
+        success: true,
+        message: "Safeping.xyz webhook处理成功",
+        payment_id: payment_id,
+        status: updates.status || transaction.status,
+        amount: amount || transaction.amount,
+      };
+    } catch (error) {
+      logger.error("处理Safeping.xyz webhook失败:", error);
       throw error;
     }
   }

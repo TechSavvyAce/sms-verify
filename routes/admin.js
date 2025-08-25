@@ -223,8 +223,14 @@ router.get(
             }),
           ]);
 
+          // Ensure numeric fields are returned as numbers
+          const userData = user.toJSON();
+          userData.balance = parseFloat(userData.balance) || 0;
+          userData.total_spent = parseFloat(userData.total_spent) || 0;
+          userData.total_recharged = parseFloat(userData.total_recharged) || 0;
+
           return {
-            ...user.toJSON(),
+            ...userData,
             stats: {
               activation_count: activationCount,
               rental_count: rentalCount,
@@ -316,10 +322,16 @@ router.get(
         }),
       ]);
 
+      // Ensure numeric fields are returned as numbers
+      const userData = user.toJSON();
+      userData.balance = parseFloat(userData.balance) || 0;
+      userData.total_spent = parseFloat(userData.total_spent) || 0;
+      userData.total_recharged = parseFloat(userData.total_recharged) || 0;
+
       res.json({
         success: true,
         data: {
-          user: user.toJSON(),
+          user: userData,
           recent_activations: activations.map((a) => ({
             id: a.id,
             service: a.service,

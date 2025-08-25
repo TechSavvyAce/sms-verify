@@ -1,34 +1,33 @@
 import React, { Component, ErrorInfo, ReactNode } from "react";
-import { Alert, Button, Card } from "antd";
-import { ReloadOutlined, HomeOutlined } from "@ant-design/icons";
-import { useNavigate } from "react-router-dom";
+import { Result, Button, Typography, Space } from "antd";
+import { ReloadOutlined, HomeOutlined, LoginOutlined } from "@ant-design/icons";
+
+const { Text } = Typography;
 
 interface Props {
   children: ReactNode;
+  fallback?: ReactNode;
 }
 
 interface State {
   hasError: boolean;
-  error: Error | null;
-  errorInfo: ErrorInfo | null;
+  error?: Error;
+  errorInfo?: ErrorInfo;
 }
 
-class ErrorBoundaryClass extends Component<Props & { navigate: (path: string) => void }, State> {
-  constructor(props: Props & { navigate: (path: string) => void }) {
+class ErrorBoundary extends Component<Props, State> {
+  constructor(props: Props) {
     super(props);
-    this.state = { hasError: false, error: null, errorInfo: null };
+    this.state = { hasError: false };
   }
 
   static getDerivedStateFromError(error: Error): State {
-    return { hasError: true, error, errorInfo: null };
+    return { hasError: true, error };
   }
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    console.error("ErrorBoundary caught an error:", error, errorInfo);
-    this.setState({
-      error,
-      errorInfo,
-    });
+    console.error("Error caught by boundary:", error, errorInfo);
+    this.setState({ error, errorInfo });
   }
 
   handleReload = () => {
@@ -36,74 +35,66 @@ class ErrorBoundaryClass extends Component<Props & { navigate: (path: string) =>
   };
 
   handleGoHome = () => {
-    this.props.navigate("/dashboard");
-    this.setState({ hasError: false, error: null, errorInfo: null });
+    window.location.href = "/";
+  };
+
+  handleGoLogin = () => {
+    window.location.href = "/login";
   };
 
   render() {
     if (this.state.hasError) {
+      // 如果有自定义的 fallback，使用它
+      if (this.props.fallback) {
+        return this.props.fallback;
+      }
+
+      const error = this.state.error;
+      const isAuthError =
+        error?.message?.includes("认证") ||
+        error?.message?.includes("token") ||
+        error?.message?.includes("unauthorized");
+
       return (
-        <div style={{ padding: "24px", maxWidth: "600px", margin: "0 auto" }}>
-          <Card>
-            <Alert
-              message="应用出现错误"
-              description={
-                <div>
-                  <p>抱歉，应用遇到了一个错误。请尝试以下解决方案：</p>
-                  <ul>
-                    <li>刷新页面</li>
-                    <li>返回首页</li>
-                    <li>清除浏览器缓存</li>
-                  </ul>
-                  {process.env.NODE_ENV === "development" && this.state.error && (
-                    <details style={{ marginTop: "16px" }}>
-                      <summary>错误详情 (开发模式)</summary>
-                      <pre
-                        style={{
-                          background: "#f5f5f5",
-                          padding: "12px",
-                          borderRadius: "4px",
-                          overflow: "auto",
-                          fontSize: "12px",
-                        }}
-                      >
-                        {this.state.error.toString()}
-                        {this.state.errorInfo?.componentStack}
-                      </pre>
-                    </details>
-                  )}
-                </div>
-              }
-              type="error"
-              showIcon
-              style={{ marginBottom: "16px" }}
-            />
-            <div style={{ textAlign: "center" }}>
-              <Button
-                type="primary"
-                icon={<ReloadOutlined />}
-                onClick={this.handleReload}
-                style={{ marginRight: "8px" }}
-              >
-                刷新页面
+        <Result
+          status="error"
+          title="页面出现错误"
+          subTitle={
+            <Space direction="vertical" size="small">
+              <Text type="secondary">
+                {isAuthError ? "认证状态异常，请重新登录" : "抱歉，页面遇到了一个错误"}
+              </Text>
+              {error && (
+                <Text code style={{ fontSize: "12px" }}>
+                  {error.message}
+                </Text>
+              )}
+            </Space>
+          }
+          extra={[
+            <Button
+              key="reload"
+              type="primary"
+              icon={<ReloadOutlined />}
+              onClick={this.handleReload}
+            >
+              刷新页面
+            </Button>,
+            <Button key="home" icon={<HomeOutlined />} onClick={this.handleGoHome}>
+              返回首页
+            </Button>,
+            isAuthError && (
+              <Button key="login" icon={<LoginOutlined />} onClick={this.handleGoLogin}>
+                重新登录
               </Button>
-              <Button icon={<HomeOutlined />} onClick={this.handleGoHome}>
-                返回首页
-              </Button>
-            </div>
-          </Card>
-        </div>
+            ),
+          ].filter(Boolean)}
+        />
       );
     }
 
     return this.props.children;
   }
 }
-
-// Wrapper component to provide navigation
-const ErrorBoundary: React.FC<Props> = ({ children }) => {
-  const navigate = useNavigate();
-  return <ErrorBoundaryClass navigate={navigate}>{children}</ErrorBoundaryClass>;
-};
 
 export default ErrorBoundary;

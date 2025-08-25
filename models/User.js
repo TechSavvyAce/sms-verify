@@ -21,8 +21,7 @@ const User = sequelize.define(
     },
     email: {
       type: DataTypes.STRING(100),
-      allowNull: false,
-      unique: true,
+      allowNull: true, // 邮箱现在是可选的
       validate: {
         isEmail: true,
         notEmpty: true,
@@ -30,7 +29,7 @@ const User = sequelize.define(
     },
     password_hash: {
       type: DataTypes.STRING(255),
-      allowNull: false,
+      allowNull: true, // 密码现在是可选的
     },
     balance: {
       type: DataTypes.DECIMAL(10, 2),
@@ -98,6 +97,30 @@ const User = sequelize.define(
         len: [0, 20],
       },
     },
+    phone_verified: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: false,
+    },
+    phone_verified_at: {
+      type: DataTypes.DATE,
+      allowNull: true,
+    },
+
+    verification_code: {
+      type: DataTypes.STRING(8),
+      allowNull: true,
+      validate: {
+        len: [8, 8],
+      },
+      field: "email_verification_token",
+    },
+    verification_code_expires: {
+      type: DataTypes.DATE,
+      allowNull: true,
+      field: "email_verification_expires",
+    },
+
     country: {
       type: DataTypes.STRING(50),
       allowNull: true,
@@ -203,16 +226,19 @@ User.prototype.toJSON = function () {
   const values = Object.assign({}, this.get());
   delete values.password_hash;
   delete values.password_reset_token;
-  delete values.email_verification_token;
-  delete values.email_verification_expires;
-  return values;
-};
+  delete values.password_reset_expires;
 
-User.prototype.generateEmailVerificationToken = function () {
-  const crypto = require("crypto");
-  this.email_verification_token = crypto.randomBytes(32).toString("hex");
-  this.email_verification_expires = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24小时后过期
-  return this.email_verification_token;
+  // 重命名字段以保持API一致性
+  if (values.email_verification_token) {
+    values.verification_code = values.email_verification_token;
+    delete values.email_verification_token;
+  }
+  if (values.email_verification_expires) {
+    values.verification_code_expires = values.email_verification_expires;
+    delete values.email_verification_expires;
+  }
+
+  return values;
 };
 
 User.prototype.generatePasswordResetToken = function () {
@@ -225,8 +251,15 @@ User.prototype.generatePasswordResetToken = function () {
 User.prototype.verifyEmail = async function () {
   this.email_verified = true;
   this.status = "active";
-  this.email_verification_token = null;
-  this.email_verification_expires = null;
+  // 清除验证码（新系统使用 verification_code 而不是 email_verification_token）
+  this.verification_code = null;
+  this.verification_code_expires = null;
+  await this.save();
+};
+
+User.prototype.verifySMS = async function () {
+  this.phone_verified = true;
+  this.status = "active";
   await this.save();
 };
 

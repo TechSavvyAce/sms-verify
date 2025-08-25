@@ -23,7 +23,21 @@ const consoleFormat = winston.format.combine(
   winston.format.printf(({ level, message, timestamp, ...meta }) => {
     let msg = `${timestamp} [${level}]: ${message}`;
     if (Object.keys(meta).length > 0) {
-      msg += ` ${JSON.stringify(meta)}`;
+      try {
+        // Safely stringify meta, handling circular references
+        const safeMeta = JSON.parse(
+          JSON.stringify(meta, (key, value) => {
+            if (key === "req" || key === "res" || key === "socket" || key === "connection") {
+              return "[Circular Reference]";
+            }
+            return value;
+          })
+        );
+        msg += ` ${JSON.stringify(safeMeta)}`;
+      } catch (error) {
+        // If JSON.stringify fails, just show the keys
+        msg += ` [Meta keys: ${Object.keys(meta).join(", ")}]`;
+      }
     }
     return msg;
   })

@@ -98,7 +98,17 @@ const createApiInstance = (): AxiosInstance => {
         // 确保 errorMessage 是字符串
         const messageText =
           typeof errorMessage === "string" ? errorMessage : JSON.stringify(errorMessage);
-        message.error(messageText);
+
+        // 根据错误类型提供更友好的错误信息
+        if (error.response?.status === 0 || error.code === "NETWORK_ERROR") {
+          message.error("网络连接失败，请检查网络后重试");
+        } else if (error.response?.status === 500) {
+          message.error("服务器内部错误，请稍后重试");
+        } else if (error.response?.status === 503) {
+          message.error("服务暂时不可用，请稍后重试");
+        } else {
+          message.error(messageText);
+        }
       }
 
       return Promise.reject(error);
@@ -113,9 +123,21 @@ const api = createApiInstance();
 // 通用请求方法
 const request = async <T = any>(config: AxiosRequestConfig): Promise<ApiResponse<T>> => {
   try {
+    console.log("API Request:", config.method?.toUpperCase(), config.url, config.data);
     const response = await api.request<ApiResponse<T>>(config);
+    console.log("API Response:", response.data);
     return response.data;
   } catch (error: any) {
+    console.error("API Error:", {
+      method: config.method,
+      url: config.url,
+      data: config.data,
+      error: error.message,
+      response: error.response?.data,
+      status: error.response?.status,
+      statusText: error.response?.statusText,
+    });
+
     // 返回标准化的错误响应
     return {
       success: false,
@@ -135,12 +157,24 @@ export const authApi = {
     request({ method: "POST", url: "/auth/register", data: userData }),
 
   // 邮箱验证
-  verifyEmail: (token: string): Promise<ApiResponse> =>
-    request({ method: "POST", url: "/auth/verify-email", data: { token } }),
+  verifyEmail: (code: string): Promise<ApiResponse> =>
+    request({ method: "POST", url: "/auth/verify-email", data: { code } }),
+
+  // 发送验证邮件
+  sendVerification: (email: string, userId?: number): Promise<ApiResponse> =>
+    request({ method: "POST", url: "/auth/send-email-verification", data: { email, userId } }),
 
   // 重新发送验证邮件
   resendVerificationEmail: (email: string): Promise<ApiResponse> =>
     request({ method: "POST", url: "/auth/resend-verification", data: { email } }),
+
+  // 发送SMS验证码
+  sendSMSVerification: (phone: string, userId?: number): Promise<ApiResponse> =>
+    request({ method: "POST", url: "/auth/send-sms-verification", data: { phone, userId } }),
+
+  // 验证SMS验证码
+  verifySMS: (phone: string, code: string): Promise<ApiResponse> =>
+    request({ method: "POST", url: "/auth/verify-sms", data: { phone, code } }),
 
   // 刷新 token
   refresh: (data: { refreshToken: string }): Promise<ApiResponse> =>
@@ -167,6 +201,10 @@ export const authApi = {
       url: "/auth/reset-password",
       data: { token, newPassword },
     }),
+
+  // 设置初始密码
+  setPassword: (username: string, password: string): Promise<ApiResponse> =>
+    request({ method: "POST", url: "/auth/set-password", data: { username, password } }),
 };
 
 // 用户 API

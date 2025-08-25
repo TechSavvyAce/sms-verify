@@ -11,8 +11,7 @@ const webhookService = new WebhookService();
  */
 const verifyWebhookSignature = (req, res, next) => {
   try {
-    const signature =
-      req.headers["x-webhook-signature"] || req.headers["x-signature"];
+    const signature = req.headers["x-webhook-signature"] || req.headers["x-signature"];
     const secret = req.query.secret || req.headers["x-webhook-secret"];
 
     if (!signature) {
@@ -96,6 +95,57 @@ router.post("/payment", verifyWebhookSignature, async (req, res) => {
     res.status(500).json({
       success: false,
       error: error.message || "支付webhook处理失败",
+    });
+  }
+});
+
+/**
+ * Safeping.xyz支付状态更新webhook
+ * POST /api/webhook/safeping
+ */
+router.post("/safeping", async (req, res) => {
+  try {
+    logger.info("收到Safeping.xyz webhook:", req.body);
+
+    // 验证Safeping.xyz webhook签名
+    const signature = req.headers["x-safeping-signature"];
+    const webhookSecret = process.env.SAFEPING_WEBHOOK_SECRET;
+
+    if (webhookSecret && signature) {
+      const payload = JSON.stringify(req.body);
+      const expectedSignature = crypto
+        .createHmac("sha256", webhookSecret)
+        .update(payload)
+        .digest("hex");
+
+      if (signature !== expectedSignature) {
+        logger.warn("Safeping.xyz webhook签名验证失败", {
+          received: signature,
+          expected: expectedSignature,
+        });
+        return res.status(401).json({
+          success: false,
+          error: "Webhook签名验证失败",
+        });
+      }
+    }
+
+    const result = await webhookService.handleSafepingWebhook(req.body);
+
+    res.json({
+      success: true,
+      message: result.message,
+      data: {
+        payment_id: result.payment_id,
+        status: result.status,
+        amount: result.amount,
+      },
+    });
+  } catch (error) {
+    logger.error("Safeping.xyz webhook处理失败:", error);
+    res.status(500).json({
+      success: false,
+      error: error.message || "Safeping.xyz webhook处理失败",
     });
   }
 });
@@ -250,6 +300,7 @@ router.get("/health", (req, res) => {
       "POST /api/webhook/payment",
       "POST /api/webhook/activation",
       "POST /api/webhook/sms-activate",
+      "POST /api/webhook/safeping",
       "GET /api/webhook/config",
       "POST /api/webhook/test",
     ],

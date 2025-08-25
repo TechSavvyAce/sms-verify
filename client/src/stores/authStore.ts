@@ -125,21 +125,37 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       }
     } catch (error: any) {
       set({ isLoading: false });
-      message.error(error.message || "登录失败，请重试");
-      throw error;
+
+      // 处理特定的错误情况
+      if (error.response?.data?.code === "ACCOUNT_PENDING") {
+        const userId = error.response.data.userId;
+        message.error("账户尚未激活，请先完成验证");
+        // 可以在这里跳转到验证页面或显示验证提示
+        throw new Error("账户尚未激活，请先完成验证");
+      } else if (error.response?.data?.code === "ACCOUNT_SUSPENDED") {
+        message.error("账户已被停用，请联系客服");
+        throw new Error("账户已被停用，请联系客服");
+      } else {
+        message.error(error.message || "登录失败，请重试");
+        throw error;
+      }
     }
   },
 
   register: async (userData: RegisterRequest) => {
     set({ isLoading: true });
     try {
+      console.log("AuthStore - Calling authApi.register with:", userData);
       const response = await authApi.register(userData);
+      console.log("AuthStore - Raw API response:", response);
 
       if (response.success && response.data) {
-        const { user, accessToken, refreshToken, requires_verification } = response.data;
+        const { user, accessToken, refreshToken } = response.data;
+        console.log("AuthStore - Extracted data:", { user, accessToken, refreshToken });
 
         // 标准化用户数据
         const normalizedUser = normalizeUserData(user);
+        console.log("AuthStore - Normalized user:", normalizedUser);
 
         // 保存到 localStorage
         localStorage.setItem("token", accessToken);
@@ -156,18 +172,14 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           isLoading: false,
         });
 
-        if (requires_verification) {
-          message.success(`注册成功！请检查您的邮箱并点击验证链接激活账户。`);
-        } else {
-          message.success(`注册成功，欢迎加入 ${normalizedUser.username}！`);
-        }
-
-        // Return the response data so the component can access requires_verification
+        console.log("AuthStore - Returning response data:", response.data);
         return response.data as RegisterResponse;
       } else {
+        console.error("AuthStore - API response not successful:", response);
         throw new Error(getApiErrorMessage(response.error, "注册失败"));
       }
     } catch (error: any) {
+      console.error("AuthStore - Registration error:", error);
       set({ isLoading: false });
       message.error(error.message || "注册失败，请重试");
       throw error;

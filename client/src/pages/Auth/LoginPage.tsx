@@ -1,15 +1,21 @@
 import React, { useState, useEffect } from "react";
-import { Form, Input, Button, Card, Typography, Divider, message, Space, Alert } from "antd";
-import { UserOutlined, LockOutlined, MobileOutlined } from "@ant-design/icons";
+import { Form, Input, Button, Card, Typography, Divider, message, Space } from "antd";
+import {
+  UserOutlined,
+  LockOutlined,
+  EyeInvisibleOutlined,
+  EyeTwoTone,
+  LoginOutlined,
+} from "@ant-design/icons";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useAuthStore } from "../../stores/authStore";
-import { LoginRequest } from "../../types";
 
 const { Title, Text } = Typography;
 
 const LoginPage: React.FC = () => {
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
+
   const { login } = useAuthStore();
   const navigate = useNavigate();
   const location = useLocation();
@@ -18,37 +24,26 @@ const LoginPage: React.FC = () => {
   useEffect(() => {
     if (location.state?.message) {
       message.success(location.state.message);
-      // 清除state，避免重复显示
       navigate(location.pathname, { replace: true });
     }
   }, [location.state, navigate, location.pathname]);
 
-  const handleSubmit = async (values: LoginRequest) => {
+  // 处理登录
+  const handleLogin = async (values: { username: string; password: string }) => {
     setLoading(true);
     try {
-      await login(values);
+      await login({
+        username: values.username,
+        password: values.password,
+      });
       navigate("/dashboard");
-    } catch (error) {
-      // 错误已在 store 中处理
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleDemoLogin = async () => {
-    const demoCredentials = {
-      username: "demo",
-      password: "demo123",
-    };
-
-    try {
-      setLoading(true);
-      await login(demoCredentials);
-      navigate("/dashboard");
-      message.success("已使用演示账户登录");
-    } catch (error) {
-      // 如果演示账户不存在，提示用户注册
-      message.info("演示账户不存在，请注册新账户");
+    } catch (error: any) {
+      // 检查是否是账户验证相关的错误
+      if (error.message === "账户尚未激活，请先完成验证") {
+        // 可以在这里提供验证选项或跳转到验证页面
+        message.info("请完成账户验证后再登录");
+      }
+      // 其他错误已在 store 中处理
     } finally {
       setLoading(false);
     }
@@ -68,53 +63,61 @@ const LoginPage: React.FC = () => {
       <Card
         style={{
           width: "100%",
-          maxWidth: "400px",
-          borderRadius: "16px",
-          boxShadow: "0 20px 40px rgba(0,0,0,0.15)",
+          maxWidth: "480px",
+          borderRadius: "20px",
+          boxShadow: "0 25px 50px rgba(0,0,0,0.15)",
+          border: "none",
         }}
-        bodyStyle={{ padding: "40px 32px" }}
+        bodyStyle={{ padding: "48px 40px" }}
       >
         {/* Logo 和标题 */}
-        <div style={{ textAlign: "center", marginBottom: "32px" }}>
+        <div style={{ textAlign: "center", marginBottom: "40px" }}>
           <div
             style={{
-              width: "64px",
-              height: "64px",
-              background: "#1890ff",
-              borderRadius: "16px",
+              width: "72px",
+              height: "72px",
+              background: "linear-gradient(135deg, #1890ff 0%, #52c41a 100%)",
+              borderRadius: "20px",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              margin: "0 auto 16px",
-              fontSize: "24px",
+              margin: "0 auto 20px",
+              fontSize: "28px",
               color: "#fff",
               fontWeight: "bold",
+              boxShadow: "0 8px 24px rgba(24, 144, 255, 0.3)",
             }}
           >
-            <MobileOutlined />
+            <UserOutlined />
           </div>
-          <Title level={2} style={{ margin: 0, color: "#262626" }}>
-            短信验证平台
+          <Title level={2} style={{ margin: 0, color: "#262626", fontWeight: "600" }}>
+            欢迎回来
           </Title>
-          <Text style={{ color: "#8c8c8c", fontSize: "14px" }}>可靠的短信验证解决方案</Text>
+          <Text style={{ color: "#8c8c8c", fontSize: "16px", marginTop: "8px", display: "block" }}>
+            使用用户名和密码登录
+          </Text>
         </div>
 
         {/* 登录表单 */}
-        <Form form={form} layout="vertical" onFinish={handleSubmit} size="large" autoComplete="off">
+        <Form form={form} layout="vertical" onFinish={handleLogin} size="large" autoComplete="off">
+          {/* 用户名 */}
           <Form.Item
             name="username"
             rules={[
-              { required: true, message: "请输入用户名或邮箱" },
+              { required: true, message: "请输入用户名" },
               { min: 3, message: "用户名至少3个字符" },
             ]}
           >
             <Input
               prefix={<UserOutlined style={{ color: "#1890ff" }} />}
-              placeholder="用户名或邮箱"
+              placeholder="用户名"
               autoComplete="username"
+              size="large"
+              style={{ height: "48px", fontSize: "16px" }}
             />
           </Form.Item>
 
+          {/* 密码 */}
           <Form.Item
             name="password"
             rules={[
@@ -126,15 +129,21 @@ const LoginPage: React.FC = () => {
               prefix={<LockOutlined style={{ color: "#1890ff" }} />}
               placeholder="密码"
               autoComplete="current-password"
+              size="large"
+              style={{ height: "48px", fontSize: "16px" }}
+              iconRender={(visible) => (visible ? <EyeTwoTone /> : <EyeInvisibleOutlined />)}
             />
           </Form.Item>
 
+          {/* 登录按钮 */}
           <Form.Item>
             <Button
               type="primary"
               htmlType="submit"
               loading={loading}
               block
+              size="large"
+              icon={<LoginOutlined />}
               style={{
                 height: "48px",
                 fontSize: "16px",
@@ -148,35 +157,23 @@ const LoginPage: React.FC = () => {
         </Form>
 
         {/* 分隔线 */}
-        <Divider>
-          <Text style={{ color: "#8c8c8c", fontSize: "12px" }}>或</Text>
+        <Divider style={{ margin: "32px 0" }}>
+          <Text style={{ color: "#bfbfbf", fontSize: "14px" }}>或</Text>
         </Divider>
 
-        {/* 演示登录 */}
+        {/* 其他选项 */}
         <Space direction="vertical" style={{ width: "100%" }} size="middle">
-          <Button
-            block
-            onClick={handleDemoLogin}
-            loading={loading}
-            style={{
-              height: "40px",
-              borderRadius: "8px",
-              borderColor: "#d9d9d9",
-            }}
-          >
-            演示账户登录
-          </Button>
-
           {/* 注册链接 */}
           <div style={{ textAlign: "center" }}>
-            <Text style={{ color: "#8c8c8c" }}>
+            <Text style={{ color: "#8c8c8c", fontSize: "16px" }}>
               还没有账户？{" "}
               <Link
                 to="/register"
                 style={{
                   color: "#1890ff",
-                  fontWeight: "500",
+                  fontWeight: "600",
                   textDecoration: "none",
+                  fontSize: "16px",
                 }}
               >
                 立即注册
@@ -190,7 +187,7 @@ const LoginPage: React.FC = () => {
               to="/forgot-password"
               style={{
                 color: "#8c8c8c",
-                fontSize: "12px",
+                fontSize: "14px",
                 textDecoration: "none",
               }}
             >
@@ -200,7 +197,7 @@ const LoginPage: React.FC = () => {
         </Space>
 
         {/* 底部信息 */}
-        <div style={{ textAlign: "center", marginTop: "32px" }}>
+        <div style={{ textAlign: "center", marginTop: "40px" }}>
           <Text style={{ color: "#bfbfbf", fontSize: "12px" }}>
             登录即表示同意我们的{" "}
             <span style={{ color: "#1890ff", cursor: "pointer" }}>服务条款</span> 和{" "}
