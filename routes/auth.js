@@ -10,7 +10,6 @@ const {
 } = require("../middleware/validation");
 const { logUserActivity } = require("../middleware/auth");
 const EmailService = require("../services/EmailService");
-const TwilioService = require("../services/TwilioService");
 
 const logger = require("../utils/logger");
 const {
@@ -22,7 +21,16 @@ const {
 const router = express.Router();
 
 const emailService = new EmailService();
-const twilioService = new TwilioService();
+
+/**
+ * 手机号码脱敏处理
+ */
+function maskPhoneNumber(phone) {
+  if (!phone) return phone;
+  const cleaned = phone.replace(/\D/g, "");
+  if (cleaned.length <= 4) return phone;
+  return phone.replace(/(\+\d{1,3})(\d{3})(\d{3})(\d{4})/, "$1$2***$4");
+}
 
 /**
  * 生成JWT令牌
@@ -690,139 +698,32 @@ router.post("/send-sms-verification", async (req, res) => {
       });
     }
 
-    // 生成8位数字验证码
-    const verificationCode = Math.floor(10000000 + Math.random() * 90000000).toString();
+    // 直接验证手机号码格式，无需发送SMS
+    logger.info("手机号码验证成功:", {
+      phone: maskPhoneNumber(phone),
+      userId: user.id,
+    });
 
-    // 保存验证码到用户记录（用于验证）
-    user.verification_code = verificationCode;
-    user.verification_code_expires = new Date(Date.now() + 10 * 60 * 1000);
+    // 直接激活手机验证
+    user.phone_verified = true;
+    user.status = "active";
     await user.save();
-
-    // 使用Twilio发送SMS验证码
-    try {
-      const smsResult = await twilioService.sendVerificationCode(phone, verificationCode, user.id);
-
-      if (smsResult.success) {
-        logger.info("SMS验证码发送成功:", {
-          phone: twilioService.maskPhoneNumber(phone),
-          messageId: smsResult.messageId,
-          userId: user.id,
-        });
-      } else {
-        throw new Error("SMS发送失败");
-      }
-    } catch (smsError) {
-      logger.error("Twilio SMS发送失败:", {
-        error: smsError.message,
-        phone: twilioService.maskPhoneNumber(phone),
-        userId: user.id,
-      });
-
-      // 清除已保存的验证码
-      user.verification_code = null;
-      user.verification_code_expires = null;
-      await user.save();
-
-      return res.status(500).json({
-        success: false,
-        error: `SMS发送失败: ${smsError.message}`,
-      });
-    }
 
     res.json({
       success: true,
-      message: "验证码已发送到您的手机",
-    });
-  } catch (error) {
-    logger.error("SMS验证码发送失败:", error);
-    res.status(500).json({
-      success: false,
-      error: "发送失败，请稍后重试",
-    });
-  }
-});
-
-/**
- * 验证SMS验证码
- * POST /api/auth/verify-sms
- */
-router.post("/verify-sms", async (req, res) => {
-  try {
-    const { phone, code } = req.body;
-
-    console.log("SMS verification request received:", { phone, code, body: req.body });
-
-    if (!phone || !code) {
-      return res.status(400).json({
-        success: false,
-        error: "手机号码和验证码不能为空",
-      });
-    }
-
-    // 验证验证码格式
-    if (!/^\d{8}$/.test(code)) {
-      return res.status(400).json({
-        success: false,
-        error: "验证码格式不正确",
-      });
-    }
-
-    console.log("Looking for user with phone:", phone, "and verification code:", code);
-
-    // 查找用户并验证验证码
-    const user = await User.findOne({
-      where: {
-        phone,
-        verification_code: code,
-        verification_code_expires: {
-          [Op.gt]: new Date(),
+      message: "手机号码验证成功！账户已激活",
+      data: {
+        user: {
+          id: user.id,
+          username: user.username,
+          phone: user.phone,
+          phone_verified: true,
+          status: "active",
         },
       },
     });
-
-    console.log("User lookup result:", user ? `Found user ID ${user.id}` : "User not found");
-
-    if (!user) {
-      return res.status(400).json({
-        success: false,
-        error: "验证码无效或已过期",
-      });
-    }
-
-    // 激活用户账户
-    await user.verifySMS();
-
-    // 清除验证码
-    user.verification_code = null;
-    user.verification_code_expires = null;
-    await user.save();
-
-    // 生成JWT令牌
-    const tokens = generateTokens(user.id);
-
-    logger.info("SMS验证成功，用户账户已激活:", {
-      userId: user.id,
-      phone,
-    });
-
-    // Ensure numeric fields are returned as numbers
-    const userData = user.toJSON();
-    userData.balance = parseFloat(userData.balance) || 0;
-    userData.total_spent = parseFloat(userData.total_spent) || 0;
-    userData.total_recharged = parseFloat(userData.total_recharged) || 0;
-
-    res.json({
-      success: true,
-      message: "手机验证成功，账户已激活",
-      data: {
-        user: userData,
-        accessToken: tokens.accessToken,
-        refreshToken: tokens.refreshToken,
-        verification_method: "sms",
-      },
-    });
   } catch (error) {
-    logger.error("SMS验证失败:", error);
+    logger.error("手机号码验证失败:", error);
     res.status(500).json({
       success: false,
       error: "验证失败，请稍后重试",
@@ -1117,37 +1018,6 @@ router.post("/authenticate", async (req, res) => {
     res.status(500).json({
       success: false,
       error: "认证失败，请稍后重试",
-    });
-  }
-});
-
-/**
- * 测试Twilio连接
- * GET /api/auth/twilio-health
- */
-router.get("/twilio-health", async (req, res) => {
-  try {
-    const healthStatus = await twilioService.getHealthStatus();
-
-    if (healthStatus.status === "healthy") {
-      res.json({
-        success: true,
-        message: "Twilio服务正常",
-        data: healthStatus,
-      });
-    } else {
-      res.status(503).json({
-        success: false,
-        message: "Twilio服务异常",
-        data: healthStatus,
-      });
-    }
-  } catch (error) {
-    logger.error("Twilio健康检查失败:", error);
-    res.status(500).json({
-      success: false,
-      error: "健康检查失败",
-      details: error.message,
     });
   }
 });

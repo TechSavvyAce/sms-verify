@@ -401,56 +401,43 @@ const VerificationPage: React.FC = () => {
         </div>
 
         {/* 用户信息 */}
-        <Alert
-          message={`用户名: ${finalUsername || currentUser?.username}`}
-          description="请选择并完成验证以激活您的账户"
-          type="info"
-          showIcon
-          icon={<UserOutlined />}
-          style={{ marginBottom: "24px" }}
-        />
+        <div
+          style={{
+            textAlign: "center",
+            marginBottom: "32px",
+            padding: "16px",
+            background: "#f8f9fa",
+            borderRadius: "8px",
+          }}
+        >
+          <Text strong style={{ fontSize: "16px", color: "#262626" }}>
+            {finalUsername || currentUser?.username}
+          </Text>
+        </div>
 
         {/* 验证方式选择 */}
-        <div style={{ marginBottom: "24px" }}>
-          <Text strong style={{ display: "block", marginBottom: "12px" }}>
-            选择验证方式:
-          </Text>
+        <div style={{ marginBottom: "32px" }}>
           <Radio.Group
             value={verificationMethod}
             onChange={(e) => setVerificationMethod(e.target.value)}
+            buttonStyle="solid"
+            size="large"
           >
-            <Space direction="vertical">
-              <Radio value="email">
-                <Space>
-                  <MailOutlined />
-                  邮箱验证
-                </Space>
-              </Radio>
-              <Radio value="sms">
-                <Space>
-                  <MobileOutlined />
-                  手机验证
-                </Space>
-              </Radio>
-            </Space>
+            <Radio.Button value="email">
+              <MailOutlined /> 邮箱验证
+            </Radio.Button>
+            <Radio.Button value="sms">
+              <MobileOutlined /> 手机验证
+            </Radio.Button>
           </Radio.Group>
         </div>
 
-        {/* 说明文字 */}
-        <Alert
-          message="请先输入您的联系信息"
-          description={`请提供您的${verificationMethod === "email" ? "邮箱地址" : "手机号码"}，我们将发送验证码到该${verificationMethod === "email" ? "邮箱" : "手机"}`}
-          type="info"
-          showIcon
-          style={{ marginBottom: "16px" }}
-        />
-
         {/* 邮箱/手机输入 */}
         {verificationMethod === "email" ? (
-          <Form.Item label="邮箱地址" style={{ marginBottom: "16px" }}>
+          <Form.Item label="邮箱地址" style={{ marginBottom: "24px" }}>
             <Input
               prefix={<MailOutlined />}
-              placeholder="请输入您的邮箱地址"
+              placeholder="请输入邮箱地址"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               size="large"
@@ -458,7 +445,7 @@ const VerificationPage: React.FC = () => {
             />
           </Form.Item>
         ) : (
-          <div style={{ marginBottom: "16px" }}>
+          <div style={{ marginBottom: "24px" }}>
             <Text strong style={{ display: "block", marginBottom: "8px", color: "#262626" }}>
               手机号码
             </Text>
@@ -514,37 +501,27 @@ const VerificationPage: React.FC = () => {
           loading={sendingCode}
           disabled={countdown > 0}
           size="large"
+          block
           style={{
             marginBottom: "24px",
-            borderRadius: "50%",
-            width: "56px",
-            height: "56px",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            margin: "0 auto 24px",
+            height: "48px",
+            borderRadius: "8px",
+            fontSize: "16px",
+            fontWeight: "500",
           }}
         >
-          {countdown > 0 ? countdown : ""}
+          {countdown > 0
+            ? `${countdown}s`
+            : `发送${verificationMethod === "email" ? "邮箱" : "手机"}验证码`}
         </Button>
 
         {/* 验证码输入表单 - 只在发送验证码后显示 */}
         {codeSent && (
           <div style={{ marginTop: "24px" }}>
-            <Alert
-              message="验证码已发送"
-              description={`请检查您的${verificationMethod === "email" ? "邮箱" : "手机"}，输入8位验证码完成验证`}
-              type="success"
-              showIcon
-              style={{ marginBottom: "16px" }}
-            />
-
-            <Form.Item name="verificationCode" style={{ marginBottom: "16px" }}>
+            <Form.Item name="verificationCode" style={{ marginBottom: "24px" }}>
               <Input
                 prefix={<SafetyOutlined style={{ color: "#1890ff" }} />}
-                placeholder={
-                  verificationMethod === "email" ? "输入8位邮箱验证码" : "输入8位手机验证码"
-                }
+                placeholder="输入8位验证码"
                 size="large"
                 style={{ height: "48px", fontSize: "16px" }}
                 maxLength={8}
@@ -583,7 +560,7 @@ const VerificationPage: React.FC = () => {
 
         {/* 其他选项 */}
         <div style={{ textAlign: "center" }}>
-          <Text style={{ color: "#8c8c8c", fontSize: "16px" }}>
+          <Text style={{ color: "#8c8c8c", fontSize: "14px" }}>
             已有账户？{" "}
             <a
               href="/login"
@@ -591,7 +568,6 @@ const VerificationPage: React.FC = () => {
                 color: "#1890ff",
                 fontWeight: "600",
                 textDecoration: "none",
-                fontSize: "16px",
               }}
             >
               立即登录
