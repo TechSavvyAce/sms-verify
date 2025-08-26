@@ -244,19 +244,6 @@ const AddFundsModal: React.FC<AddFundsModalProps> = ({
 
         {paymentUrl && (
           <>
-            <div
-              style={{
-                marginBottom: "16px",
-                padding: "16px",
-                background: "#f0f8ff",
-                borderRadius: "8px",
-              }}
-            >
-              <Text strong style={{ color: "#1890ff" }}>
-                📱 支付说明：请使用以下方式之一完成支付
-              </Text>
-            </div>
-
             <div style={{ marginBottom: "16px" }}>
               <Text strong>支付链接:</Text>
               <div style={{ display: "flex", alignItems: "center", gap: "8px", marginTop: "8px" }}>
@@ -274,7 +261,7 @@ const AddFundsModal: React.FC<AddFundsModalProps> = ({
               </div>
             </div>
 
-            {qrCode && (
+            {/* {qrCode && (
               <div style={{ textAlign: "center", marginBottom: "16px" }}>
                 <Text strong>二维码支付:</Text>
                 <div style={{ marginTop: "8px" }}>
@@ -288,7 +275,7 @@ const AddFundsModal: React.FC<AddFundsModalProps> = ({
                   使用支持加密货币的钱包扫描二维码进行支付
                 </Text>
               </div>
-            )}
+            )} */}
 
             <div style={{ textAlign: "center" }}>
               <Button
@@ -301,26 +288,6 @@ const AddFundsModal: React.FC<AddFundsModalProps> = ({
               >
                 我已支付完成
               </Button>
-            </div>
-
-            <div
-              style={{
-                marginTop: "16px",
-                padding: "12px",
-                background: "#f6ffed",
-                borderRadius: "6px",
-              }}
-            >
-              <Text type="secondary" style={{ fontSize: "12px" }}>
-                <strong>支付说明：</strong>
-                <br />
-                • 支付完成后，点击"我已支付完成"按钮
-                <br />
-                • 系统将自动确认并更新您的余额
-                <br />
-                • 支付订单30分钟后自动过期
-                <br />• 如遇问题，请联系客服并提供支付ID: {paymentId}
-              </Text>
             </div>
           </>
         )}
