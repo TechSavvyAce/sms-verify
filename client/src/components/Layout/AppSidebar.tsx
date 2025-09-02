@@ -13,6 +13,7 @@ import {
   BarChartOutlined,
   MessageOutlined,
   ClockCircleOutlined,
+  CreditCardOutlined,
 } from "@ant-design/icons";
 import { useAuthStore } from "../../stores/authStore";
 
@@ -86,9 +87,9 @@ const AppSidebar: React.FC<AppSidebarProps> = ({ collapsed, isMobile, onCollapse
           label: "个人中心",
         },
         {
-          key: "/settings",
-          icon: <SettingOutlined />,
-          label: "账户设置",
+          key: "/balance",
+          icon: <CreditCardOutlined />,
+          label: "账户充值",
         },
       ],
     },
@@ -102,19 +103,14 @@ const AppSidebar: React.FC<AppSidebarProps> = ({ collapsed, isMobile, onCollapse
       label: "系统管理",
       children: [
         {
-          key: "/admin/dashboard",
-          icon: <BarChartOutlined />,
-          label: "管理面板",
-        },
-        {
           key: "/admin/users",
           icon: <TeamOutlined />,
           label: "用户管理",
         },
         {
-          key: "/admin/system",
-          icon: <SettingOutlined />,
-          label: "系统设置",
+          key: "/admin/transactions",
+          icon: <WalletOutlined />,
+          label: "交易管理",
         },
       ],
     });
@@ -148,6 +144,9 @@ const AppSidebar: React.FC<AppSidebarProps> = ({ collapsed, isMobile, onCollapse
       pathname.startsWith("/transactions")
     ) {
       openKeys.push("records");
+    }
+    if (pathname.startsWith("/profile") || pathname.startsWith("/balance")) {
+      openKeys.push("user");
     }
     if (pathname.startsWith("/admin")) {
       openKeys.push("admin");

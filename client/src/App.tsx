@@ -19,13 +19,11 @@ import RentNumberPage from "./pages/Services/RentNumberPage";
 import ActivationsPage from "./pages/Activations/ActivationsPage";
 import RentalsPage from "./pages/Rentals/RentalsPage";
 import TransactionsPage from "./pages/Transactions/TransactionsPage";
-import SettingsPage from "./pages/Settings/SettingsPage";
-import AdminDashboard from "./pages/Admin/AdminDashboard";
 import AdminUsersPage from "./pages/Admin/AdminUsersPage";
-import AdminSystemPage from "./pages/Admin/AdminSystemPage";
 import AdminTransactionsPage from "./pages/Admin/AdminTransactionsPage";
 import NotFoundPage from "./pages/Error/NotFoundPage";
 import ProfilePage from "./pages/Profile/ProfilePage";
+import BalancePage from "./pages/Balance/BalancePage";
 import VerificationPage from "./pages/Auth/VerificationPage";
 
 const { Content } = Layout;
@@ -136,32 +134,16 @@ const App: React.FC = () => {
 
                         {/* 用户相关页面 */}
                         <Route path="/profile" element={<ProfilePage />} />
-                        <Route path="/settings" element={<SettingsPage />} />
+                        <Route path="/balance" element={<BalancePage />} />
 
                         {/* 管理员页面 */}
                         {user?.id === 1 && (
                           <>
                             <Route
-                              path="/admin/dashboard"
-                              element={
-                                <ProtectedRoute requireAdmin>
-                                  <AdminDashboard />
-                                </ProtectedRoute>
-                              }
-                            />
-                            <Route
                               path="/admin/users"
                               element={
                                 <ProtectedRoute requireAdmin>
                                   <AdminUsersPage />
-                                </ProtectedRoute>
-                              }
-                            />
-                            <Route
-                              path="/admin/system"
-                              element={
-                                <ProtectedRoute requireAdmin>
-                                  <AdminSystemPage />
                                 </ProtectedRoute>
                               }
                             />

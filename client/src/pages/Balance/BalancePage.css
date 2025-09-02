@@ -1,0 +1,22 @@
+/* Balance Page Styles */
+.balance-container {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.balance-title {
+  color: #1890ff;
+  font-weight: 600;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .balance-container {
+    padding: 16px !important;
+  }
+  
+  .balance-title {
+    font-size: 20px !important;
+    margin-bottom: 16px !important;
+  }
+}
