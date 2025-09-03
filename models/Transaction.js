@@ -41,6 +41,15 @@ const Transaction = sequelize.define(
       type: DataTypes.TEXT,
       allowNull: true,
     },
+    status: {
+      type: DataTypes.ENUM("pending", "completed", "failed", "cancelled", "expired"),
+      allowNull: true,
+      defaultValue: "completed",
+    },
+    completed_at: {
+      type: DataTypes.DATE,
+      allowNull: true,
+    },
     created_at: {
       type: DataTypes.DATE,
       allowNull: false,

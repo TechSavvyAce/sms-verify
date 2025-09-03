@@ -165,6 +165,11 @@ export interface SMSMessage {
 export interface Transaction {
   id: number;
   user_id?: number;
+  user?: {
+    id: number;
+    username: string;
+    email: string;
+  };
   type: "recharge" | "activation" | "rental" | "refund" | "adjustment";
   type_display?: string;
   amount: number;
@@ -172,7 +177,9 @@ export interface Transaction {
   balance_after?: number;
   reference_id?: string;
   description?: string;
+  status?: "pending" | "completed" | "failed" | "cancelled" | "expired";
   created_at: string;
+  completed_at?: string;
 }
 
 // API响应类型

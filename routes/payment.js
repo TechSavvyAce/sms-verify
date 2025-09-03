@@ -73,19 +73,12 @@ router.post("/create", authenticateToken, async (req, res) => {
       const payment = await Transaction.create({
         user_id: userId,
         type: "recharge",
-        type_display: "账户充值",
         amount: amount,
         balance_before: user.balance,
         balance_after: user.balance,
         description: description || `用户 ${user.username} 充值 $${amount}`,
         status: "pending",
         reference_id: safepingData.payment_id,
-        metadata: {
-          safeping_payment_id: safepingData.payment_id,
-          payment_url: safepingData.payment_url,
-          qr_code: safepingData.qr_code,
-          provider: "onetimeping.eu",
-        },
       });
 
       logger.info("SafePing支付订单创建成功:", {
@@ -185,20 +178,13 @@ router.post("/webhook", async (req, res) => {
     const transaction = await Transaction.create({
       user_id: user_id,
       type: "recharge",
-      type_display: "充值",
       amount: amount,
       balance_before: oldBalance,
       balance_after: newBalance,
       description: description || `SafePing充值 $${amount}`,
       status: "completed",
       reference_id: payment_id,
-      reference_type: "safeping_payment",
       completed_at: new Date(),
-      metadata: {
-        safeping_payment_id: payment_id,
-        service_name: service_name,
-        processed_at: new Date().toISOString(),
-      },
     });
 
     logger.info("SafePing支付处理成功:", {
@@ -340,6 +326,22 @@ router.get("/check-pending", authenticateToken, async (req, res) => {
   try {
     const userId = req.user.id;
 
+    // 首先检查并过期旧的待处理交易（超过24小时）
+    const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    await Transaction.update(
+      { status: "expired" },
+      {
+        where: {
+          user_id: userId,
+          type: "recharge",
+          status: "pending",
+          created_at: {
+            [Op.lt]: twentyFourHoursAgo,
+          },
+        },
+      }
+    );
+
     // Get recent transactions for this user
     const recentTransactions = await Transaction.findAll({
       where: {
@@ -408,6 +410,17 @@ router.post("/confirm", authenticateToken, async (req, res) => {
       });
     }
 
+    // 检查交易是否已过期（超过24小时）
+    const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    if (transaction.created_at < twentyFourHoursAgo) {
+      // 将过期交易标记为expired
+      await transaction.update({ status: "expired" });
+      return res.status(400).json({
+        success: false,
+        error: "支付订单已过期，无法确认",
+      });
+    }
+
     // 获取用户信息
     const user = await User.findByPk(userId);
     if (!user) {
@@ -431,11 +444,6 @@ router.post("/confirm", authenticateToken, async (req, res) => {
       status: "completed",
       balance_after: newBalance,
       completed_at: new Date(),
-      metadata: {
-        ...transaction.metadata,
-        manually_confirmed: true,
-        confirmed_at: new Date().toISOString(),
-      },
     });
 
     logger.info("手动确认支付成功:", {

@@ -433,6 +433,10 @@ export const paymentApi = {
   // 获取支付状态
   getStatus: (paymentId: string): Promise<ApiResponse> =>
     request({ method: "GET", url: `/payment/status/${paymentId}` }),
+
+  // 确认支付完成
+  confirmPayment: (data: { payment_id: string; amount: number }): Promise<ApiResponse> =>
+    request({ method: "POST", url: "/payment/confirm", data }),
 };
 
 // 管理员 API

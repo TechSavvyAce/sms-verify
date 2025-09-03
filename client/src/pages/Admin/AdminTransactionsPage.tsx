@@ -124,10 +124,23 @@ const AdminTransactionsPage: React.FC = () => {
       width: 80,
     },
     {
-      title: "用户ID",
-      dataIndex: "user_id",
-      key: "user_id",
-      render: (userId: number) => userId || "N/A",
+      title: "用户",
+      key: "user",
+      render: (record: Transaction) => {
+        if (record.user) {
+          return (
+            <div>
+              <div>ID: {record.user.id}</div>
+              <div>用户名: {record.user.username}</div>
+            </div>
+          );
+        }
+        // Fallback to user_id if user object is not available
+        if (record.user_id) {
+          return `ID: ${record.user_id}`;
+        }
+        return "N/A";
+      },
     },
     {
       title: "类型",
@@ -288,8 +301,16 @@ const AdminTransactionsPage: React.FC = () => {
         {selectedTransaction && (
           <Descriptions column={1} bordered>
             <Descriptions.Item label="交易ID">{selectedTransaction.id}</Descriptions.Item>
-            <Descriptions.Item label="用户ID">
-              {selectedTransaction.user_id || "N/A"}
+            <Descriptions.Item label="用户信息">
+              {selectedTransaction.user ? (
+                <div>
+                  <div>ID: {selectedTransaction.user.id}</div>
+                  <div>用户名: {selectedTransaction.user.username}</div>
+                  <div>邮箱: {selectedTransaction.user.email}</div>
+                </div>
+              ) : (
+                "N/A"
+              )}
             </Descriptions.Item>
             <Descriptions.Item label="交易类型">
               <Tag color="blue">{selectedTransaction.type}</Tag>

@@ -220,7 +220,9 @@ router.get(
           "balance_after",
           "reference_id",
           "description",
+          "status",
           "created_at",
+          "completed_at",
         ],
       });
 
