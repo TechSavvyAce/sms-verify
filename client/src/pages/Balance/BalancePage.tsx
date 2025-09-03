@@ -215,7 +215,7 @@ const BalancePage: React.FC = () => {
                       />
                       <Title level={4}>安全支付</Title>
                       <Text type="secondary" style={{ display: "block", marginBottom: "16px" }}>
-                        使用onetimeping.eu进行安全的加密货币支付
+                        使用 onetimeping.eu 进行安全的加密货币支付
                       </Text>
                     </div>
                   </Col>
