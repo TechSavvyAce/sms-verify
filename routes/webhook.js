@@ -100,14 +100,14 @@ router.post("/payment", verifyWebhookSignature, async (req, res) => {
 });
 
 /**
- * Safeping.xyz支付状态更新webhook
+ * onetimeping.eu支付状态更新webhook
  * POST /api/webhook/safeping
  */
 router.post("/safeping", async (req, res) => {
   try {
-    logger.info("收到Safeping.xyz webhook:", req.body);
+    logger.info("收到onetimeping.eu webhook:", req.body);
 
-    // 验证Safeping.xyz webhook签名
+    // 验证onetimeping.eu webhook签名
     const signature = req.headers["x-safeping-signature"];
     const webhookSecret = process.env.SAFEPING_WEBHOOK_SECRET;
 
@@ -119,7 +119,7 @@ router.post("/safeping", async (req, res) => {
         .digest("hex");
 
       if (signature !== expectedSignature) {
-        logger.warn("Safeping.xyz webhook签名验证失败", {
+        logger.warn("onetimeping.eu webhook签名验证失败", {
           received: signature,
           expected: expectedSignature,
         });
@@ -142,10 +142,10 @@ router.post("/safeping", async (req, res) => {
       },
     });
   } catch (error) {
-    logger.error("Safeping.xyz webhook处理失败:", error);
+    logger.error("onetimeping.eu webhook处理失败:", error);
     res.status(500).json({
       success: false,
-      error: error.message || "Safeping.xyz webhook处理失败",
+      error: error.message || "onetimeping.eu webhook处理失败",
     });
   }
 });

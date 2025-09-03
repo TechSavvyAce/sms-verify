@@ -229,11 +229,11 @@ class WebhookService {
   }
 
   /**
-   * 处理Safeping.xyz支付状态更新webhook
+   * 处理onetimeping.eu支付状态更新webhook
    */
   async handleSafepingWebhook(payload) {
     try {
-      logger.info("处理Safeping.xyz webhook:", payload);
+      logger.info("处理onetimeping.eu webhook:", payload);
 
       const {
         payment_id,
@@ -266,13 +266,13 @@ class WebhookService {
       });
 
       if (!transaction) {
-        logger.warn(`未找到Safeping.xyz支付订单: ${payment_id}`);
+        logger.warn(`未找到onetimeping.eu支付订单: ${payment_id}`);
         return { success: false, message: "支付订单不存在" };
       }
 
       // 检查是否已经处理过
       if (transaction.status === "completed") {
-        logger.info(`Safeping.xyz支付订单 ${payment_id} 已经处理过`);
+        logger.info(`onetimeping.eu支付订单 ${payment_id} 已经处理过`);
         return { success: true, message: "订单已处理" };
       }
 
@@ -297,7 +297,7 @@ class WebhookService {
         });
 
         logger.info(
-          `用户 ${user.id} Safeping.xyz充值成功: $${rechargeAmount}, 新余额: $${
+          `用户 ${user.id} onetimeping.eu充值成功: $${rechargeAmount}, 新余额: $${
             user.balance + rechargeAmount
           }`
         );
@@ -306,13 +306,13 @@ class WebhookService {
         await this.logUserActivity(
           user.id,
           "payment_success",
-          `Safeping.xyz充值成功 $${rechargeAmount}`,
+          `onetimeping.eu充值成功 $${rechargeAmount}`,
           {
             transaction_id: transaction.id,
             amount: rechargeAmount,
             payment_method,
             external_transaction_id: transaction_hash,
-            provider: "safeping.xyz",
+            provider: "onetimeping.eu",
           }
         );
       } else if (status === "failed" || status === "cancelled" || status === "expired") {
@@ -324,14 +324,14 @@ class WebhookService {
           await this.logUserActivity(
             transaction.user.id,
             "payment_failed",
-            `Safeping.xyz充值${status === "failed" ? "失败" : status === "cancelled" ? "取消" : "过期"} $${
+            `onetimeping.eu充值${status === "failed" ? "失败" : status === "cancelled" ? "取消" : "过期"} $${
               transaction.amount
             }`,
             {
               transaction_id: transaction.id,
               reason: status,
               payment_method,
-              provider: "safeping.xyz",
+              provider: "onetimeping.eu",
             }
           );
         }
@@ -344,13 +344,13 @@ class WebhookService {
 
       return {
         success: true,
-        message: "Safeping.xyz webhook处理成功",
+        message: "onetimeping.eu webhook处理成功",
         payment_id: payment_id,
         status: updates.status || transaction.status,
         amount: amount || transaction.amount,
       };
     } catch (error) {
-      logger.error("处理Safeping.xyz webhook失败:", error);
+      logger.error("处理onetimeping.eu webhook失败:", error);
       throw error;
     }
   }

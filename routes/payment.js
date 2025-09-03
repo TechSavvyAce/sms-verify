@@ -35,9 +35,9 @@ router.post("/create", authenticateToken, async (req, res) => {
       });
     }
 
-    // 调用safeping.xyz API创建支付订单
+    // 调用onetimeping.eu API创建支付订单
     try {
-      const safepingResponse = await fetch("https://www.safeping.xyz/api/payment/create", {
+      const safepingResponse = await fetch("https://www.onetimeping.eu/api/payment/create", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -84,7 +84,7 @@ router.post("/create", authenticateToken, async (req, res) => {
           safeping_payment_id: safepingData.payment_id,
           payment_url: safepingData.payment_url,
           qr_code: safepingData.qr_code,
-          provider: "safeping.xyz",
+          provider: "onetimeping.eu",
         },
       });
 
