@@ -56,7 +56,7 @@ const AddFundsModal: React.FC<AddFundsModalProps> = ({
       // Create payment using our backend API endpoint
       const token = localStorage.getItem("token");
       const response = await fetch(
-        `${process.env.REACT_APP_API_URL || "http://localhost:5001"}/api/payment/create`,
+        `${process.env.REACT_APP_API_URL || "http://localhost:5001/api"}/payment/create`,
         {
           method: "POST",
           headers: {
