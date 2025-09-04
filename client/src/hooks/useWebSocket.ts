@@ -138,6 +138,24 @@ export const useWebSocket = () => {
       window.dispatchEvent(event);
     });
 
+    // 支付过期事件
+    socket.on("payment_expired", (data) => {
+      console.log("收到支付过期通知:", data);
+
+      // 发送自定义事件到页面组件
+      const event = new CustomEvent("payment_expired", { detail: data });
+      window.dispatchEvent(event);
+    });
+
+    // 支付状态更新事件
+    socket.on("payment_status_updated", (data) => {
+      console.log("收到支付状态更新通知:", data);
+
+      // 发送自定义事件到页面组件
+      const event = new CustomEvent("payment_status_updated", { detail: data });
+      window.dispatchEvent(event);
+    });
+
     // 系统通知
     socket.on("system_notification", (data) => {
       const { type, message: msg, duration = 5 } = data;

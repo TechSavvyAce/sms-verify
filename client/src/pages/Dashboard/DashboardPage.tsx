@@ -1,23 +1,11 @@
 import React, { useEffect, useState } from "react";
-import {
-  Row,
-  Col,
-  Card,
-  Statistic,
-  Typography,
-  Space,
-  Button,
-  Alert,
-  Spin,
-  Progress,
-} from "antd";
+import { Row, Col, Card, Statistic, Typography, Space, Button, Alert, Spin, Progress } from "antd";
 import {
   WalletOutlined,
   MessageOutlined,
   PhoneOutlined,
   TrophyOutlined,
   ReloadOutlined,
-  RiseOutlined,
   ClockCircleOutlined,
 } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
@@ -39,12 +27,11 @@ const DashboardPage: React.FC = () => {
   // 加载数据
   const loadData = async () => {
     try {
-      const [statsResponse, activationsResponse, rentalsResponse] =
-        await Promise.all([
-          userApi.getStats(),
-          activationApi.getList({ page: 1, limit: 5 }),
-          rentalApi.getList({ page: 1, limit: 5 }),
-        ]);
+      const [statsResponse, activationsResponse, rentalsResponse] = await Promise.all([
+        userApi.getStats(),
+        activationApi.getList({ page: 1, limit: 5 }),
+        rentalApi.getList({ page: 1, limit: 5 }),
+      ]);
 
       if (statsResponse.success && statsResponse.data) {
         setStats(statsResponse.data);
@@ -77,22 +64,16 @@ const DashboardPage: React.FC = () => {
 
   // 计算统计数据
   const totalActivations = stats
-    ? Object.values(stats.activations).reduce(
-        (sum, item) => sum + item.count,
-        0
-      )
+    ? Object.values(stats.activations).reduce((sum, item) => sum + item.count, 0)
     : 0;
   const totalRentals = stats
     ? Object.values(stats.rentals).reduce((sum, item) => sum + item.count, 0)
     : 0;
   const successActivations = stats
-    ? (stats.activations["3"]?.count || 0) +
-      (stats.activations["8"]?.count || 0)
+    ? (stats.activations["3"]?.count || 0) + (stats.activations["8"]?.count || 0)
     : 0;
   const successRate =
-    totalActivations > 0
-      ? Math.round((successActivations / totalActivations) * 100)
-      : 0;
+    totalActivations > 0 ? Math.round((successActivations / totalActivations) * 100) : 0;
 
   if (loading) {
     return (
@@ -135,11 +116,7 @@ const DashboardPage: React.FC = () => {
               })}
             </Text>
           </div>
-          <Button
-            icon={<ReloadOutlined />}
-            onClick={handleRefresh}
-            loading={refreshing}
-          >
+          <Button icon={<ReloadOutlined />} onClick={handleRefresh} loading={refreshing}>
             刷新数据
           </Button>
         </div>
@@ -152,10 +129,7 @@ const DashboardPage: React.FC = () => {
             type="warning"
             showIcon
             action={
-              <Button
-                size="small"
-                onClick={() => navigate("/profile?tab=balance")}
-              >
+              <Button size="small" onClick={() => navigate("/balance")}>
                 立即充值
               </Button>
             }
@@ -170,11 +144,7 @@ const DashboardPage: React.FC = () => {
           <Card>
             <Statistic
               title="账户余额"
-              value={
-                user?.balance && typeof user.balance === "number"
-                  ? user.balance
-                  : 0
-              }
+              value={user?.balance && typeof user.balance === "number" ? user.balance : 0}
               precision={2}
               prefix="$"
               valueStyle={{ color: "#1890ff" }}
@@ -209,24 +179,13 @@ const DashboardPage: React.FC = () => {
               suffix="%"
               prefix={<TrophyOutlined />}
               valueStyle={{
-                color:
-                  successRate > 80
-                    ? "#52c41a"
-                    : successRate > 60
-                    ? "#faad14"
-                    : "#ff4d4f",
+                color: successRate > 80 ? "#52c41a" : successRate > 60 ? "#faad14" : "#ff4d4f",
               }}
             />
             <Progress
               percent={successRate}
               showInfo={false}
-              strokeColor={
-                successRate > 80
-                  ? "#52c41a"
-                  : successRate > 60
-                  ? "#faad14"
-                  : "#ff4d4f"
-              }
+              strokeColor={successRate > 80 ? "#52c41a" : successRate > 60 ? "#faad14" : "#ff4d4f"}
               style={{ marginTop: "8px" }}
             />
           </Card>
@@ -261,7 +220,7 @@ const DashboardPage: React.FC = () => {
             <Button
               size="large"
               icon={<WalletOutlined />}
-              onClick={() => navigate("/profile?tab=balance")}
+              onClick={() => navigate("/balance")}
               block
             >
               账户充值
@@ -270,11 +229,11 @@ const DashboardPage: React.FC = () => {
           <Col xs={24} sm={12} md={6}>
             <Button
               size="large"
-              icon={<RiseOutlined />}
-              onClick={() => navigate("/profile?tab=stats")}
+              icon={<ClockCircleOutlined />}
+              onClick={() => navigate("/transactions")}
               block
             >
-              查看统计
+              交易记录
             </Button>
           </Col>
         </Row>
@@ -287,21 +246,13 @@ const DashboardPage: React.FC = () => {
           <Card
             title="最近激活"
             extra={
-              <Button
-                type="link"
-                onClick={() => navigate("/activations")}
-                style={{ padding: 0 }}
-              >
+              <Button type="link" onClick={() => navigate("/activations")} style={{ padding: 0 }}>
                 查看全部
               </Button>
             }
           >
             {recentActivations.length > 0 ? (
-              <Space
-                direction="vertical"
-                style={{ width: "100%" }}
-                size="middle"
-              >
+              <Space direction="vertical" style={{ width: "100%" }} size="middle">
                 {recentActivations.map((activation) => (
                   <div
                     key={activation.id}
@@ -323,12 +274,11 @@ const DashboardPage: React.FC = () => {
                         <Text
                           style={{
                             color:
-                              activation.status === "3" ||
-                              activation.status === "8"
+                              activation.status === "3" || activation.status === "8"
                                 ? "#52c41a"
                                 : activation.status === "6"
-                                ? "#ff4d4f"
-                                : "#faad14",
+                                  ? "#ff4d4f"
+                                  : "#faad14",
                           }}
                         >
                           {activation.status_text}
@@ -374,21 +324,13 @@ const DashboardPage: React.FC = () => {
           <Card
             title="最近租用"
             extra={
-              <Button
-                type="link"
-                onClick={() => navigate("/rentals")}
-                style={{ padding: 0 }}
-              >
+              <Button type="link" onClick={() => navigate("/rentals")} style={{ padding: 0 }}>
                 查看全部
               </Button>
             }
           >
             {recentRentals.length > 0 ? (
-              <Space
-                direction="vertical"
-                style={{ width: "100%" }}
-                size="middle"
-              >
+              <Space direction="vertical" style={{ width: "100%" }} size="middle">
                 {recentRentals.map((rental) => (
                   <div
                     key={rental.id}
@@ -413,8 +355,8 @@ const DashboardPage: React.FC = () => {
                               rental.status === "active"
                                 ? "#52c41a"
                                 : rental.status === "cancelled"
-                                ? "#ff4d4f"
-                                : "#8c8c8c",
+                                  ? "#ff4d4f"
+                                  : "#8c8c8c",
                           }}
                         >
                           {rental.status_text}

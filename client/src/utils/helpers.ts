@@ -57,7 +57,7 @@ export const formatDate = (date: string | Date): string => {
  * @param currency 货币符号
  * @returns 格式化后的金额字符串
  */
-export const formatCurrency = (amount: number, currency: string = "¥"): string => {
+export const formatCurrency = (amount: number, currency: string = "$"): string => {
   if (amount === null || amount === undefined || isNaN(amount)) {
     return `${currency}0.00`;
   }

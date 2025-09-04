@@ -22,7 +22,6 @@ const sequelize = new Sequelize(
     },
     dialectOptions: {
       charset: "utf8mb4",
-      collate: "utf8mb4_unicode_ci",
     },
     timezone: "+08:00", // 中国时区
     define: {

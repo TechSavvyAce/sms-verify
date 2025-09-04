@@ -1,14 +1,5 @@
 import React, { useState } from "react";
-import {
-  Layout,
-  Button,
-  Dropdown,
-  Avatar,
-  Badge,
-  Space,
-  Typography,
-  Modal,
-} from "antd";
+import { Layout, Button, Dropdown, Avatar, Badge, Space, Typography, Modal } from "antd";
 import {
   MenuFoldOutlined,
   MenuUnfoldOutlined,
@@ -31,11 +22,7 @@ interface AppHeaderProps {
   isMobile: boolean;
 }
 
-const AppHeader: React.FC<AppHeaderProps> = ({
-  collapsed,
-  onCollapse,
-  isMobile,
-}) => {
+const AppHeader: React.FC<AppHeaderProps> = ({ collapsed, onCollapse, isMobile }) => {
   const { user, logout } = useAuthStore();
   const navigate = useNavigate();
   const [logoutModalVisible, setLogoutModalVisible] = useState(false);
@@ -64,7 +51,7 @@ const AppHeader: React.FC<AppHeaderProps> = ({
         ? user.balance
         : 0
       ).toFixed(2)}`,
-      onClick: () => navigate("/profile?tab=balance"),
+      onClick: () => navigate("/balance"),
     },
     {
       type: "divider" as const,

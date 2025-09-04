@@ -8,7 +8,12 @@ const {
   validateDateRange,
   createValidationMiddleware,
 } = require("../middleware/validation");
-const { getPaginationParams, buildPaginatedResponse, formatDateTime } = require("../utils/helpers");
+const {
+  getPaginationParams,
+  buildPaginatedResponse,
+  formatDateTime,
+  checkPaymentStatus,
+} = require("../utils/helpers");
 const logger = require("../utils/logger");
 const router = express.Router();
 
@@ -226,8 +231,108 @@ router.get(
         ],
       });
 
+      // 检查并更新待处理的充值交易状态
+      const pendingRechargeTransactions = transactions.filter(
+        (t) => t.type === "recharge" && t.status === "pending" && t.reference_id
+      );
+
+      for (const transaction of pendingRechargeTransactions) {
+        try {
+          // 调用OneTimePing API检查支付状态
+          const paymentStatusResult = await checkPaymentStatus(transaction.reference_id);
+
+          if (paymentStatusResult.success) {
+            const paymentData = paymentStatusResult.data;
+
+            if (paymentData.success && paymentData.payment) {
+              const payment = paymentData.payment;
+
+              // 如果支付已完成，更新交易状态和用户余额
+              if (payment.status === "completed" || payment.status === "paid") {
+                const user = await User.findByPk(req.user.id);
+                if (user) {
+                  const oldBalance = parseFloat(user.balance);
+                  const rechargeAmount = parseFloat(transaction.amount);
+                  const newBalance = oldBalance + rechargeAmount;
+
+                  // 更新用户余额
+                  await user.update({
+                    balance: newBalance,
+                    total_recharged: parseFloat(user.total_recharged || 0) + rechargeAmount,
+                  });
+
+                  // 更新交易记录
+                  await transaction.update({
+                    status: "completed",
+                    balance_after: newBalance,
+                    completed_at: new Date(),
+                  });
+
+                  // 发送WebSocket通知
+                  const io = req.app.get("io");
+                  if (io) {
+                    io.to(`user_${req.user.id}`).emit("payment_success", {
+                      payment_id: transaction.reference_id,
+                      amount: rechargeAmount,
+                      old_balance: oldBalance,
+                      new_balance: newBalance,
+                      transaction_id: transaction.id,
+                      message: "充值成功！",
+                      timestamp: new Date().toISOString(),
+                      type: "recharge",
+                      status: "completed",
+                    });
+
+                    // 发送余额更新事件
+                    io.to(`user_${req.user.id}`).emit("balance_updated", {
+                      new_balance: newBalance,
+                      change_amount: rechargeAmount,
+                      description: "自动充值确认",
+                      transaction_id: transaction.id,
+                      timestamp: new Date().toISOString(),
+                    });
+                  }
+
+                  logger.info(
+                    `自动更新支付状态成功: 用户${req.user.id}, 交易${transaction.id}, 金额$${rechargeAmount}`
+                  );
+                }
+              } else if (payment.status === "failed" || payment.status === "cancelled") {
+                // 如果支付失败或取消，更新交易状态
+                await transaction.update({
+                  status: payment.status === "failed" ? "failed" : "cancelled",
+                  completed_at: new Date(),
+                });
+              }
+            }
+          }
+        } catch (error) {
+          logger.error(`检查支付状态失败: 交易${transaction.id}`, error);
+        }
+      }
+
+      // 重新获取更新后的交易数据
+      const { rows: updatedTransactions } = await Transaction.findAndCountAll({
+        where: whereClause,
+        order: [["created_at", "DESC"]],
+        limit,
+        offset,
+        attributes: [
+          "id",
+          "type",
+          "amount",
+          "balance_before",
+          "balance_after",
+          "reference_id",
+          "description",
+          "status",
+          "created_at",
+          "completed_at",
+        ],
+      });
+
       // 格式化交易数据
-      const formattedTransactions = transactions.map((transaction) => ({
+      const formattedTransactions = updatedTransactions.map((transaction) => ({
         ...transaction.toJSON(),
         amount: parseFloat(transaction.amount),
         balance_before: parseFloat(transaction.balance_before),

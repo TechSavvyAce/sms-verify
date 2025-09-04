@@ -82,6 +82,33 @@ router.post("/payment", verifyWebhookSignature, async (req, res) => {
 
     const result = await webhookService.handlePaymentWebhook(req.body);
 
+    // Send WebSocket notification if payment was successful
+    if (result.success && result.status === "completed" && result.user_id) {
+      const io = req.app.get("io");
+      if (io) {
+        io.to(`user_${result.user_id}`).emit("payment_success", {
+          payment_id: result.transaction_id,
+          amount: result.amount,
+          old_balance: result.old_balance,
+          new_balance: result.new_balance,
+          transaction_id: result.transaction_id,
+          message: "充值成功！",
+          timestamp: new Date().toISOString(),
+          type: "recharge",
+          status: "completed",
+        });
+
+        // Also send balance update event
+        io.to(`user_${result.user_id}`).emit("balance_updated", {
+          new_balance: result.new_balance,
+          change_amount: result.amount,
+          description: "充值成功",
+          transaction_id: result.transaction_id,
+          timestamp: new Date().toISOString(),
+        });
+      }
+    }
+
     res.json({
       success: true,
       message: result.message,
@@ -131,6 +158,33 @@ router.post("/safeping", async (req, res) => {
     }
 
     const result = await webhookService.handleSafepingWebhook(req.body);
+
+    // Send WebSocket notification if payment was successful
+    if (result.success && result.status === "completed" && result.user_id) {
+      const io = req.app.get("io");
+      if (io) {
+        io.to(`user_${result.user_id}`).emit("payment_success", {
+          payment_id: result.payment_id,
+          amount: result.amount,
+          old_balance: result.old_balance,
+          new_balance: result.new_balance,
+          transaction_id: result.transaction_id,
+          message: "充值成功！",
+          timestamp: new Date().toISOString(),
+          type: "recharge",
+          status: "completed",
+        });
+
+        // Also send balance update event
+        io.to(`user_${result.user_id}`).emit("balance_updated", {
+          new_balance: result.new_balance,
+          change_amount: result.amount,
+          description: "充值成功",
+          transaction_id: result.transaction_id,
+          timestamp: new Date().toISOString(),
+        });
+      }
+    }
 
     res.json({
       success: true,

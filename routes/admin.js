@@ -872,8 +872,11 @@ router.get(
         amount: parseFloat(transaction.amount || 0),
         balance_before: parseFloat(transaction.balance_before || 0),
         balance_after: parseFloat(transaction.balance_after || 0),
+        reference_id: transaction.reference_id,
         description: transaction.description,
+        status: transaction.status,
         created_at: formatDateTime(transaction.created_at),
+        completed_at: transaction.completed_at ? formatDateTime(transaction.completed_at) : null,
         user: transaction.user,
       }));
 

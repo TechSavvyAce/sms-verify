@@ -118,10 +118,11 @@ const AdminTransactionsPage: React.FC = () => {
   // Table columns
   const columns = [
     {
-      title: "ID",
-      dataIndex: "id",
-      key: "id",
-      width: 80,
+      title: "支付ID",
+      dataIndex: "reference_id",
+      key: "reference_id",
+      width: 200,
+      render: (referenceId: string) => referenceId || "-",
     },
     {
       title: "用户",
@@ -148,11 +149,11 @@ const AdminTransactionsPage: React.FC = () => {
       key: "type",
       render: (type: string) => {
         const typeMap: { [key: string]: { color: string; text: string } } = {
-          activation: { color: "blue", text: "激活" },
-          rental: { color: "green", text: "租用" },
-          recharge: { color: "orange", text: "充值" },
+          recharge: { color: "orange", text: "账户充值" },
+          activation: { color: "blue", text: "验证码消费" },
+          rental: { color: "green", text: "号码租用" },
           refund: { color: "red", text: "退款" },
-          adjustment: { color: "purple", text: "调整" },
+          adjustment: { color: "purple", text: "余额调整" },
         };
         const config = typeMap[type] || { color: "default", text: type };
         return <Tag color={config.color}>{config.text}</Tag>;
@@ -172,12 +173,39 @@ const AdminTransactionsPage: React.FC = () => {
     {
       title: "余额变化",
       key: "balance_change",
-      render: (record: Transaction) => (
-        <div>
-          <div>前: {record.balance_before?.toFixed(2) || "0.00"}</div>
-          <div>后: {record.balance_after?.toFixed(2) || "0.00"}</div>
-        </div>
-      ),
+      render: (record: Transaction) => {
+        // 只有状态为completed的交易才显示余额变化
+        if (
+          record.status === "completed" &&
+          record.balance_before !== undefined &&
+          record.balance_after !== undefined
+        ) {
+          return (
+            <div>
+              <div>前: {record.balance_before.toFixed(2)}</div>
+              <div>后: {record.balance_after.toFixed(2)}</div>
+            </div>
+          );
+        }
+        return "-";
+      },
+    },
+    {
+      title: "状态",
+      dataIndex: "status",
+      key: "status",
+      width: 100,
+      render: (status: string) => {
+        const statusMap: { [key: string]: { color: string; text: string } } = {
+          pending: { color: "orange", text: "待处理" },
+          completed: { color: "green", text: "已完成" },
+          failed: { color: "red", text: "失败" },
+          cancelled: { color: "gray", text: "已取消" },
+          expired: { color: "red", text: "已过期" },
+        };
+        const config = statusMap[status || ""] || { color: "default", text: status || "未知" };
+        return <Tag color={config.color}>{config.text}</Tag>;
+      },
     },
     {
       title: "描述",
@@ -226,11 +254,11 @@ const AdminTransactionsPage: React.FC = () => {
             style={{ width: 120 }}
             allowClear
           >
-            <Option value="activation">激活</Option>
-            <Option value="rental">租用</Option>
-            <Option value="recharge">充值</Option>
+            <Option value="recharge">账户充值</Option>
+            <Option value="activation">验证码消费</Option>
+            <Option value="rental">号码租用</Option>
             <Option value="refund">退款</Option>
-            <Option value="adjustment">调整</Option>
+            <Option value="adjustment">余额调整</Option>
           </Select>
 
           <Select
@@ -300,6 +328,9 @@ const AdminTransactionsPage: React.FC = () => {
       >
         {selectedTransaction && (
           <Descriptions column={1} bordered>
+            <Descriptions.Item label="支付ID">
+              {selectedTransaction.reference_id || "-"}
+            </Descriptions.Item>
             <Descriptions.Item label="交易ID">{selectedTransaction.id}</Descriptions.Item>
             <Descriptions.Item label="用户信息">
               {selectedTransaction.user ? (
@@ -313,7 +344,36 @@ const AdminTransactionsPage: React.FC = () => {
               )}
             </Descriptions.Item>
             <Descriptions.Item label="交易类型">
-              <Tag color="blue">{selectedTransaction.type}</Tag>
+              {(() => {
+                const typeMap: { [key: string]: { color: string; text: string } } = {
+                  recharge: { color: "orange", text: "账户充值" },
+                  activation: { color: "blue", text: "验证码消费" },
+                  rental: { color: "green", text: "号码租用" },
+                  refund: { color: "red", text: "退款" },
+                  adjustment: { color: "purple", text: "余额调整" },
+                };
+                const config = typeMap[selectedTransaction.type] || {
+                  color: "default",
+                  text: selectedTransaction.type,
+                };
+                return <Tag color={config.color}>{config.text}</Tag>;
+              })()}
+            </Descriptions.Item>
+            <Descriptions.Item label="状态">
+              {(() => {
+                const statusMap: { [key: string]: { color: string; text: string } } = {
+                  pending: { color: "orange", text: "待处理" },
+                  completed: { color: "green", text: "已完成" },
+                  failed: { color: "red", text: "失败" },
+                  cancelled: { color: "gray", text: "已取消" },
+                  expired: { color: "red", text: "已过期" },
+                };
+                const config = statusMap[selectedTransaction.status || ""] || {
+                  color: "default",
+                  text: selectedTransaction.status || "未知",
+                };
+                return <Tag color={config.color}>{config.text}</Tag>;
+              })()}
             </Descriptions.Item>
             <Descriptions.Item label="金额">
               <span style={{ color: selectedTransaction.amount >= 0 ? "#52c41a" : "#ff4d4f" }}>
@@ -322,8 +382,11 @@ const AdminTransactionsPage: React.FC = () => {
               </span>
             </Descriptions.Item>
             <Descriptions.Item label="余额变化">
-              {selectedTransaction.balance_before?.toFixed(2) || "0.00"} →{" "}
-              {selectedTransaction.balance_after?.toFixed(2) || "0.00"}
+              {selectedTransaction.status === "completed" &&
+              selectedTransaction.balance_before !== undefined &&
+              selectedTransaction.balance_after !== undefined
+                ? `${selectedTransaction.balance_before.toFixed(2)} → ${selectedTransaction.balance_after.toFixed(2)}`
+                : "-"}
             </Descriptions.Item>
             <Descriptions.Item label="描述">
               {selectedTransaction.description || "无"}

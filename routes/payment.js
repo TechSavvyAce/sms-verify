@@ -4,6 +4,7 @@ const { authenticateToken } = require("../middleware/auth");
 const logger = require("../utils/logger");
 const { User, Transaction } = require("../models");
 const { Op } = require("sequelize");
+const { checkPaymentStatus } = require("../utils/helpers");
 
 // =================================
 // 💳 Payment Creation API Route
@@ -116,114 +117,6 @@ router.post("/create", authenticateToken, async (req, res) => {
 });
 
 /**
- * 支付回调处理
- * POST /api/payment/webhook
- */
-router.post("/webhook", async (req, res) => {
-  try {
-    const { payment_id, status, amount, service_name, description } = req.body;
-    const { user_id } = req.query; // Get user_id from webhook URL
-
-    logger.info("收到SafePing支付回调:", {
-      payment_id,
-      status,
-      amount,
-      user_id,
-      service_name,
-    });
-
-    // 验证支付状态
-    if (status !== "completed") {
-      logger.info("支付未完成，忽略回调:", { payment_id, status });
-      return res.status(200).json({ received: true });
-    }
-
-    // 验证用户ID
-    if (!user_id) {
-      logger.error("缺少用户ID参数:", { payment_id });
-      return res.status(400).json({ received: false, error: "Missing user_id" });
-    }
-
-    // 获取用户信息
-    const user = await User.findByPk(user_id);
-    if (!user) {
-      logger.error("用户不存在:", { userId: user_id });
-      return res.status(200).json({ received: true });
-    }
-
-    // 检查是否已经处理过这个支付
-    const existingTransaction = await Transaction.findOne({
-      where: {
-        reference_id: payment_id,
-        type: "recharge",
-        status: "completed",
-      },
-    });
-
-    if (existingTransaction) {
-      logger.info("支付已处理过，跳过:", { payment_id });
-      return res.status(200).json({ received: true });
-    }
-
-    // 更新用户余额
-    const oldBalance = user.balance;
-    const newBalance = oldBalance + amount;
-
-    await user.update({
-      balance: newBalance,
-      total_recharged: user.total_recharged + amount,
-    });
-
-    // 创建交易记录
-    const transaction = await Transaction.create({
-      user_id: user_id,
-      type: "recharge",
-      amount: amount,
-      balance_before: oldBalance,
-      balance_after: newBalance,
-      description: description || `SafePing充值 $${amount}`,
-      status: "completed",
-      reference_id: payment_id,
-      completed_at: new Date(),
-    });
-
-    logger.info("SafePing支付处理成功:", {
-      userId: user.id,
-      username: user.username,
-      amount,
-      oldBalance,
-      newBalance,
-      transactionId: transaction.id,
-      paymentId: payment_id,
-    });
-
-    // Send WebSocket notification if available
-    const io = req.app.get("io");
-    if (io) {
-      io.to(`user_${user_id}`).emit("payment_success", {
-        payment_id,
-        amount,
-        old_balance: oldBalance,
-        new_balance: newBalance,
-        transaction_id: transaction.id,
-        message: "充值成功！",
-      });
-      logger.info("发送WebSocket通知:", { userId: user_id });
-    }
-
-    res.status(200).json({
-      received: true,
-      processed: true,
-      transaction_id: transaction.id,
-      new_balance: newBalance,
-    });
-  } catch (error) {
-    logger.error("处理SafePing支付回调失败:", error);
-    res.status(500).json({ received: false, error: error.message });
-  }
-});
-
-/**
  * 获取支付历史
  * GET /api/payment/history
  */
@@ -328,19 +221,47 @@ router.get("/check-pending", authenticateToken, async (req, res) => {
 
     // 首先检查并过期旧的待处理交易（超过24小时）
     const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
-    await Transaction.update(
-      { status: "expired" },
-      {
-        where: {
-          user_id: userId,
-          type: "recharge",
-          status: "pending",
-          created_at: {
-            [Op.lt]: twentyFourHoursAgo,
-          },
+    const expiredTransactions = await Transaction.findAll({
+      where: {
+        user_id: userId,
+        type: "recharge",
+        status: "pending",
+        created_at: {
+          [Op.lt]: twentyFourHoursAgo,
         },
+      },
+    });
+
+    if (expiredTransactions.length > 0) {
+      await Transaction.update(
+        { status: "expired" },
+        {
+          where: {
+            user_id: userId,
+            type: "recharge",
+            status: "pending",
+            created_at: {
+              [Op.lt]: twentyFourHoursAgo,
+            },
+          },
+        }
+      );
+
+      // Send WebSocket notification for expired transactions
+      const io = req.app.get("io");
+      if (io) {
+        io.to(`user_${userId}`).emit("payment_expired", {
+          expired_count: expiredTransactions.length,
+          message: `有 ${expiredTransactions.length} 个支付订单已过期`,
+          transactions: expiredTransactions.map((t) => ({
+            id: t.id,
+            amount: t.amount,
+            created_at: t.created_at,
+          })),
+          timestamp: new Date().toISOString(),
+        });
       }
-    );
+    }
 
     // Get recent transactions for this user
     const recentTransactions = await Transaction.findAll({
@@ -411,13 +332,48 @@ router.post("/confirm", authenticateToken, async (req, res) => {
     }
 
     // 检查交易是否已过期（超过24小时）
-    const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
-    if (transaction.created_at < twentyFourHoursAgo) {
+    const thiryminut = new Date(Date.now() - 30 * 60 * 1000);
+    if (transaction.created_at < thiryminut) {
       // 将过期交易标记为expired
       await transaction.update({ status: "expired" });
       return res.status(400).json({
         success: false,
         error: "支付订单已过期，无法确认",
+      });
+    }
+
+    // 验证支付状态 - 检查OneTimePing API
+    const paymentStatusResult = await checkPaymentStatus(payment_id);
+    if (!paymentStatusResult.success) {
+      return res.status(400).json({
+        success: false,
+        error: "无法验证支付状态，请稍后重试",
+      });
+    }
+
+    const paymentData = paymentStatusResult.data;
+    if (!paymentData.success || !paymentData.payment) {
+      return res.status(400).json({
+        success: false,
+        error: "支付订单不存在或状态异常",
+      });
+    }
+
+    const payment = paymentData.payment;
+
+    // 如果支付尚未完成，不允许手动确认
+    if (payment.status !== "completed" && payment.status !== "paid") {
+      return res.status(400).json({
+        success: false,
+        error: `支付尚未完成，当前状态: ${payment.status}`,
+      });
+    }
+
+    // 验证支付金额
+    if (parseFloat(payment.amount) !== parseFloat(amount)) {
+      return res.status(400).json({
+        success: false,
+        error: "支付金额不匹配",
       });
     }
 
@@ -465,7 +421,20 @@ router.post("/confirm", authenticateToken, async (req, res) => {
         new_balance: newBalance,
         transaction_id: transaction.id,
         message: "充值成功！",
+        timestamp: new Date().toISOString(),
+        type: "recharge",
+        status: "completed",
       });
+
+      // Also send balance update event
+      io.to(`user_${userId}`).emit("balance_updated", {
+        new_balance: newBalance,
+        change_amount: parseFloat(amount),
+        description: "手动确认充值",
+        transaction_id: transaction.id,
+        timestamp: new Date().toISOString(),
+      });
+
       logger.info("发送WebSocket通知:", { userId });
     }
 
@@ -485,6 +454,57 @@ router.post("/confirm", authenticateToken, async (req, res) => {
     res.status(500).json({
       success: false,
       error: "支付确认失败，请重试",
+    });
+  }
+});
+
+// 检查支付状态
+router.post("/check-status", authenticateToken, async (req, res) => {
+  try {
+    const { payment_id } = req.body;
+
+    if (!payment_id) {
+      return res.status(400).json({
+        success: false,
+        error: "支付ID不能为空",
+      });
+    }
+
+    // 检查外部支付状态
+    const paymentStatusResult = await checkPaymentStatus(payment_id);
+
+    if (!paymentStatusResult.success) {
+      return res.status(400).json({
+        success: false,
+        error: paymentStatusResult.error || "无法检查支付状态",
+      });
+    }
+
+    const payment = paymentStatusResult.data.payment;
+
+    if (!payment) {
+      return res.status(400).json({
+        success: false,
+        error: "支付数据为空",
+      });
+    }
+
+    res.json({
+      success: true,
+      payment: {
+        id: payment.payment_id,
+        status: payment.status,
+        amount: payment.amount,
+        currency: "USD", // OneTimePing doesn't return currency, defaulting to USD
+        created_at: payment.created_at,
+        completed_at: payment.updated_at, // Using updated_at as completed_at
+      },
+    });
+  } catch (error) {
+    logger.error("检查支付状态失败:", error);
+    res.status(500).json({
+      success: false,
+      error: "检查支付状态失败，请重试",
     });
   }
 });

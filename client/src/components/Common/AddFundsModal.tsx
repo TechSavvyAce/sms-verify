@@ -22,7 +22,9 @@ const AddFundsModal: React.FC<AddFundsModalProps> = ({
   const [paymentUrl, setPaymentUrl] = useState<string>("");
   const [qrCode, setQrCode] = useState<string>("");
   const [paymentId, setPaymentId] = useState<string>("");
-  const [paymentStatus, setPaymentStatus] = useState<"idle" | "created" | "confirmed">("idle");
+  const [paymentStatus, setPaymentStatus] = useState<
+    "idle" | "created" | "pending" | "failed" | "confirmed"
+  >("idle");
 
   const predefinedAmounts = [10, 25, 50, 100, 200, 500];
 
@@ -54,7 +56,7 @@ const AddFundsModal: React.FC<AddFundsModalProps> = ({
       // Create payment using our backend API endpoint
       const token = localStorage.getItem("token");
       const response = await fetch(
-        `${process.env.REACT_APP_API_URL || window.location.origin}/payment/create`,
+        `${process.env.REACT_APP_API_URL || "http://localhost:5001"}/api/payment/create`,
         {
           method: "POST",
           headers: {
@@ -105,10 +107,10 @@ const AddFundsModal: React.FC<AddFundsModalProps> = ({
     try {
       setLoading(true);
 
-      // Call the payment confirmation API
+      // First, check the payment status via our backend API
       const token = localStorage.getItem("token");
-      const response = await fetch(
-        `${process.env.REACT_APP_API_URL || window.location.origin}/payment/confirm`,
+      const paymentStatusResponse = await fetch(
+        `${process.env.REACT_APP_API_URL || "http://localhost:5001/api"}/payment/check-status`,
         {
           method: "POST",
           headers: {
@@ -117,33 +119,91 @@ const AddFundsModal: React.FC<AddFundsModalProps> = ({
           },
           body: JSON.stringify({
             payment_id: paymentId,
-            amount: selectedAmount,
           }),
         }
       );
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || "支付确认失败");
+      if (!paymentStatusResponse.ok) {
+        throw new Error("无法检查支付状态，请稍后重试");
       }
 
-      const result = await response.json();
+      const paymentStatusData = await paymentStatusResponse.json();
 
-      if (result.success) {
-        setPaymentStatus("confirmed");
-        message.success(`充值成功！已到账 $${selectedAmount.toFixed(2)}`);
+      if (!paymentStatusData.success || !paymentStatusData.payment) {
+        throw new Error("支付状态检查失败");
+      }
 
-        // Call the success callback to refresh user data
-        onSuccess(selectedAmount);
+      const payment = paymentStatusData.payment;
 
-        // Close the modal
-        handleClose();
+      // Check if payment is completed
+      if (payment.status === "completed" || payment.status === "paid") {
+        // Payment is completed, call our confirmation API
+        const response = await fetch(
+          `${process.env.REACT_APP_API_URL || "http://localhost:5001/api"}/payment/confirm`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify({
+              payment_id: paymentId,
+              amount: selectedAmount,
+            }),
+          }
+        );
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || "支付确认失败");
+        }
+
+        const result = await response.json();
+
+        if (result.success) {
+          setPaymentStatus("confirmed");
+          message.success(`充值成功！已到账 $${selectedAmount.toFixed(2)}`);
+
+          // Call the success callback to refresh user data
+          onSuccess(selectedAmount);
+
+          // Close the modal
+          handleClose();
+        } else {
+          throw new Error(result.error || "支付确认失败");
+        }
+      } else if (payment.status === "pending") {
+        // Payment is still pending
+        message.warning("⏳ 您的支付仍在处理中，请稍后查看交易记录");
+        setPaymentStatus("pending");
+
+        // Close the modal after showing the message
+        setTimeout(() => {
+          handleClose();
+        }, 2000); // Close after 2 seconds
+      } else if (payment.status === "failed" || payment.status === "cancelled") {
+        // Payment failed or was cancelled
+        message.error(`支付${payment.status === "failed" ? "失败" : "已取消"}，请重新发起支付`);
+        setPaymentStatus("failed");
+
+        // Close the modal after showing the message
+        setTimeout(() => {
+          handleClose();
+        }, 2000); // Close after 2 seconds
       } else {
-        throw new Error(result.error || "支付确认失败");
+        // Unknown status
+        message.warning(`支付状态未知: ${payment.status}，请稍后重试`);
+        setPaymentStatus("pending");
+
+        // Close the modal after showing the message
+        setTimeout(() => {
+          handleClose();
+        }, 2000); // Close after 2 seconds
       }
     } catch (error: any) {
-      console.error("Payment confirmation failed:", error);
-      message.error(error.message || "支付确认失败，请重试");
+      console.error("Payment status check failed:", error);
+      message.error(error.message || "无法检查支付状态，请稍后重试");
+      setPaymentStatus("pending");
     } finally {
       setLoading(false);
     }
@@ -232,6 +292,22 @@ const AddFundsModal: React.FC<AddFundsModalProps> = ({
               </div>
             )}
 
+            {paymentStatus === "pending" && (
+              <div style={{ marginBottom: "16px" }}>
+                <Text type="warning" strong>
+                  ⏳ 支付尚未完成，请完成支付后再点击检查
+                </Text>
+              </div>
+            )}
+
+            {paymentStatus === "failed" && (
+              <div style={{ marginBottom: "16px" }}>
+                <Text type="danger" strong>
+                  ❌ 支付失败或已取消，请重新发起支付
+                </Text>
+              </div>
+            )}
+
             {paymentStatus === "confirmed" && (
               <div style={{ marginBottom: "16px" }}>
                 <Text type="success" strong>
@@ -286,7 +362,7 @@ const AddFundsModal: React.FC<AddFundsModalProps> = ({
                 onClick={handlePaymentSuccess}
                 style={{ minWidth: "200px" }}
               >
-                我已支付完成
+                检查支付状态
               </Button>
             </div>
           </>

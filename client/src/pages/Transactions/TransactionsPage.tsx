@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from "react";
-import { Card, Typography, Table, Button, Tag, Space, message, Modal, InputNumber } from "antd";
-import { WalletOutlined, CheckCircleOutlined, ClockCircleOutlined } from "@ant-design/icons";
-import { userApi, paymentApi } from "../../services/api";
+import { Card, Typography, Table, Tag, message, Statistic } from "antd";
+import { CheckCircleOutlined, ClockCircleOutlined, DollarOutlined } from "@ant-design/icons";
+import { userApi } from "../../services/api";
 import api from "../../services/api";
 import { Transaction, PaginatedResponse } from "../../types";
+import { useAuthStore } from "../../stores/authStore";
 
 const { Title, Text } = Typography;
 
@@ -15,10 +16,7 @@ const TransactionsPage: React.FC = () => {
     pageSize: 10,
     total: 0,
   });
-  const [confirmModalVisible, setConfirmModalVisible] = useState(false);
-  const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
-  const [confirmAmount, setConfirmAmount] = useState<number>(0);
-  const [confirming, setConfirming] = useState(false);
+  const { user, updateBalance } = useAuthStore();
 
   // 获取交易记录
   const fetchTransactions = async (page = 1, pageSize = 10) => {
@@ -53,6 +51,53 @@ const TransactionsPage: React.FC = () => {
     fetchTransactions();
     // 检查是否有过期的待处理交易
     checkExpiredTransactions();
+
+    // 监听支付成功事件
+    const handlePaymentSuccess = (event: CustomEvent) => {
+      const data = event.detail;
+      console.log("收到支付成功事件:", data);
+
+      // 更新用户余额
+      if (data.new_balance !== undefined) {
+        updateBalance(0, data.new_balance);
+      }
+
+      // 刷新交易列表
+      fetchTransactions();
+
+      // 显示成功消息
+      message.success(`充值成功！余额已更新为 $${data.new_balance}`);
+    };
+
+    // 监听余额更新事件
+    const handleBalanceUpdate = (data: any) => {
+      console.log("收到余额更新事件:", data);
+
+      // 更新用户余额
+      if (data.new_balance !== undefined) {
+        updateBalance(0, data.new_balance);
+      }
+    };
+
+    // 监听支付过期事件
+    const handlePaymentExpired = (data: any) => {
+      console.log("收到支付过期事件:", data);
+      message.warning(data.message);
+      // 刷新交易列表以显示过期状态
+      fetchTransactions();
+    };
+
+    // 添加事件监听器
+    window.addEventListener("payment_success", handlePaymentSuccess as EventListener);
+    window.addEventListener("balance_updated", handleBalanceUpdate as EventListener);
+    window.addEventListener("payment_expired", handlePaymentExpired as EventListener);
+
+    // 清理函数
+    return () => {
+      window.removeEventListener("payment_success", handlePaymentSuccess as EventListener);
+      window.removeEventListener("balance_updated", handleBalanceUpdate as EventListener);
+      window.removeEventListener("payment_expired", handlePaymentExpired as EventListener);
+    };
   }, []);
 
   // 检查过期交易
@@ -69,59 +114,11 @@ const TransactionsPage: React.FC = () => {
     fetchTransactions(pagination.current, pagination.pageSize);
   };
 
-  // 打开确认支付模态框
-  const handleConfirmPayment = (transaction: Transaction) => {
-    setSelectedTransaction(transaction);
-    setConfirmAmount(transaction.amount);
-    setConfirmModalVisible(true);
-  };
-
-  // 检查交易是否即将过期
-  const isTransactionExpiringSoon = (transaction: Transaction) => {
-    if (transaction.status !== "pending") return false;
-    const timeRemaining = getTimeRemaining(transaction.created_at);
-    if (!timeRemaining) return false;
-    const hours = parseInt(timeRemaining.split("小时")[0]);
-    return hours < 2; // 少于2小时
-  };
-
-  // 确认支付
-  const handleConfirmPaymentSubmit = async () => {
-    if (!selectedTransaction || !selectedTransaction.reference_id) {
-      message.error("交易信息不完整");
-      return;
-    }
-
-    setConfirming(true);
-    try {
-      const response = await paymentApi.confirmPayment({
-        payment_id: selectedTransaction.reference_id,
-        amount: confirmAmount,
-      });
-
-      if (response.success) {
-        message.success("支付确认成功！");
-        setConfirmModalVisible(false);
-        setSelectedTransaction(null);
-        // 刷新交易记录
-        fetchTransactions(pagination.current, pagination.pageSize);
-      } else {
-        const errorMsg = typeof response.error === "string" ? response.error : "支付确认失败";
-        message.error(errorMsg);
-      }
-    } catch (error) {
-      console.error("支付确认失败:", error);
-      message.error("支付确认失败");
-    } finally {
-      setConfirming(false);
-    }
-  };
-
   // 计算剩余时间
   const getTimeRemaining = (createdAt: string) => {
     const created = new Date(createdAt);
     const now = new Date();
-    const timeDiff = 24 * 60 * 60 * 1000 - (now.getTime() - created.getTime()); // 24小时
+    const timeDiff = 30 * 60 * 1000 - (now.getTime() - created.getTime()); // 24小时
     const hours = Math.floor(timeDiff / (1000 * 60 * 60));
     const minutes = Math.floor((timeDiff % (1000 * 60 * 60)) / (1000 * 60));
 
@@ -165,9 +162,9 @@ const TransactionsPage: React.FC = () => {
   // 获取交易类型显示名称
   const getTypeDisplay = (type: string) => {
     const typeMap: Record<string, string> = {
-      recharge: "充值",
-      activation: "激活消费",
-      rental: "租用消费",
+      recharge: "账户充值",
+      activation: "验证码消费",
+      rental: "号码租用",
       refund: "退款",
       adjustment: "余额调整",
     };
@@ -177,10 +174,11 @@ const TransactionsPage: React.FC = () => {
   // 表格列定义
   const columns = [
     {
-      title: "交易ID",
-      dataIndex: "id",
-      key: "id",
-      width: 80,
+      title: "支付ID",
+      dataIndex: "reference_id",
+      key: "reference_id",
+      width: 200,
+      render: (referenceId: string) => referenceId || "-",
     },
     {
       title: "类型",
@@ -194,7 +192,7 @@ const TransactionsPage: React.FC = () => {
       dataIndex: "amount",
       key: "amount",
       width: 120,
-      render: (amount: number) => `¥${amount.toFixed(2)}`,
+      render: (amount: number) => `$${amount.toFixed(2)}`,
     },
     {
       title: "状态",
@@ -207,7 +205,12 @@ const TransactionsPage: React.FC = () => {
       key: "balance_change",
       width: 150,
       render: (_: any, record: Transaction) => {
-        if (record.balance_before !== undefined && record.balance_after !== undefined) {
+        // 只有状态为completed或paid的交易才显示余额变化
+        if (
+          record.status === "completed" &&
+          record.balance_before !== undefined &&
+          record.balance_after !== undefined
+        ) {
           const change = record.balance_after - record.balance_before;
           const color = change >= 0 ? "green" : "red";
           return (
@@ -231,30 +234,6 @@ const TransactionsPage: React.FC = () => {
       key: "created_at",
       width: 180,
     },
-    {
-      title: "操作",
-      key: "action",
-      width: 120,
-      render: (_: any, record: Transaction) => {
-        // 只有充值类型且状态为pending的交易才显示确认按钮
-        if (record.type === "recharge" && record.status === "pending") {
-          return (
-            <Button type="primary" size="small" onClick={() => handleConfirmPayment(record)}>
-              确认支付
-            </Button>
-          );
-        }
-        // 对于过期的交易，显示过期提示
-        if (record.type === "recharge" && record.status === "expired") {
-          return (
-            <Text type="secondary" style={{ fontSize: "12px" }}>
-              已过期
-            </Text>
-          );
-        }
-        return "-";
-      },
-    },
   ];
 
   return (
@@ -262,6 +241,17 @@ const TransactionsPage: React.FC = () => {
       <Title level={2} style={{ marginBottom: "24px" }}>
         交易记录
       </Title>
+
+      {/* 余额显示卡片 */}
+      <Card style={{ marginBottom: "24px" }}>
+        <Statistic
+          title="当前余额"
+          value={user?.balance || 0}
+          precision={2}
+          prefix={<DollarOutlined />}
+          valueStyle={{ color: "#3f8600" }}
+        />
+      </Card>
 
       <Card>
         <Table
@@ -279,57 +269,6 @@ const TransactionsPage: React.FC = () => {
           scroll={{ x: 800 }}
         />
       </Card>
-
-      {/* 确认支付模态框 */}
-      <Modal
-        title="确认支付"
-        open={confirmModalVisible}
-        onOk={handleConfirmPaymentSubmit}
-        onCancel={() => setConfirmModalVisible(false)}
-        confirmLoading={confirming}
-        okText="确认"
-        cancelText="取消"
-      >
-        {selectedTransaction && (
-          <div>
-            <p>请确认您已完成支付：</p>
-            <p>
-              <strong>交易ID:</strong> {selectedTransaction.id}
-            </p>
-            <p>
-              <strong>支付金额:</strong> ¥{selectedTransaction.amount.toFixed(2)}
-            </p>
-            <p>
-              <strong>支付ID:</strong> {selectedTransaction.reference_id}
-            </p>
-            {isTransactionExpiringSoon(selectedTransaction) && (
-              <div
-                style={{
-                  backgroundColor: "#fff2e8",
-                  border: "1px solid #ffbb96",
-                  borderRadius: "4px",
-                  padding: "8px",
-                  margin: "8px 0",
-                }}
-              >
-                <Text type="warning">⚠️ 此交易即将过期，请尽快确认支付！</Text>
-              </div>
-            )}
-            <br />
-            <p>确认金额：</p>
-            <InputNumber
-              value={confirmAmount}
-              onChange={(value) => setConfirmAmount(value || 0)}
-              precision={2}
-              style={{ width: "100%" }}
-              addonBefore="¥"
-            />
-            <p style={{ marginTop: 8, color: "#666", fontSize: "12px" }}>
-              请确保您已完成支付，确认后将立即到账
-            </p>
-          </div>
-        )}
-      </Modal>
     </div>
   );
 };

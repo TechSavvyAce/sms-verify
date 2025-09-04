@@ -931,7 +931,7 @@ const RentNumberPage: React.FC = () => {
                   showIcon
                   style={{ marginBottom: "24px" }}
                   action={
-                    <Button size="small" onClick={() => navigate("/profile?tab=balance")}>
+                    <Button size="small" onClick={() => navigate("/balance")}>
                       立即充值
                     </Button>
                   }

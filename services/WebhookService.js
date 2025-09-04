@@ -138,7 +138,7 @@ class WebhookService {
       // 查找对应的交易记录
       const transaction = await Transaction.findOne({
         where: {
-          external_id: orderId,
+          reference_id: orderId,
           type: "recharge",
         },
         include: [
@@ -175,15 +175,19 @@ class WebhookService {
         // 更新用户余额
         const user = transaction.user;
         const rechargeAmount = parseFloat(amount || transaction.amount);
+        const oldBalance = parseFloat(user.balance);
+        const newBalance = oldBalance + rechargeAmount;
 
         await user.update({
-          balance: parseFloat(user.balance) + rechargeAmount,
+          balance: newBalance,
           total_recharged: parseFloat(user.total_recharged || 0) + rechargeAmount,
         });
 
-        logger.info(
-          `用户 ${user.id} 充值成功: $${rechargeAmount}, 新余额: $${user.balance + rechargeAmount}`
-        );
+        // 更新交易记录的余额信息
+        updates.balance_after = newBalance;
+        updates.completed_at = new Date();
+
+        logger.info(`用户 ${user.id} 充值成功: $${rechargeAmount}, 新余额: $${newBalance}`);
 
         // 记录活动日志
         await this.logUserActivity(user.id, "payment_success", `充值成功 $${rechargeAmount}`, {
@@ -221,6 +225,10 @@ class WebhookService {
         message: "支付webhook处理成功",
         transaction_id: transaction.id,
         status: updates.status || transaction.status,
+        user_id: transaction.user?.id,
+        old_balance: transaction.balance_before,
+        new_balance: updates.balance_after,
+        amount: transaction.amount,
       };
     } catch (error) {
       logger.error("处理支付webhook失败:", error);
@@ -253,7 +261,7 @@ class WebhookService {
       // 查找对应的交易记录
       const transaction = await Transaction.findOne({
         where: {
-          external_id: payment_id,
+          reference_id: payment_id,
           type: "recharge",
         },
         include: [
@@ -290,16 +298,20 @@ class WebhookService {
         // 更新用户余额
         const user = transaction.user;
         const rechargeAmount = parseFloat(amount || transaction.amount);
+        const oldBalance = parseFloat(user.balance);
+        const newBalance = oldBalance + rechargeAmount;
 
         await user.update({
-          balance: parseFloat(user.balance) + rechargeAmount,
+          balance: newBalance,
           total_recharged: parseFloat(user.total_recharged || 0) + rechargeAmount,
         });
 
+        // 更新交易记录的余额信息
+        updates.balance_after = newBalance;
+        updates.completed_at = new Date();
+
         logger.info(
-          `用户 ${user.id} onetimeping.eu充值成功: $${rechargeAmount}, 新余额: $${
-            user.balance + rechargeAmount
-          }`
+          `用户 ${user.id} onetimeping.eu充值成功: $${rechargeAmount}, 新余额: $${newBalance}`
         );
 
         // 记录活动日志
@@ -348,6 +360,10 @@ class WebhookService {
         payment_id: payment_id,
         status: updates.status || transaction.status,
         amount: amount || transaction.amount,
+        user_id: transaction.user?.id,
+        old_balance: transaction.balance_before,
+        new_balance: updates.balance_after,
+        transaction_id: transaction.id,
       };
     } catch (error) {
       logger.error("处理onetimeping.eu webhook失败:", error);
@@ -470,36 +486,6 @@ class WebhookService {
       url: `${baseUrl}/api/webhook/${type}?secret=${webhookSecret}`,
       secret: webhookSecret,
     };
-  }
-
-  /**
-   * 测试webhook连接
-   */
-  async testWebhook(url, payload, secret) {
-    try {
-      const signature = crypto
-        .createHmac("sha256", secret)
-        .update(JSON.stringify(payload))
-        .digest("hex");
-
-      const response = await fetch(url, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "X-Webhook-Signature": `sha256=${signature}`,
-        },
-        body: JSON.stringify(payload),
-      });
-
-      return {
-        success: response.ok,
-        status: response.status,
-        statusText: response.statusText,
-      };
-    } catch (error) {
-      logger.error("测试webhook失败:", error);
-      return { success: false, error: error.message };
-    }
   }
 }
 

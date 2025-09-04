@@ -163,6 +163,15 @@ const validatePagination = Joi.object({
 });
 
 /**
+ * 日期范围验证
+ */
+const validateDateRange = Joi.object({
+  start_date: Joi.date().iso().optional(),
+  end_date: Joi.date().iso().optional(),
+  type: Joi.string().valid("recharge", "activation", "rental", "refund", "adjustment").optional(),
+});
+
+/**
  * 状态更新验证
  */
 const validateStatusUpdate = Joi.object({
@@ -358,6 +367,7 @@ module.exports = {
   validatePaymentCreation,
   validateApiKeyCreation,
   validatePagination,
+  validateDateRange,
   validateStatusUpdate,
   validateEmailVerification,
   validatePasswordReset,
