@@ -186,23 +186,6 @@ const LoginPage: React.FC = () => {
               </Button>
             </Text>
           </div>
-
-          {/* 忘记密码 */}
-          <div style={{ textAlign: "center" }}>
-            <Button
-              type="link"
-              onClick={() => navigate("forgot-password")}
-              style={{
-                color: "#8c8c8c",
-                fontSize: "14px",
-                textDecoration: "none",
-                padding: 0,
-                height: "auto",
-              }}
-            >
-              {t("auth.forgotPassword")}
-            </Button>
-          </div>
         </Space>
 
         {/* 底部信息 */}

@@ -2,6 +2,7 @@ const express = require("express");
 const cors = require("cors");
 const helmet = require("helmet");
 const compression = require("compression");
+const path = require("path");
 const { createServer } = require("http");
 const { Server } = require("socket.io");
 require("dotenv").config();
