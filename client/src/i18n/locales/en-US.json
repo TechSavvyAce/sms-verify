@@ -1,4 +1,9 @@
 {
+  "meta": {
+    "title": "SMS Middleware Platform - Professional SMS Verification Service",
+    "description": "Professional SMS verification middleware platform providing global SMS receiving and mobile number rental services",
+    "keywords": "SMS verification,SMS validation,mobile number rental,SMS receiving,verification code"
+  },
   "common": {
     "loading": "Loading...",
     "error": "Error",

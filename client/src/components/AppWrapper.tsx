@@ -6,6 +6,7 @@ import dayjs from "dayjs";
 import "dayjs/locale/zh-cn";
 import "dayjs/locale/en";
 import { useLanguage } from "../contexts/LanguageContext";
+import MetaTagsManager from "./Common/MetaTagsManager";
 import App from "../App";
 
 const AppWrapper: React.FC = () => {
@@ -62,6 +63,7 @@ const AppWrapper: React.FC = () => {
         },
       }}
     >
+      <MetaTagsManager />
       <App />
     </ConfigProvider>
   );
