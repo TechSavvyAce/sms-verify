@@ -8,7 +8,9 @@ import {
   ReloadOutlined,
   ClockCircleOutlined,
 } from "@ant-design/icons";
-import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
+import { useLanguage } from "../../contexts/LanguageContext";
+import { useLocalizedNavigate } from "../../hooks/useLocalizedNavigate";
 import { useAuthStore } from "../../stores/authStore";
 import { userApi, activationApi, rentalApi } from "../../services/api";
 import { UserStats, Activation, Rental } from "../../types";
@@ -16,7 +18,9 @@ import { UserStats, Activation, Rental } from "../../types";
 const { Title, Text } = Typography;
 
 const DashboardPage: React.FC = () => {
-  const navigate = useNavigate();
+  const { t } = useTranslation();
+  const { currentLanguage } = useLanguage();
+  const navigate = useLocalizedNavigate();
   const { user } = useAuthStore();
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState<UserStats | null>(null);
@@ -24,8 +28,14 @@ const DashboardPage: React.FC = () => {
   const [recentRentals, setRecentRentals] = useState<Rental[]>([]);
   const [refreshing, setRefreshing] = useState(false);
 
+  // Get the appropriate locale for date formatting based on current language
+  const getDateLocale = () => {
+    return currentLanguage === "zh-CN" ? "zh-CN" : "en-US";
+  };
+
   // 加载数据
   const loadData = async () => {
+    console.log("Dashboard: loadData 被调用");
     try {
       const [statsResponse, activationsResponse, rentalsResponse] = await Promise.all([
         userApi.getStats(),
@@ -58,7 +68,16 @@ const DashboardPage: React.FC = () => {
     setRefreshing(false);
   };
 
+  const loadDataRef = React.useRef(false);
+
   useEffect(() => {
+    if (loadDataRef.current) {
+      console.log("Dashboard: 数据已加载，跳过重复调用");
+      return;
+    }
+
+    loadDataRef.current = true;
+    console.log("Dashboard: useEffect 被调用");
     loadData();
   }, []);
 
@@ -85,7 +104,7 @@ const DashboardPage: React.FC = () => {
           height: "400px",
         }}
       >
-        <Spin size="large" tip="正在加载仪表板..." />
+        <Spin size="large" tip={t("dashboard.loadingDashboard")} />
       </div>
     );
   }
@@ -104,11 +123,11 @@ const DashboardPage: React.FC = () => {
         >
           <div>
             <Title level={2} style={{ margin: 0 }}>
-              欢迎回来，{user?.username}！
+              {t("dashboard.welcomeUser", { username: user?.username })}
             </Title>
             <Text type="secondary">
-              今天是{" "}
-              {new Date().toLocaleDateString("zh-CN", {
+              {t("dashboard.todayIs")}{" "}
+              {new Date().toLocaleDateString(getDateLocale(), {
                 year: "numeric",
                 month: "long",
                 day: "numeric",
@@ -117,20 +136,20 @@ const DashboardPage: React.FC = () => {
             </Text>
           </div>
           <Button icon={<ReloadOutlined />} onClick={handleRefresh} loading={refreshing}>
-            刷新数据
+            {t("dashboard.refreshData")}
           </Button>
         </div>
 
         {/* 余额不足提醒 */}
         {user && user.balance < 2 && (
           <Alert
-            message="余额不足提醒"
-            description="您的账户余额较低，建议及时充值以确保服务正常使用。"
+            message={t("dashboard.lowBalanceWarning")}
+            description={t("dashboard.lowBalanceDescription")}
             type="warning"
             showIcon
             action={
-              <Button size="small" onClick={() => navigate("/balance")}>
-                立即充值
+              <Button size="small" onClick={() => navigate("balance")}>
+                {t("dashboard.rechargeNow")}
               </Button>
             }
             style={{ marginBottom: "16px" }}
@@ -143,7 +162,7 @@ const DashboardPage: React.FC = () => {
         <Col xs={24} sm={12} lg={6}>
           <Card>
             <Statistic
-              title="账户余额"
+              title={t("dashboard.accountBalance")}
               value={user?.balance && typeof user.balance === "number" ? user.balance : 0}
               precision={2}
               prefix="$"
@@ -154,7 +173,7 @@ const DashboardPage: React.FC = () => {
         <Col xs={24} sm={12} lg={6}>
           <Card>
             <Statistic
-              title="总激活次数"
+              title={t("dashboard.totalActivations")}
               value={totalActivations}
               prefix={<MessageOutlined />}
               valueStyle={{ color: "#52c41a" }}
@@ -164,7 +183,7 @@ const DashboardPage: React.FC = () => {
         <Col xs={24} sm={12} lg={6}>
           <Card>
             <Statistic
-              title="总租用次数"
+              title={t("dashboard.totalRentals")}
               value={totalRentals}
               prefix={<PhoneOutlined />}
               valueStyle={{ color: "#722ed1" }}
@@ -174,7 +193,7 @@ const DashboardPage: React.FC = () => {
         <Col xs={24} sm={12} lg={6}>
           <Card>
             <Statistic
-              title="成功率"
+              title={t("dashboard.successRate")}
               value={successRate}
               suffix="%"
               prefix={<TrophyOutlined />}
@@ -193,47 +212,47 @@ const DashboardPage: React.FC = () => {
       </Row>
 
       {/* 快速操作 */}
-      <Card title="快速操作" style={{ marginBottom: "24px" }}>
+      <Card title={t("dashboard.quickActions")} style={{ marginBottom: "24px" }}>
         <Row gutter={[16, 16]}>
           <Col xs={24} sm={12} md={6}>
             <Button
               type="primary"
               size="large"
               icon={<MessageOutlined />}
-              onClick={() => navigate("/get-number")}
+              onClick={() => navigate("get-number")}
               block
             >
-              获取验证码
+              {t("dashboard.getVerificationCode")}
             </Button>
           </Col>
           <Col xs={24} sm={12} md={6}>
             <Button
               size="large"
               icon={<PhoneOutlined />}
-              onClick={() => navigate("/rent-number")}
+              onClick={() => navigate("rent-number")}
               block
             >
-              租用号码
+              {t("dashboard.rentNumber")}
             </Button>
           </Col>
           <Col xs={24} sm={12} md={6}>
             <Button
               size="large"
               icon={<WalletOutlined />}
-              onClick={() => navigate("/balance")}
+              onClick={() => navigate("balance")}
               block
             >
-              账户充值
+              {t("dashboard.accountRecharge")}
             </Button>
           </Col>
           <Col xs={24} sm={12} md={6}>
             <Button
               size="large"
               icon={<ClockCircleOutlined />}
-              onClick={() => navigate("/transactions")}
+              onClick={() => navigate("transactions")}
               block
             >
-              交易记录
+              {t("dashboard.transactionRecords")}
             </Button>
           </Col>
         </Row>
@@ -244,10 +263,10 @@ const DashboardPage: React.FC = () => {
         {/* 最近激活 */}
         <Col xs={24} lg={12}>
           <Card
-            title="最近激活"
+            title={t("dashboard.recentActivations")}
             extra={
-              <Button type="link" onClick={() => navigate("/activations")} style={{ padding: 0 }}>
-                查看全部
+              <Button type="link" onClick={() => navigate("activations")} style={{ padding: 0 }}>
+                {t("dashboard.viewAll")}
               </Button>
             }
           >
@@ -306,13 +325,13 @@ const DashboardPage: React.FC = () => {
                     opacity: 0.3,
                   }}
                 />
-                <div>暂无激活记录</div>
+                <div>{t("dashboard.noActivationRecords")}</div>
                 <Button
                   type="link"
-                  onClick={() => navigate("/get-number")}
+                  onClick={() => navigate("get-number")}
                   style={{ padding: 0, marginTop: "8px" }}
                 >
-                  立即获取验证码
+                  {t("dashboard.getCodeNow")}
                 </Button>
               </div>
             )}
@@ -322,10 +341,10 @@ const DashboardPage: React.FC = () => {
         {/* 最近租用 */}
         <Col xs={24} lg={12}>
           <Card
-            title="最近租用"
+            title={t("dashboard.recentRentals")}
             extra={
-              <Button type="link" onClick={() => navigate("/rentals")} style={{ padding: 0 }}>
-                查看全部
+              <Button type="link" onClick={() => navigate("rentals")} style={{ padding: 0 }}>
+                {t("dashboard.viewAll")}
               </Button>
             }
           >
@@ -384,13 +403,13 @@ const DashboardPage: React.FC = () => {
                     opacity: 0.3,
                   }}
                 />
-                <div>暂无租用记录</div>
+                <div>{t("dashboard.noRentalRecords")}</div>
                 <Button
                   type="link"
-                  onClick={() => navigate("/rent-number")}
+                  onClick={() => navigate("rent-number")}
                   style={{ padding: 0, marginTop: "8px" }}
                 >
-                  立即租用号码
+                  {t("dashboard.rentNow")}
                 </Button>
               </div>
             )}

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Card, Typography, Table, Tag, message, Statistic } from "antd";
 import { CheckCircleOutlined, ClockCircleOutlined, DollarOutlined } from "@ant-design/icons";
+import { useTranslation } from "react-i18next";
 import { userApi } from "../../services/api";
 import api from "../../services/api";
 import { Transaction, PaginatedResponse } from "../../types";
@@ -9,6 +10,7 @@ import { useAuthStore } from "../../stores/authStore";
 const { Title, Text } = Typography;
 
 const TransactionsPage: React.FC = () => {
+  const { t } = useTranslation();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(false);
   const [pagination, setPagination] = useState({
@@ -36,12 +38,15 @@ const TransactionsPage: React.FC = () => {
           total: data.pagination.total,
         });
       } else {
-        const errorMsg = typeof response.error === "string" ? response.error : "获取交易记录失败";
+        const errorMsg =
+          typeof response.error === "string"
+            ? response.error
+            : t("transactions.fetchTransactionsFailed");
         message.error(errorMsg);
       }
     } catch (error) {
       console.error("获取交易记录失败:", error);
-      message.error("获取交易记录失败");
+      message.error(t("transactions.fetchTransactionsFailed"));
     } finally {
       setLoading(false);
     }
@@ -66,7 +71,7 @@ const TransactionsPage: React.FC = () => {
       fetchTransactions();
 
       // 显示成功消息
-      message.success(`充值成功！余额已更新为 $${data.new_balance}`);
+      message.success(t("transactions.rechargeSuccess", { balance: data.new_balance }));
     };
 
     // 监听余额更新事件
@@ -118,13 +123,13 @@ const TransactionsPage: React.FC = () => {
   const getTimeRemaining = (createdAt: string) => {
     const created = new Date(createdAt);
     const now = new Date();
-    const timeDiff = 30 * 60 * 1000 - (now.getTime() - created.getTime()); // 24小时
+    const timeDiff = 30 * 60 * 1000 - (now.getTime() - created.getTime()); // 30分钟
     const hours = Math.floor(timeDiff / (1000 * 60 * 60));
     const minutes = Math.floor((timeDiff % (1000 * 60 * 60)) / (1000 * 60));
 
     if (timeDiff <= 0) return null;
-    if (hours > 0) return `${hours}小时${minutes}分钟`;
-    return `${minutes}分钟`;
+    if (hours > 0) return t("transactions.timeRemainingHours", { hours, minutes });
+    return t("transactions.timeRemainingMinutes", { minutes });
   };
 
   // 获取交易状态标签
@@ -135,11 +140,11 @@ const TransactionsPage: React.FC = () => {
         return (
           <div>
             <Tag color="orange" icon={<ClockCircleOutlined />}>
-              待确认
+              {t("transactions.pending")}
             </Tag>
             {timeRemaining && (
               <div style={{ fontSize: "11px", color: "#ff4d4f", marginTop: "2px" }}>
-                剩余: {timeRemaining}
+                {t("transactions.remaining")}: {timeRemaining}
               </div>
             )}
           </div>
@@ -147,26 +152,26 @@ const TransactionsPage: React.FC = () => {
       } else if (transaction.status === "completed") {
         return (
           <Tag color="green" icon={<CheckCircleOutlined />}>
-            已完成
+            {t("transactions.completed")}
           </Tag>
         );
       } else if (transaction.status === "failed") {
-        return <Tag color="red">失败</Tag>;
+        return <Tag color="red">{t("transactions.failed")}</Tag>;
       } else if (transaction.status === "expired") {
-        return <Tag color="gray">已过期</Tag>;
+        return <Tag color="gray">{t("transactions.expired")}</Tag>;
       }
     }
-    return <Tag color="blue">已完成</Tag>;
+    return <Tag color="blue">{t("transactions.completed")}</Tag>;
   };
 
   // 获取交易类型显示名称
   const getTypeDisplay = (type: string) => {
     const typeMap: Record<string, string> = {
-      recharge: "账户充值",
-      activation: "验证码消费",
-      rental: "号码租用",
-      refund: "退款",
-      adjustment: "余额调整",
+      recharge: t("transactions.accountRecharge"),
+      activation: t("transactions.smsConsumption"),
+      rental: t("transactions.numberRental"),
+      refund: t("transactions.refund"),
+      adjustment: t("transactions.balanceAdjustment"),
     };
     return typeMap[type] || type;
   };
@@ -174,34 +179,34 @@ const TransactionsPage: React.FC = () => {
   // 表格列定义
   const columns = [
     {
-      title: "支付ID",
+      title: t("transactions.paymentId"),
       dataIndex: "reference_id",
       key: "reference_id",
       width: 200,
       render: (referenceId: string) => referenceId || "-",
     },
     {
-      title: "类型",
+      title: t("transactions.type"),
       dataIndex: "type",
       key: "type",
       width: 100,
       render: (type: string) => getTypeDisplay(type),
     },
     {
-      title: "金额",
+      title: t("transactions.amount"),
       dataIndex: "amount",
       key: "amount",
       width: 120,
       render: (amount: number) => `$${amount.toFixed(2)}`,
     },
     {
-      title: "状态",
+      title: t("transactions.status"),
       key: "status",
       width: 100,
       render: (_: any, record: Transaction) => getStatusTag(record),
     },
     {
-      title: "余额变化",
+      title: t("transactions.balanceChange"),
       key: "balance_change",
       width: 150,
       render: (_: any, record: Transaction) => {
@@ -223,13 +228,13 @@ const TransactionsPage: React.FC = () => {
       },
     },
     {
-      title: "描述",
+      title: t("transactions.description"),
       dataIndex: "description",
       key: "description",
       ellipsis: true,
     },
     {
-      title: "创建时间",
+      title: t("transactions.createdAt"),
       dataIndex: "created_at",
       key: "created_at",
       width: 180,
@@ -239,13 +244,13 @@ const TransactionsPage: React.FC = () => {
   return (
     <div>
       <Title level={2} style={{ marginBottom: "24px" }}>
-        交易记录
+        {t("transactions.transactionRecords")}
       </Title>
 
       {/* 余额显示卡片 */}
       <Card style={{ marginBottom: "24px" }}>
         <Statistic
-          title="当前余额"
+          title={t("transactions.currentBalance")}
           value={user?.balance || 0}
           precision={2}
           prefix={<DollarOutlined />}
@@ -263,7 +268,8 @@ const TransactionsPage: React.FC = () => {
             ...pagination,
             showSizeChanger: true,
             showQuickJumper: true,
-            showTotal: (total, range) => `第 ${range[0]}-${range[1]} 条，共 ${total} 条记录`,
+            showTotal: (total, range) =>
+              t("transactions.paginationText", { start: range[0], end: range[1], total }),
           }}
           onChange={handleTableChange}
           scroll={{ x: 800 }}

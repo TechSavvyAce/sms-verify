@@ -1,0 +1,192 @@
+/* Admin Pages Mobile Responsive Styles */
+
+/* Main container */
+.admin-page-container {
+  padding: 16px;
+}
+
+/* Title responsive */
+.admin-title {
+  margin-bottom: 20px;
+  font-size: 20px;
+}
+
+@media (min-width: 768px) {
+  .admin-title {
+    font-size: 24px;
+  }
+}
+
+/* Card extra actions */
+.admin-extra-actions {
+  width: 100%;
+}
+
+@media (min-width: 768px) {
+  .admin-extra-actions {
+    flex-direction: row !important;
+    width: auto;
+  }
+}
+
+/* Modal content responsive */
+.admin-modal-content {
+  flex-direction: column;
+}
+
+@media (min-width: 768px) {
+  .admin-modal-content {
+    flex-direction: row;
+  }
+}
+
+/* Balance form responsive */
+.admin-balance-form {
+  width: 100%;
+}
+
+@media (min-width: 768px) {
+  .admin-balance-form {
+    flex-direction: row !important;
+    width: auto;
+  }
+}
+
+/* Table responsive improvements */
+.admin-table .ant-table-thead > tr > th {
+  font-size: 12px;
+  padding: 8px 4px;
+}
+
+.admin-table .ant-table-tbody > tr > td {
+  font-size: 12px;
+  padding: 8px 4px;
+}
+
+/* Action buttons in table */
+.admin-table .ant-space {
+  flex-wrap: wrap;
+}
+
+.admin-table .ant-btn {
+  font-size: 11px;
+  padding: 2px 6px;
+  height: auto;
+}
+
+/* Filter section responsive */
+.admin-filters {
+  margin-bottom: 16px;
+}
+
+.admin-filters .ant-space {
+  flex-wrap: wrap;
+  width: 100%;
+}
+
+.admin-filters .ant-space-item {
+  flex: 1;
+  min-width: 120px;
+}
+
+@media (max-width: 768px) {
+  .admin-filters .ant-space-item {
+    flex: 1 1 100%;
+    margin-bottom: 8px;
+  }
+}
+
+/* Pagination responsive */
+.admin-pagination .ant-pagination {
+  text-align: center;
+}
+
+.admin-pagination .ant-pagination-options {
+  display: none;
+}
+
+@media (min-width: 768px) {
+  .admin-pagination .ant-pagination-options {
+    display: block;
+  }
+}
+
+/* Modal responsive */
+.admin-modal .ant-modal-body {
+  padding: 16px;
+}
+
+@media (max-width: 768px) {
+  .admin-modal .ant-modal-body {
+    padding: 12px;
+  }
+}
+
+/* Descriptions responsive */
+.admin-descriptions .ant-descriptions-item-label {
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.admin-descriptions .ant-descriptions-item-content {
+  font-size: 12px;
+}
+
+/* Card titles responsive */
+.admin-card .ant-card-head-title {
+  font-size: 14px;
+}
+
+@media (min-width: 768px) {
+  .admin-card .ant-card-head-title {
+    font-size: 16px;
+  }
+}
+
+/* Mobile user cards */
+.admin-user-card {
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.admin-user-card .ant-card-body {
+  padding: 12px;
+}
+
+.admin-user-card .ant-statistic-title {
+  font-size: 11px;
+  margin-bottom: 4px;
+}
+
+.admin-user-card .ant-statistic-content {
+  font-size: 14px;
+}
+
+.admin-user-card .ant-btn {
+  font-size: 11px;
+  height: 28px;
+  padding: 0 8px;
+}
+
+.admin-user-card .ant-space {
+  width: 100%;
+}
+
+.admin-user-card .ant-space-item:first-child {
+  flex: 1;
+}
+
+/* Mobile responsive improvements */
+@media (max-width: 768px) {
+  .admin-user-card {
+    margin-bottom: 8px;
+  }
+  
+  .admin-user-card .ant-row {
+    margin-bottom: 8px;
+  }
+  
+  .admin-user-card .ant-col {
+    padding: 0 4px;
+  }
+}

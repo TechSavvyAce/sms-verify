@@ -333,14 +333,29 @@ class SMSActivateService {
     try {
       const result = await this.makeRequest(params, "GET");
 
+      // 处理成功响应
       if (result.status === "success" && result.countryOperators) {
         return result.countryOperators;
-      } else {
-        throw new Error("获取运营商列表失败: 响应格式错误");
       }
+
+      // 处理错误响应 - 运营商未找到
+      if (result.status === "error" && result.error === "OPERATORS_NOT_FOUND") {
+        logger.warn(`国家 ${country} 没有可用的运营商信息`);
+        return {}; // 返回空对象而不是抛出错误
+      }
+
+      // 处理其他错误
+      if (result.status === "error") {
+        logger.warn(`获取运营商列表失败: ${result.error}`);
+        return {}; // 返回空对象而不是抛出错误
+      }
+
+      // 处理未知响应格式
+      logger.warn("获取运营商列表失败: 响应格式错误", result);
+      return {};
     } catch (error) {
       logger.error("获取运营商列表失败:", error);
-      throw error;
+      return {}; // 返回空对象而不是抛出错误
     }
   }
 

@@ -18,6 +18,7 @@ import { SearchOutlined, ReloadOutlined, EyeOutlined } from "@ant-design/icons";
 import { adminApi } from "../../services/api";
 import { Transaction } from "../../types";
 import { formatDateTime } from "../../utils/helpers";
+import "./AdminPage.css";
 
 const { Title } = Typography;
 const { Option } = Select;
@@ -231,28 +232,37 @@ const AdminTransactionsPage: React.FC = () => {
   ];
 
   return (
-    <div>
-      <Title level={2} style={{ marginBottom: "24px" }}>
+    <div style={{ padding: "16px" }}>
+      <Title
+        level={2}
+        className="admin-title"
+        style={{
+          marginBottom: "20px",
+          fontSize: "20px",
+        }}
+      >
         交易管理
       </Title>
 
       {/* Filters */}
-      <Card style={{ marginBottom: "16px" }}>
-        <Space wrap size="middle">
+      <Card style={{ marginBottom: "16px" }} size="small" className="admin-card">
+        <Space wrap size="small" className="admin-filters" style={{ width: "100%" }}>
           <Input
             placeholder="搜索用户或描述"
             value={filters.search}
             onChange={(e) => handleFilterChange("search", e.target.value)}
-            style={{ width: 200 }}
+            style={{ width: "100%", minWidth: "120px" }}
             onPressEnter={handleSearch}
+            size="small"
           />
 
           <Select
             placeholder="交易类型"
             value={filters.type}
             onChange={(value) => handleFilterChange("type", value)}
-            style={{ width: 120 }}
+            style={{ width: "100%", minWidth: "120px" }}
             allowClear
+            size="small"
           >
             <Option value="recharge">账户充值</Option>
             <Option value="activation">验证码消费</Option>
@@ -265,32 +275,46 @@ const AdminTransactionsPage: React.FC = () => {
             placeholder="状态"
             value={filters.status}
             onChange={(value) => handleFilterChange("status", value)}
-            style={{ width: 120 }}
+            style={{ width: "100%", minWidth: "120px" }}
             allowClear
+            size="small"
           >
             <Option value="completed">已完成</Option>
             <Option value="pending">处理中</Option>
             <Option value="failed">失败</Option>
           </Select>
 
-          <RangePicker onChange={handleDateRangeChange} placeholder={["开始日期", "结束日期"]} />
+          <RangePicker
+            onChange={handleDateRangeChange}
+            placeholder={["开始日期", "结束日期"]}
+            style={{ width: "100%", minWidth: "200px" }}
+            size="small"
+          />
 
-          <Button type="primary" icon={<SearchOutlined />} onClick={handleSearch}>
+          <Button
+            type="primary"
+            icon={<SearchOutlined />}
+            onClick={handleSearch}
+            size="small"
+            style={{ width: "100%", minWidth: "80px" }}
+          >
             搜索
           </Button>
 
-          <Button onClick={resetFilters}>重置</Button>
+          <Button onClick={resetFilters} size="small" style={{ width: "100%", minWidth: "80px" }}>
+            重置
+          </Button>
         </Space>
       </Card>
 
       {/* Transactions Table */}
-      <Card>
+      <Card size="small" className="admin-card">
         <div style={{ marginBottom: "16px" }}>
-          <Space>
-            <Button icon={<ReloadOutlined />} onClick={loadTransactions}>
+          <Space wrap>
+            <Button icon={<ReloadOutlined />} onClick={loadTransactions} size="small">
               刷新
             </Button>
-            <span>共 {total} 条记录</span>
+            <span style={{ fontSize: "12px" }}>共 {total} 条记录</span>
           </Space>
         </div>
 
@@ -299,17 +323,23 @@ const AdminTransactionsPage: React.FC = () => {
           dataSource={transactions}
           rowKey="id"
           loading={loading}
+          scroll={{ x: 1200 }}
+          size="small"
+          className="admin-table"
           pagination={{
             current: currentPage,
             pageSize: pageSize,
             total: total,
-            showSizeChanger: true,
-            showQuickJumper: true,
+            showSizeChanger: false,
+            showQuickJumper: false,
+            simple: true,
             showTotal: (total, range) => `第 ${range[0]}-${range[1]} 条，共 ${total} 条`,
             onChange: (page, size) => {
               setCurrentPage(page);
               setPageSize(size || 10);
             },
+            size: "small",
+            className: "admin-pagination",
           }}
         />
       </Card>
@@ -320,14 +350,16 @@ const AdminTransactionsPage: React.FC = () => {
         open={detailModalVisible}
         onCancel={() => setDetailModalVisible(false)}
         footer={[
-          <Button key="close" onClick={() => setDetailModalVisible(false)}>
+          <Button key="close" onClick={() => setDetailModalVisible(false)} size="small">
             关闭
           </Button>,
         ]}
-        width={600}
+        width="95%"
+        style={{ top: 20 }}
+        className="admin-modal"
       >
         {selectedTransaction && (
-          <Descriptions column={1} bordered>
+          <Descriptions column={1} bordered className="admin-descriptions">
             <Descriptions.Item label="支付ID">
               {selectedTransaction.reference_id || "-"}
             </Descriptions.Item>

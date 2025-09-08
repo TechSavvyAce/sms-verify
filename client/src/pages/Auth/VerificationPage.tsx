@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from "react";
 import { Form, Input, Button, Card, Typography, Divider, message, Radio } from "antd";
 import { MailOutlined, SafetyOutlined, UserOutlined, MobileOutlined } from "@ant-design/icons";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useLocation } from "react-router-dom";
 import { authApi } from "../../services/api";
 import { useAuthStore } from "../../stores/authStore";
+import { useLocalizedNavigate } from "../../hooks/useLocalizedNavigate";
 
 const { Title, Text } = Typography;
 
@@ -19,7 +20,7 @@ const VerificationPage: React.FC = () => {
   const [verificationCode, setVerificationCode] = useState("");
 
   const location = useLocation();
-  const navigate = useNavigate();
+  const navigate = useLocalizedNavigate();
   const { user, isAuthenticated } = useAuthStore();
 
   // 从导航状态或URL参数获取用户信息
@@ -105,7 +106,7 @@ const VerificationPage: React.FC = () => {
 
       // 延迟跳转到仪表板
       setTimeout(() => {
-        navigate("/dashboard");
+        navigate("dashboard");
       }, 2000);
     } catch (error: any) {
       console.error("VerificationPage - Verification failed:", error);
@@ -148,7 +149,7 @@ const VerificationPage: React.FC = () => {
 
         // 延迟跳转到仪表板
         setTimeout(() => {
-          navigate("/dashboard");
+          navigate("dashboard");
         }, 2000);
       } else {
         // 处理错误响应
@@ -220,12 +221,12 @@ const VerificationPage: React.FC = () => {
           if (userData.status === "active") {
             console.log("VerificationPage - User is active, redirecting to dashboard");
             message.success("您的账户已激活，正在跳转到仪表板...");
-            navigate("/dashboard");
+            navigate("dashboard");
             return;
           } else if (userData.status === "suspended") {
             console.log("VerificationPage - User is suspended, redirecting to register");
             message.error("账户已被停用，请联系客服");
-            navigate("/register");
+            navigate("register");
             return;
           } else if (userData.status === "pending") {
             // 用户状态正确，继续验证流程
@@ -241,7 +242,7 @@ const VerificationPage: React.FC = () => {
         localStorage.removeItem("token");
         localStorage.removeItem("refreshToken");
         message.error("会话已过期，请重新注册");
-        navigate("/register");
+        navigate("register");
         return;
       }
     } else {
@@ -252,7 +253,7 @@ const VerificationPage: React.FC = () => {
     if (!currentUser?.username || !currentUser?.id) {
       console.log("VerificationPage - No currentUser data, redirecting to register");
       message.error("缺少用户信息，请重新注册");
-      navigate("/register");
+      navigate("register");
     } else {
       console.log("VerificationPage - CurrentUser data available:", currentUser);
     }
@@ -322,7 +323,7 @@ const VerificationPage: React.FC = () => {
           boxShadow: "0 25px 50px rgba(0,0,0,0.15)",
           border: "none",
         }}
-        bodyStyle={{ padding: "48px 40px" }}
+        styles={{ body: { padding: "48px 40px" } }}
       >
         {/* Logo 和标题 */}
         <div style={{ textAlign: "center", marginBottom: "40px" }}>

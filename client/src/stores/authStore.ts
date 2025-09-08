@@ -1,8 +1,10 @@
 import { create } from "zustand";
-import { message } from "antd";
 import { AuthState, User, LoginRequest, RegisterRequest, RegisterResponse } from "../types";
 import { authApi } from "../services/api";
 import { getApiErrorMessage } from "../utils/errorHelpers";
+
+// Global flag to prevent multiple initialization calls
+let isInitializing = false;
 
 // 数据标准化函数
 const normalizeUserData = (user: any): User => {
@@ -27,10 +29,36 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   // 初始化认证状态
   initializeAuth: async () => {
-    const { token } = get();
+    console.log("AuthStore: initializeAuth 被调用");
+
+    // 使用全局标志防止重复调用
+    if (isInitializing) {
+      console.log("AuthStore: 认证初始化正在进行中，跳过重复调用");
+      return;
+    }
+
+    const { token, isLoading } = get();
+
+    // 如果已经在加载中，避免重复调用
+    if (isLoading) {
+      console.log("AuthStore: 已经在加载中，跳过重复调用");
+      return;
+    }
+
+    // 如果已经有用户数据且已认证，跳过初始化
+    const { user, isAuthenticated } = get();
+    if (user && isAuthenticated) {
+      console.log("AuthStore: 用户已认证，跳过初始化");
+      return;
+    }
+
+    isInitializing = true;
 
     if (!token) {
-      set({ isAuthenticated: false });
+      console.log("AuthStore: 没有token，设置未认证状态");
+      set({ isAuthenticated: false, isLoading: false });
+      // 清除初始化标志
+      isInitializing = false;
       return;
     }
 
@@ -45,12 +73,16 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         isAuthenticated: false,
         isLoading: false,
       });
+      // 清除初始化标志
+      isInitializing = false;
       return;
     }
 
     set({ isLoading: true });
     try {
+      console.log("AuthStore: 开始获取用户资料...");
       const response = await authApi.getProfile();
+      console.log("AuthStore: 获取用户资料响应:", response);
       if (response.success && response.data) {
         const normalizedUser = normalizeUserData(response.data);
 
@@ -62,6 +94,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           isAuthenticated: isFullyAuthenticated,
           isLoading: false,
         });
+
+        // 清除初始化标志
+        (window as any).__authInitializing = false;
       } else {
         // 不要自动刷新token，直接清除认证状态
         console.log("用户资料获取失败，清除认证状态");
@@ -75,8 +110,22 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           isLoading: false,
         });
       }
-    } catch (error) {
+
+      // 清除初始化标志
+      isInitializing = false;
+    } catch (error: any) {
       console.error("初始化认证失败:", error);
+
+      // 如果是网络错误或超时，不要清除token，只是设置加载状态为false
+      if (error.code === "NETWORK_ERROR" || error.message?.includes("timeout")) {
+        console.log("AuthStore: 网络错误，保持当前状态");
+        set({ isLoading: false });
+        // 清除初始化标志
+        (window as any).__authInitializing = false;
+        return;
+      }
+
+      // 其他错误才清除token
       localStorage.removeItem("token");
       localStorage.removeItem("refreshToken");
       set({
@@ -86,6 +135,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         isAuthenticated: false,
         isLoading: false,
       });
+
+      // 清除初始化标志
+      isInitializing = false;
     }
   },
 
@@ -116,9 +168,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         });
 
         if (isFullyAuthenticated) {
-          message.success(`欢迎回来，${normalizedUser.username}！`);
+          console.log(`欢迎回来，${normalizedUser.username}！`);
         } else {
-          message.warning(`登录成功，但账户状态为 ${normalizedUser.status}，请完成邮箱验证。`);
+          console.warn(`登录成功，但账户状态为 ${normalizedUser.status}，请完成邮箱验证。`);
         }
       } else {
         throw new Error(getApiErrorMessage(response.error, "登录失败"));
@@ -129,14 +181,14 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       // 处理特定的错误情况
       if (error.response?.data?.code === "ACCOUNT_PENDING") {
         const userId = error.response.data.userId;
-        message.error("账户尚未激活，请先完成验证");
+        console.error("账户尚未激活，请先完成验证");
         // 可以在这里跳转到验证页面或显示验证提示
         throw new Error("账户尚未激活，请先完成验证");
       } else if (error.response?.data?.code === "ACCOUNT_SUSPENDED") {
-        message.error("账户已被停用，请联系客服");
+        console.error("账户已被停用，请联系客服");
         throw new Error("账户已被停用，请联系客服");
       } else {
-        message.error(error.message || "登录失败，请重试");
+        console.error(error.message || "登录失败，请重试");
         throw error;
       }
     }
@@ -184,7 +236,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     } catch (error: any) {
       console.error("AuthStore - Registration error:", error);
       set({ isLoading: false });
-      message.error(error.message || "注册失败，请重试");
+      console.error(error.message || "注册失败，请重试");
       throw error;
     }
   },
@@ -202,7 +254,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       isLoading: false,
     });
 
-    message.info("已退出登录");
+    console.log("已退出登录");
   },
 
   refreshAuth: async () => {

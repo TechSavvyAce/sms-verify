@@ -25,9 +25,13 @@ import {
   MailOutlined,
   MobileOutlined,
 } from "@ant-design/icons";
+import { useTranslation } from "react-i18next";
+import { useLanguage } from "../../contexts/LanguageContext";
 import { useAuthStore } from "../../stores/authStore";
 import { userApi } from "../../services/api";
 import { getApiErrorMessage } from "../../utils/errorHelpers";
+import countriesData from "../../data/countries.json";
+import countriesFlagData from "../../data/countries_flag.json";
 import "./ProfilePage.css";
 
 const { Title, Text } = Typography;
@@ -57,6 +61,8 @@ interface UserProfile {
 }
 
 const ProfilePage: React.FC = () => {
+  const { t } = useTranslation();
+  const { currentLanguage } = useLanguage();
   const { user } = useAuthStore();
   const [loading, setLoading] = useState(false);
   const [profileData, setProfileData] = useState<UserProfile | null>(null);
@@ -65,6 +71,21 @@ const ProfilePage: React.FC = () => {
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string>("");
   const [updateLoading, setUpdateLoading] = useState(false);
+
+  // 根据当前语言获取本地化国家名称
+  const getLocalizedCountryName = (country: any) => {
+    if (currentLanguage === "zh-CN") {
+      return country.name_cn || country.name;
+    } else {
+      return country.name || country.name_cn;
+    }
+  };
+
+  // 根据国家代码获取国旗
+  const getCountryFlag = (countryCode: string) => {
+    const flagData = countriesFlagData.find((item) => item.code === countryCode);
+    return flagData ? `https://flagcdn.com/w20/${flagData.flag.toLowerCase()}.png` : null;
+  };
 
   // Load profile data
   useEffect(() => {
@@ -82,7 +103,9 @@ const ProfilePage: React.FC = () => {
         setProfileData(profile);
       }
     } catch (error: any) {
-      message.error(getApiErrorMessage(error.response?.data?.error, "加载个人资料失败"));
+      message.error(
+        getApiErrorMessage(error.response?.data?.error, t("profile.loadProfileFailed"))
+      );
     } finally {
       setLoading(false);
     }
@@ -106,17 +129,19 @@ const ProfilePage: React.FC = () => {
       const response = await userApi.updateProfile(formData);
 
       if (response.success) {
-        message.success("个人资料更新成功");
+        message.success(t("profile.profileUpdateSuccess"));
         setEditMode(false);
         setAvatarFile(null);
         setAvatarPreview("");
         await loadProfileData();
       } else {
-        message.error(response.message || "更新个人资料失败");
+        message.error(response.message || t("profile.profileUpdateFailed"));
       }
     } catch (error: any) {
       console.error("Profile update error:", error);
-      message.error(getApiErrorMessage(error.response?.data?.error, "更新个人资料失败"));
+      message.error(
+        getApiErrorMessage(error.response?.data?.error, t("profile.profileUpdateFailed"))
+      );
     } finally {
       setUpdateLoading(false);
     }
@@ -133,25 +158,25 @@ const ProfilePage: React.FC = () => {
       const selectedFile = file.originFileObj || file;
 
       if (selectedFile.size > 2 * 1024 * 1024) {
-        message.error("文件大小不能超过 2MB");
+        message.error(t("profile.fileSizeExceeded"));
         return;
       }
 
       if (!selectedFile.type.startsWith("image/")) {
-        message.error("请选择有效的图片文件");
+        message.error(t("profile.invalidImageFile"));
         return;
       }
 
       setAvatarFile(selectedFile);
       setAvatarPreview(URL.createObjectURL(selectedFile));
-      message.success("头像已选择，请点击保存按钮应用更改");
+      message.success(t("profile.avatarSelected"));
     }
   };
 
   const handleRemoveAvatar = () => {
     setAvatarFile(null);
     setAvatarPreview("");
-    message.info("头像已移除，请点击保存按钮应用更改");
+    message.info(t("profile.avatarRemoved"));
   };
 
   const resetForm = () => {
@@ -173,50 +198,58 @@ const ProfilePage: React.FC = () => {
   if (!user) {
     return (
       <div style={{ textAlign: "center", padding: "50px" }}>
-        <Empty description="请先登录" />
+        <Empty description={t("profile.pleaseLogin")} />
       </div>
     );
   }
 
   return (
-    <div className="profile-container" style={{ padding: "24px" }}>
+    <div className="profile-container" style={{ padding: "16px" }}>
       <Title
         level={2}
         className="profile-title"
         style={{
-          marginBottom: "24px",
-          fontSize: "24px",
+          marginBottom: "20px",
+          fontSize: "20px",
         }}
       >
-        个人中心
+        {t("profile.personalCenter")}
       </Title>
 
       <Spin spinning={loading}>
         <div>
           {editMode ? (
             <Card
-              title="编辑个人资料"
+              title={t("profile.editProfile")}
               extra={
-                <Space direction="horizontal" size="small" className="button-group">
+                <Space
+                  direction="horizontal"
+                  size="small"
+                  className="button-group"
+                  style={{
+                    width: "100%",
+                    justifyContent: "flex-end",
+                  }}
+                >
                   <Button
                     onClick={resetForm}
                     icon={<CloseOutlined />}
-                    size="middle"
-                    block={false}
+                    size="small"
                     className="mobile-full-width"
+                    style={{ minWidth: "80px" }}
                   >
-                    取消
+                    {t("profile.cancel")}
                   </Button>
                   <Button
                     type="primary"
                     loading={updateLoading}
                     onClick={() => profileForm.submit()}
                     icon={<SaveOutlined />}
-                    size="middle"
-                    block={false}
+                    size="small"
                     className="mobile-full-width"
+                    style={{ minWidth: "80px" }}
                   >
-                    保存
+                    {t("profile.save")}
                   </Button>
                 </Space>
               }
@@ -231,40 +264,72 @@ const ProfilePage: React.FC = () => {
                   <Col xs={24} sm={24} md={12} lg={12} xl={12}>
                     <Form.Item
                       name="username"
-                      label="用户名"
-                      rules={[{ required: true, message: "请输入用户名" }]}
+                      label={t("profile.username")}
+                      rules={[{ required: true, message: t("profile.pleaseEnterUsername") }]}
                     >
-                      <Input prefix={<UserOutlined />} placeholder="请输入用户名" />
+                      <Input
+                        prefix={<UserOutlined />}
+                        placeholder={t("profile.pleaseEnterUsername")}
+                      />
                     </Form.Item>
                   </Col>
                   <Col xs={24} sm={24} md={12} lg={12} xl={12}>
                     <Form.Item
                       name="email"
-                      label="邮箱地址"
+                      label={t("profile.emailAddress")}
                       rules={[
-                        { required: true, message: "请输入邮箱地址" },
-                        { type: "email", message: "请输入有效的邮箱地址" },
+                        { required: true, message: t("profile.pleaseEnterEmail") },
+                        { type: "email", message: t("profile.pleaseEnterValidEmail") },
                       ]}
                     >
-                      <Input prefix={<MailOutlined />} placeholder="请输入邮箱地址" />
+                      <Input
+                        prefix={<MailOutlined />}
+                        placeholder={t("profile.pleaseEnterEmail")}
+                      />
                     </Form.Item>
                   </Col>
                 </Row>
 
                 <Row gutter={[16, 16]}>
                   <Col xs={24} sm={24} md={12} lg={12} xl={12}>
-                    <Form.Item name="phone" label="手机号码">
-                      <Input prefix={<MobileOutlined />} placeholder="请输入手机号码" />
+                    <Form.Item name="phone" label={t("profile.phoneNumber")}>
+                      <Input
+                        prefix={<MobileOutlined />}
+                        placeholder={t("profile.pleaseEnterPhone")}
+                      />
                     </Form.Item>
                   </Col>
                   <Col xs={24} sm={24} md={12} lg={12} xl={12}>
-                    <Form.Item name="country" label="国家/地区">
-                      <Select placeholder="请选择国家/地区">
-                        <Option value="CN">中国</Option>
-                        <Option value="US">美国</Option>
-                        <Option value="JP">日本</Option>
-                        <Option value="KR">韩国</Option>
-                        <Option value="RU">俄罗斯</Option>
+                    <Form.Item name="country" label={t("profile.countryRegion")}>
+                      <Select
+                        placeholder={t("profile.pleaseSelectCountry")}
+                        showSearch
+                        filterOption={(input, option) => {
+                          const country = countriesData.find((c) => c.code === option?.value);
+                          if (!country) return false;
+                          const searchText = getLocalizedCountryName(country).toLowerCase();
+                          return searchText.includes(input.toLowerCase());
+                        }}
+                        optionFilterProp="children"
+                        size="large"
+                      >
+                        {countriesData
+                          .filter((country) => country.available)
+                          .sort((a, b) =>
+                            getLocalizedCountryName(a).localeCompare(getLocalizedCountryName(b))
+                          )
+                          .map((country) => (
+                            <Option key={country.code} value={country.code}>
+                              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                                <img
+                                  src={getCountryFlag(country.code) || country.flag}
+                                  alt={country.name}
+                                  style={{ width: "20px", height: "15px", objectFit: "cover" }}
+                                />
+                                <span>{getLocalizedCountryName(country)}</span>
+                              </div>
+                            </Option>
+                          ))}
                       </Select>
                     </Form.Item>
                   </Col>
@@ -272,8 +337,8 @@ const ProfilePage: React.FC = () => {
 
                 <Row gutter={[16, 16]}>
                   <Col xs={24} sm={24} md={12} lg={12} xl={12}>
-                    <Form.Item name="timezone" label="时区">
-                      <Select placeholder="请选择时区">
+                    <Form.Item name="timezone" label={t("profile.timezone")}>
+                      <Select placeholder={t("profile.pleaseSelectTimezone")}>
                         <Option value="Asia/Shanghai">Asia/Shanghai (UTC+8)</Option>
                         <Option value="America/New_York">America/New_York (UTC-5)</Option>
                         <Option value="Europe/London">Europe/London (UTC+0)</Option>
@@ -281,11 +346,11 @@ const ProfilePage: React.FC = () => {
                     </Form.Item>
                   </Col>
                   <Col xs={24} sm={24} md={12} lg={12} xl={12}>
-                    <Form.Item name="language" label="语言">
-                      <Select placeholder="请选择语言">
-                        <Option value="zh-CN">简体中文</Option>
-                        <Option value="en-US">English</Option>
-                        <Option value="ja-JP">日本語</Option>
+                    <Form.Item name="language" label={t("profile.language")}>
+                      <Select placeholder={t("profile.pleaseSelectLanguage")}>
+                        <Option value="zh-CN">{t("profile.simplifiedChinese")}</Option>
+                        <Option value="en-US">{t("profile.english")}</Option>
+                        <Option value="ja-JP">{t("profile.japanese")}</Option>
                       </Select>
                     </Form.Item>
                   </Col>
@@ -294,7 +359,7 @@ const ProfilePage: React.FC = () => {
                 {/* Avatar Upload Section */}
                 <Row gutter={[16, 16]}>
                   <Col xs={24} sm={24} md={24} lg={24} xl={24}>
-                    <Form.Item label="头像上传">
+                    <Form.Item label={t("profile.avatarUpload")}>
                       <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
                         <Avatar
                           size={80}
@@ -310,16 +375,16 @@ const ProfilePage: React.FC = () => {
                               onChange={handleAvatarChange}
                               accept="image/*"
                             >
-                              <Button icon={<CameraOutlined />}>选择图片</Button>
+                              <Button icon={<CameraOutlined />}>{t("profile.selectImage")}</Button>
                             </Upload>
                             {(avatarFile || avatarPreview) && (
                               <Button onClick={handleRemoveAvatar} danger size="small">
-                                移除
+                                {t("profile.remove")}
                               </Button>
                             )}
                           </Space>
                           <div style={{ marginTop: "8px", fontSize: "12px", color: "#8c8c8c" }}>
-                            支持 JPG、PNG 格式，文件大小不超过 2MB
+                            {t("profile.avatarUploadHint")}
                           </div>
                         </div>
                       </div>
@@ -330,7 +395,7 @@ const ProfilePage: React.FC = () => {
             </Card>
           ) : (
             <Card
-              title="个人资料详情"
+              title={t("profile.profileDetails")}
               extra={
                 <Button
                   type="primary"
@@ -338,7 +403,7 @@ const ProfilePage: React.FC = () => {
                   onClick={() => setEditMode(true)}
                   size="middle"
                 >
-                  编辑资料
+                  {t("profile.editProfileButton")}
                 </Button>
               }
             >
@@ -352,7 +417,7 @@ const ProfilePage: React.FC = () => {
                       style={{ marginBottom: "16px" }}
                     />
                     <div>
-                      <Text strong>当前头像</Text>
+                      <Text strong>{t("profile.currentAvatar")}</Text>
                     </div>
                   </div>
                 </Col>
@@ -363,33 +428,51 @@ const ProfilePage: React.FC = () => {
                     size="default"
                     className="descriptions-responsive"
                   >
-                    <Descriptions.Item label="用户名">
+                    <Descriptions.Item label={t("profile.username")}>
                       {profileData?.username || user?.username}
                     </Descriptions.Item>
-                    <Descriptions.Item label="邮箱地址">
+                    <Descriptions.Item label={t("profile.emailAddress")}>
                       {profileData?.email || user?.email}
                     </Descriptions.Item>
-                    <Descriptions.Item label="手机号码">
-                      {profileData?.phone || "未设置"}
+                    <Descriptions.Item label={t("profile.phoneNumber")}>
+                      {profileData?.phone || t("profile.notSet")}
                     </Descriptions.Item>
-                    <Descriptions.Item label="国家/地区">
-                      {profileData?.country || "未设置"}
+                    <Descriptions.Item label={t("profile.countryRegion")}>
+                      {profileData?.country
+                        ? (() => {
+                            const country = countriesData.find(
+                              (c) => c.code === profileData.country
+                            );
+                            return country ? (
+                              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                                <img
+                                  src={getCountryFlag(country.code) || country.flag}
+                                  alt={country.name}
+                                  style={{ width: "20px", height: "15px", objectFit: "cover" }}
+                                />
+                                <span>{getLocalizedCountryName(country)}</span>
+                              </div>
+                            ) : (
+                              profileData.country
+                            );
+                          })()
+                        : t("profile.notSet")}
                     </Descriptions.Item>
-                    <Descriptions.Item label="时区">
-                      {profileData?.timezone || "未设置"}
+                    <Descriptions.Item label={t("profile.timezone")}>
+                      {profileData?.timezone || t("profile.notSet")}
                     </Descriptions.Item>
-                    <Descriptions.Item label="语言">
-                      {profileData?.language || "未设置"}
+                    <Descriptions.Item label={t("profile.language")}>
+                      {profileData?.language || t("profile.notSet")}
                     </Descriptions.Item>
-                    <Descriptions.Item label="注册时间">
+                    <Descriptions.Item label={t("profile.registrationTime")}>
                       {profileData?.created_at
                         ? new Date(profileData.created_at).toLocaleString()
-                        : "未知"}
+                        : t("profile.unknown")}
                     </Descriptions.Item>
-                    <Descriptions.Item label="最后登录">
+                    <Descriptions.Item label={t("profile.lastLogin")}>
                       {profileData?.last_login
                         ? new Date(profileData.last_login).toLocaleString()
-                        : "从未登录"}
+                        : t("profile.neverLoggedIn")}
                     </Descriptions.Item>
                   </Descriptions>
                 </Col>

@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { Modal, Form, Input, Button, Space, message, Typography, Row, Col, Tag } from "antd";
 import { WalletOutlined, CheckCircleOutlined, CopyOutlined, LinkOutlined } from "@ant-design/icons";
+import { useTranslation } from "react-i18next";
 
 const { Title, Text } = Typography;
 
@@ -17,6 +18,7 @@ const AddFundsModal: React.FC<AddFundsModalProps> = ({
   onSuccess,
   currentBalance = 0,
 }) => {
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(false);
   const [selectedAmount, setSelectedAmount] = useState<number>(0);
   const [paymentUrl, setPaymentUrl] = useState<string>("");
@@ -46,7 +48,7 @@ const AddFundsModal: React.FC<AddFundsModalProps> = ({
 
   const handleCreatePayment = async () => {
     if (selectedAmount <= 0) {
-      message.error("请选择或输入充值金额");
+      message.error(t("balance.selectAmountError"));
       return;
     }
 
@@ -65,7 +67,7 @@ const AddFundsModal: React.FC<AddFundsModalProps> = ({
           },
           body: JSON.stringify({
             service_name: "SMS Verification Service",
-            description: `账户充值 - $${selectedAmount.toFixed(2)}`,
+            description: t("balance.paymentDescription", { amount: selectedAmount.toFixed(2) }),
             amount: selectedAmount,
             webhook_url: `${process.env.REACT_SAFEPING_API_URL || process.env.REACT_APP_API_URL || "http://localhost:5001"}/webhook/safeping`,
             language: "zh-CN",
@@ -89,10 +91,10 @@ const AddFundsModal: React.FC<AddFundsModalProps> = ({
       setPaymentId(payment_id);
       setPaymentStatus("created");
 
-      message.success("支付订单创建成功！");
+      message.success(t("balance.paymentOrderCreated"));
     } catch (error) {
       console.error("Payment creation failed:", error);
-      message.error("创建支付订单失败，请重试");
+      message.error(t("balance.paymentOrderFailed"));
     } finally {
       setLoading(false);
     }
@@ -100,7 +102,7 @@ const AddFundsModal: React.FC<AddFundsModalProps> = ({
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
-    message.success("已复制到剪贴板");
+    message.success(t("balance.copiedToClipboard"));
   };
 
   const handlePaymentSuccess = async () => {
@@ -124,13 +126,13 @@ const AddFundsModal: React.FC<AddFundsModalProps> = ({
       );
 
       if (!paymentStatusResponse.ok) {
-        throw new Error("无法检查支付状态，请稍后重试");
+        throw new Error(t("balance.cannotCheckPaymentStatus"));
       }
 
       const paymentStatusData = await paymentStatusResponse.json();
 
       if (!paymentStatusData.success || !paymentStatusData.payment) {
-        throw new Error("支付状态检查失败");
+        throw new Error(t("balance.paymentStatusCheckFailed"));
       }
 
       const payment = paymentStatusData.payment;
@@ -155,14 +157,14 @@ const AddFundsModal: React.FC<AddFundsModalProps> = ({
 
         if (!response.ok) {
           const errorData = await response.json();
-          throw new Error(errorData.error || "支付确认失败");
+          throw new Error(errorData.error || t("balance.paymentConfirmationFailed"));
         }
 
         const result = await response.json();
 
         if (result.success) {
           setPaymentStatus("confirmed");
-          message.success(`充值成功！已到账 $${selectedAmount.toFixed(2)}`);
+          message.success(t("balance.paymentSuccess", { amount: selectedAmount.toFixed(2) }));
 
           // Call the success callback to refresh user data
           onSuccess(selectedAmount);
@@ -170,11 +172,11 @@ const AddFundsModal: React.FC<AddFundsModalProps> = ({
           // Close the modal
           handleClose();
         } else {
-          throw new Error(result.error || "支付确认失败");
+          throw new Error(result.error || t("balance.paymentConfirmationFailed"));
         }
       } else if (payment.status === "pending") {
         // Payment is still pending
-        message.warning("⏳ 您的支付仍在处理中，请稍后查看交易记录");
+        message.warning(t("balance.paymentPending"));
         setPaymentStatus("pending");
 
         // Close the modal after showing the message
@@ -183,7 +185,11 @@ const AddFundsModal: React.FC<AddFundsModalProps> = ({
         }, 2000); // Close after 2 seconds
       } else if (payment.status === "failed" || payment.status === "cancelled") {
         // Payment failed or was cancelled
-        message.error(`支付${payment.status === "failed" ? "失败" : "已取消"}，请重新发起支付`);
+        message.error(
+          t("balance.paymentFailedOrCancelled", {
+            status: payment.status === "failed" ? t("balance.failed") : t("balance.cancelled"),
+          })
+        );
         setPaymentStatus("failed");
 
         // Close the modal after showing the message
@@ -192,7 +198,7 @@ const AddFundsModal: React.FC<AddFundsModalProps> = ({
         }, 2000); // Close after 2 seconds
       } else {
         // Unknown status
-        message.warning(`支付状态未知: ${payment.status}，请稍后重试`);
+        message.warning(t("balance.paymentStatusUnknown", { status: payment.status }));
         setPaymentStatus("pending");
 
         // Close the modal after showing the message
@@ -202,7 +208,7 @@ const AddFundsModal: React.FC<AddFundsModalProps> = ({
       }
     } catch (error: any) {
       console.error("Payment status check failed:", error);
-      message.error(error.message || "无法检查支付状态，请稍后重试");
+      message.error(error.message || t("balance.cannotCheckPaymentStatus"));
       setPaymentStatus("pending");
     } finally {
       setLoading(false);
@@ -223,7 +229,7 @@ const AddFundsModal: React.FC<AddFundsModalProps> = ({
       title={
         <div style={{ display: "flex", alignItems: "center" }}>
           <WalletOutlined style={{ marginRight: "8px", color: "#1890ff" }} />
-          账户充值
+          {t("balance.accountRecharge")}
         </div>
       }
       open={visible}
@@ -234,12 +240,14 @@ const AddFundsModal: React.FC<AddFundsModalProps> = ({
     >
       <div style={{ textAlign: "center", marginBottom: "24px" }}>
         <WalletOutlined style={{ fontSize: "48px", color: "#1890ff", marginBottom: "16px" }} />
-        <Title level={3}>选择充值金额</Title>
-        <Text type="secondary">当前余额: ${currentBalance.toFixed(2)}</Text>
+        <Title level={3}>{t("balance.selectRechargeAmount")}</Title>
+        <Text type="secondary">
+          {t("balance.currentBalance")}: ${currentBalance.toFixed(2)}
+        </Text>
       </div>
 
       <Form layout="vertical">
-        <Form.Item label="选择金额" required>
+        <Form.Item label={t("balance.selectAmount")} required>
           <div style={{ marginBottom: "16px" }}>
             <Space wrap>
               {predefinedAmounts.map((amount) => (
@@ -257,9 +265,9 @@ const AddFundsModal: React.FC<AddFundsModalProps> = ({
           </div>
 
           <div style={{ marginTop: "16px" }}>
-            <Text strong>自定义金额:</Text>
+            <Text strong>{t("balance.customAmount")}:</Text>
             <Input
-              placeholder="输入充值金额"
+              placeholder={t("balance.enterRechargeAmount")}
               prefix="$"
               suffix="USD"
               value={selectedAmount > 0 ? selectedAmount.toString() : ""}
@@ -280,14 +288,14 @@ const AddFundsModal: React.FC<AddFundsModalProps> = ({
                 icon={<WalletOutlined />}
                 style={{ minWidth: "200px" }}
               >
-                创建支付订单 (${selectedAmount.toFixed(2)})
+                {t("balance.createPaymentOrder", { amount: selectedAmount.toFixed(2) })}
               </Button>
             )}
 
             {paymentStatus === "created" && (
               <div style={{ marginBottom: "16px" }}>
                 <Text type="success" strong>
-                  ✅ 支付订单已创建，请完成支付
+                  ✅ {t("balance.paymentOrderCreatedPleasePay")}
                 </Text>
               </div>
             )}
@@ -295,7 +303,7 @@ const AddFundsModal: React.FC<AddFundsModalProps> = ({
             {paymentStatus === "pending" && (
               <div style={{ marginBottom: "16px" }}>
                 <Text type="warning" strong>
-                  ⏳ 支付尚未完成，请完成支付后再点击检查
+                  ⏳ {t("balance.paymentNotCompleted")}
                 </Text>
               </div>
             )}
@@ -303,7 +311,7 @@ const AddFundsModal: React.FC<AddFundsModalProps> = ({
             {paymentStatus === "failed" && (
               <div style={{ marginBottom: "16px" }}>
                 <Text type="danger" strong>
-                  ❌ 支付失败或已取消，请重新发起支付
+                  ❌ {t("balance.paymentFailedOrCancelledRetry")}
                 </Text>
               </div>
             )}
@@ -311,7 +319,7 @@ const AddFundsModal: React.FC<AddFundsModalProps> = ({
             {paymentStatus === "confirmed" && (
               <div style={{ marginBottom: "16px" }}>
                 <Text type="success" strong>
-                  🎉 支付已确认，正在处理...
+                  🎉 {t("balance.paymentConfirmedProcessing")}
                 </Text>
               </div>
             )}
@@ -321,18 +329,18 @@ const AddFundsModal: React.FC<AddFundsModalProps> = ({
         {paymentUrl && (
           <>
             <div style={{ marginBottom: "16px" }}>
-              <Text strong>支付链接:</Text>
+              <Text strong>{t("balance.paymentLink")}:</Text>
               <div style={{ display: "flex", alignItems: "center", gap: "8px", marginTop: "8px" }}>
                 <Input value={paymentUrl} readOnly style={{ flex: 1 }} />
                 <Button icon={<CopyOutlined />} onClick={() => copyToClipboard(paymentUrl)}>
-                  复制
+                  {t("balance.copy")}
                 </Button>
                 <Button
                   type="primary"
                   icon={<LinkOutlined />}
                   onClick={() => window.open(paymentUrl, "_blank")}
                 >
-                  打开
+                  {t("balance.open")}
                 </Button>
               </div>
             </div>
@@ -362,7 +370,7 @@ const AddFundsModal: React.FC<AddFundsModalProps> = ({
                 onClick={handlePaymentSuccess}
                 style={{ minWidth: "200px" }}
               >
-                检查支付状态
+                {t("balance.checkPaymentStatus")}
               </Button>
             </div>
           </>

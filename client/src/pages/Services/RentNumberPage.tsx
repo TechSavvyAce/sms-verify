@@ -24,10 +24,14 @@ import { useNavigate } from "react-router-dom";
 import { rentalApi } from "../../services/api";
 import countriesData from "../../data/countries.json";
 import { getApiErrorMessage } from "../../utils/errorHelpers";
+import { useTranslation } from "react-i18next";
+import { useLanguage } from "../../contexts/LanguageContext";
 
 const { Title, Paragraph, Text } = Typography;
 
 const RentNumberPage: React.FC = () => {
+  const { t } = useTranslation();
+  const { currentLanguage } = useLanguage();
   const navigate = useNavigate();
   const { user } = useAuthStore();
   const [modalVisible, setModalVisible] = useState(false);
@@ -45,14 +49,23 @@ const RentNumberPage: React.FC = () => {
   const [dataLoading, setDataLoading] = useState(true);
   const [selectedRegion, setSelectedRegion] = useState<string>("all");
 
+  // 根据当前语言获取本地化名称
+  const getLocalizedName = (item: any) => {
+    if (currentLanguage === "zh-CN") {
+      return item.name_cn || item.name;
+    } else {
+      return item.name || item.name_cn;
+    }
+  };
+
   // Duration options for rental
   const durationOptions = [
-    { value: 1, label: "1 Hour", label_cn: "1小时", price_multiplier: 1 },
-    { value: 4, label: "4 Hours", label_cn: "4小时", price_multiplier: 1.5 },
-    { value: 12, label: "12 Hours", label_cn: "12小时", price_multiplier: 2 },
-    { value: 24, label: "1 Day", label_cn: "1天", price_multiplier: 3 },
-    { value: 48, label: "2 Days", label_cn: "2天", price_multiplier: 5 },
-    { value: 72, label: "3 Days", label_cn: "3天", price_multiplier: 7 },
+    { value: 1, label: t("rentals.oneHour"), price_multiplier: 1 },
+    { value: 4, label: t("rentals.fourHours"), price_multiplier: 1.5 },
+    { value: 12, label: t("rentals.twelveHours"), price_multiplier: 2 },
+    { value: 24, label: t("rentals.oneDay"), price_multiplier: 3 },
+    { value: 48, label: t("rentals.twoDays"), price_multiplier: 5 },
+    { value: 72, label: t("rentals.threeDays"), price_multiplier: 7 },
   ];
 
   useEffect(() => {
@@ -88,7 +101,7 @@ const RentNumberPage: React.FC = () => {
 
               return {
                 id: countryId,
-                name_en: countryInfo?.name_en || `Country ${id}`,
+                name: countryInfo?.name || countryInfo?.name_en || `Country ${id}`,
                 name_cn: countryInfo?.name_cn || `国家 ${id}`,
                 flag:
                   countryInfo?.flag || `https://flagcdn.com/w20/${id?.toLowerCase() || "0"}.png`,
@@ -113,7 +126,7 @@ const RentNumberPage: React.FC = () => {
           setCountries(transformedCountries);
         }
       } catch (error: any) {
-        message.error("获取服务数据失败");
+        message.error(t("rentals.getServiceDataFailed"));
         console.error("Error fetching services:", error);
         // Set default empty arrays to prevent crashes
         setServices([]);
@@ -177,12 +190,12 @@ const RentNumberPage: React.FC = () => {
   // 确认租用
   const handleConfirmRental = async () => {
     if (!hasEnoughBalance()) {
-      message.error("余额不足，请先充值");
+      message.error(t("rentals.insufficientBalance"));
       return;
     }
 
     if (!selectedService || !selectedCountry || !selectedDuration) {
-      message.error("请完成所有选择");
+      message.error(t("rentals.pleaseCompleteAllSelections"));
       return;
     }
 
@@ -196,7 +209,7 @@ const RentNumberPage: React.FC = () => {
       });
 
       if (response.success) {
-        message.success("租用订单创建成功！");
+        message.success(t("rentals.rentalOrderCreated"));
         setModalVisible(false);
         setCurrentStep(0);
         setSelectedService(null);
@@ -207,13 +220,15 @@ const RentNumberPage: React.FC = () => {
         setServiceSearch("");
 
         // 跳转到租用记录页面
-        navigate("/rentals");
+        navigate("rentals");
       } else {
-        throw new Error("租用失败");
+        throw new Error(t("rentals.rentalFailed"));
       }
     } catch (error: any) {
       console.error("租用失败:", error);
-      message.error(getApiErrorMessage(error.response?.data?.error, "租用订单创建失败，请重试"));
+      message.error(
+        getApiErrorMessage(error.response?.data?.error, t("rentals.rentalOrderFailed"))
+      );
     } finally {
       setLoading(false);
     }
@@ -234,9 +249,8 @@ const RentNumberPage: React.FC = () => {
 
   // 过滤国家列表
   const filteredCountries = countries.filter((country) => {
-    const matchesSearch =
-      country.name_cn.toLowerCase().includes(countrySearch.toLowerCase()) ||
-      country.name_en.toLowerCase().includes(countrySearch.toLowerCase());
+    const countryName = getLocalizedName(country).toLowerCase();
+    const matchesSearch = countryName.includes(countrySearch.toLowerCase());
     const matchesRegion = selectedRegion === "all" || country.region === selectedRegion;
     return matchesSearch && matchesRegion;
   });
@@ -262,10 +276,10 @@ const RentNumberPage: React.FC = () => {
 
   // 步骤配置
   const steps = [
-    { title: "选择服务", description: "选择租用服务类型" },
-    { title: "选择时长", description: "选择租用时长" },
-    { title: "选择国家", description: "选择号码所属国家" },
-    { title: "确认租用", description: "确认租用信息并支付" },
+    { title: t("rentals.selectService") },
+    { title: t("rentals.selectDuration") },
+    { title: t("rentals.selectCountry") },
+    { title: t("rentals.confirmRental") },
   ];
 
   return (
@@ -280,7 +294,7 @@ const RentNumberPage: React.FC = () => {
                 marginBottom: "24px",
               }}
             />
-            <Title level={2}>号码租用服务</Title>
+            <Title level={2}>{t("rentals.rentalService")}</Title>
             <Paragraph
               style={{
                 fontSize: "16px",
@@ -288,13 +302,12 @@ const RentNumberPage: React.FC = () => {
                 margin: "0 auto 32px",
               }}
             >
-              租用手机号码一段时间，接收多条短信。适合需要持续验证或多次注册的场景。
-              灵活的租用时长，实时短信接收，安全可靠。
+              {t("rentals.rentalDescription")}
             </Paragraph>
 
             {/* 余额显示 */}
             <div style={{ marginBottom: "24px" }}>
-              <Text type="secondary">当前余额: </Text>
+              <Text type="secondary">{t("rentals.currentBalance")}: </Text>
               <Text strong style={{ fontSize: "18px", color: "#722ed1" }}>
                 ${user?.balance?.toFixed(2) || "0.00"}
               </Text>
@@ -308,7 +321,7 @@ const RentNumberPage: React.FC = () => {
               style={{ backgroundColor: "#722ed1", borderColor: "#722ed1" }}
               disabled={dataLoading}
             >
-              {dataLoading ? "加载中..." : "开始租用号码"}
+              {dataLoading ? t("rentals.loading") : t("rentals.startRenting")}
             </Button>
           </Col>
         </Row>
@@ -316,30 +329,30 @@ const RentNumberPage: React.FC = () => {
 
       {/* 租用服务选择模态框 */}
       <Modal
-        title="选择租用服务"
+        title={t("rentals.selectRentalService")}
         open={modalVisible}
         onCancel={() => setModalVisible(false)}
         footer={null}
         width={1000}
         destroyOnClose
       >
-        <Spin spinning={dataLoading} tip="加载服务信息中...">
+        <Spin spinning={dataLoading} tip={t("rentals.loadingServiceInfo")}>
           {/* 步骤条 */}
           <Steps current={currentStep} style={{ marginBottom: "32px" }}>
             {steps.map((step, index) => (
-              <Steps.Step key={index} title={step.title} description={step.description} />
+              <Steps.Step key={index} title={step.title} />
             ))}
           </Steps>
 
           {/* 步骤内容 */}
           {currentStep === 0 && (
             <div>
-              <Title level={4}>选择租用服务类型</Title>
+              <Title level={4}>{t("rentals.selectRentalServiceType")}</Title>
 
               {/* 服务搜索 */}
               <div style={{ marginBottom: "24px" }}>
                 <Input
-                  placeholder="搜索服务名称或描述（支持中文和英文）"
+                  placeholder={t("rentals.searchServiceNameOrDescription")}
                   value={serviceSearch}
                   onChange={(e) => setServiceSearch(e.target.value)}
                   style={{ maxWidth: "500px" }}
@@ -352,7 +365,9 @@ const RentNumberPage: React.FC = () => {
                 // 搜索结果
                 <div>
                   <div style={{ marginBottom: "16px" }}>
-                    <Text type="secondary">找到 {filteredServices?.length || 0} 个相关服务</Text>
+                    <Text type="secondary">
+                      {t("rentals.foundServices", { count: filteredServices?.length || 0 })}
+                    </Text>
                   </div>
                   <Row gutter={[16, 16]}>
                     {filteredServices?.map((service) => (
@@ -386,14 +401,15 @@ const RentNumberPage: React.FC = () => {
                               />
                             </div>
                             <Title level={4} style={{ margin: 0 }}>
-                              {service.name_cn || service.name || "Unknown Service"}
+                              {getLocalizedName(service) || "Unknown Service"}
                             </Title>
                           </div>
 
                           <Paragraph style={{ marginBottom: "16px" }}>
-                            {service.description_cn ||
-                              service.description ||
-                              "No description available"}
+                            {getLocalizedName({
+                              name: service.description,
+                              name_cn: service.description_cn,
+                            }) || "No description available"}
                           </Paragraph>
 
                           <div style={{ marginBottom: "16px" }}>
@@ -405,7 +421,7 @@ const RentNumberPage: React.FC = () => {
                                 marginBottom: "8px",
                               }}
                             >
-                              <Text type="secondary">成功率:</Text>
+                              <Text type="secondary">{t("rentals.successRate")}:</Text>
                               <Text strong>{service.success_rate || 0}%</Text>
                             </div>
                             <Progress
@@ -430,8 +446,11 @@ const RentNumberPage: React.FC = () => {
                                 alignItems: "center",
                               }}
                             >
-                              <Text type="secondary">基础价格:</Text>
-                              <Tag color="blue">${(service.base_price || 0).toFixed(2)}/小时</Tag>
+                              <Text type="secondary">{t("rentals.basePrice")}:</Text>
+                              <Tag color="blue">
+                                ${(service.base_price || 0).toFixed(2)}
+                                {t("rentals.perHour")}
+                              </Tag>
                             </div>
                             <div
                               style={{
@@ -440,7 +459,7 @@ const RentNumberPage: React.FC = () => {
                                 alignItems: "center",
                               }}
                             >
-                              <Text type="secondary">可用数量:</Text>
+                              <Text type="secondary">{t("rentals.availableQuantity")}:</Text>
                               <Text>{service.available || 0}</Text>
                             </div>
                           </div>
@@ -453,7 +472,9 @@ const RentNumberPage: React.FC = () => {
                 // 显示所有服务
                 <div>
                   <div style={{ marginBottom: "16px" }}>
-                    <Text type="secondary">共 {services?.length || 0} 个租用服务</Text>
+                    <Text type="secondary">
+                      {t("rentals.totalRentalServices", { count: services?.length || 0 })}
+                    </Text>
                   </div>
                   <Row gutter={[16, 16]}>
                     {services?.map((service) => (
@@ -487,14 +508,15 @@ const RentNumberPage: React.FC = () => {
                               />
                             </div>
                             <Title level={4} style={{ margin: 0 }}>
-                              {service.name_cn || service.name || "Unknown Service"}
+                              {getLocalizedName(service) || "Unknown Service"}
                             </Title>
                           </div>
 
                           <Paragraph style={{ marginBottom: "16px" }}>
-                            {service.description_cn ||
-                              service.description ||
-                              "No description available"}
+                            {getLocalizedName({
+                              name: service.description,
+                              name_cn: service.description_cn,
+                            }) || "No description available"}
                           </Paragraph>
 
                           <div style={{ marginBottom: "16px" }}>
@@ -506,7 +528,7 @@ const RentNumberPage: React.FC = () => {
                                 marginBottom: "8px",
                               }}
                             >
-                              <Text type="secondary">成功率:</Text>
+                              <Text type="secondary">{t("rentals.successRate")}:</Text>
                               <Text strong>{service.success_rate || 0}%</Text>
                             </div>
                             <Progress
@@ -531,8 +553,11 @@ const RentNumberPage: React.FC = () => {
                                 alignItems: "center",
                               }}
                             >
-                              <Text type="secondary">基础价格:</Text>
-                              <Tag color="blue">${(service.base_price || 0).toFixed(2)}/小时</Tag>
+                              <Text type="secondary">{t("rentals.basePrice")}:</Text>
+                              <Tag color="blue">
+                                ${(service.base_price || 0).toFixed(2)}
+                                {t("rentals.perHour")}
+                              </Tag>
                             </div>
                             <div
                               style={{
@@ -541,7 +566,7 @@ const RentNumberPage: React.FC = () => {
                                 alignItems: "center",
                               }}
                             >
-                              <Text type="secondary">可用数量:</Text>
+                              <Text type="secondary">{t("rentals.availableQuantity")}:</Text>
                               <Text>{service.available || 0}</Text>
                             </div>
                           </div>
@@ -556,7 +581,7 @@ const RentNumberPage: React.FC = () => {
 
           {currentStep === 1 && (
             <div>
-              <Title level={4}>选择租用时长</Title>
+              <Title level={4}>{t("rentals.selectDuration")}</Title>
               <Paragraph>
                 <div
                   style={{
@@ -567,7 +592,7 @@ const RentNumberPage: React.FC = () => {
                 >
                   <img
                     src={`https://smsactivate.s3.eu-central-1.amazonaws.com/assets/ico/${selectedService?.code}0.webp`}
-                    alt={`${selectedService?.name_cn || selectedService?.name} icon`}
+                    alt={`${getLocalizedName(selectedService)} icon`}
                     style={{
                       width: "32px",
                       height: "32px",
@@ -581,13 +606,14 @@ const RentNumberPage: React.FC = () => {
                     }}
                   />
                   <Text strong>
-                    已选择服务:{" "}
-                    {selectedService?.name_cn || selectedService?.name || "Unknown Service"}
+                    {t("rentals.selectedService")}:{" "}
+                    {getLocalizedName(selectedService) || "Unknown Service"}
                   </Text>
                 </div>
-                基础价格:{" "}
+                {t("rentals.basePrice")}:{" "}
                 <Text strong style={{ color: "#722ed1" }}>
-                  ${(selectedService?.base_price || 0).toFixed(2)}/小时
+                  ${(selectedService?.base_price || 0).toFixed(2)}
+                  {t("rentals.perHour")}
                 </Text>
               </Paragraph>
 
@@ -608,10 +634,10 @@ const RentNumberPage: React.FC = () => {
                           <ClockCircleOutlined />
                         </div>
                         <Title level={4} style={{ margin: 0 }}>
-                          {duration.label_cn || duration.label}
+                          {duration.label}
                         </Title>
                         <div style={{ marginTop: "8px" }}>
-                          <Text type="secondary">价格系数: </Text>
+                          <Text type="secondary">{t("rentals.priceMultiplier")}: </Text>
                           <Tag color="purple">{duration.price_multiplier}x</Tag>
                         </div>
                         <div style={{ marginTop: "8px" }}>
@@ -628,18 +654,18 @@ const RentNumberPage: React.FC = () => {
               <Divider />
 
               <div>
-                <Title level={5}>自定义时长</Title>
+                <Title level={5}>{t("rentals.customDuration")}</Title>
                 <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
                   <InputNumber
                     min={1}
                     max={168} // 7天
                     value={customDuration}
                     onChange={(value) => setCustomDuration(value || 1)}
-                    addonAfter="小时"
+                    addonAfter={t("rentals.hours")}
                     style={{ width: "120px" }}
                   />
                   <Text type="secondary">
-                    价格: $
+                    {t("rentals.basePrice")}: $
                     {(
                       selectedService?.base_price *
                       (customDuration > 72
@@ -657,7 +683,7 @@ const RentNumberPage: React.FC = () => {
                   </Text>
                 </div>
                 <Text type="secondary" style={{ fontSize: "12px" }}>
-                  自定义时长价格按阶梯计算，超过72小时按7倍计算
+                  {t("rentals.customDurationDescription")}
                 </Text>
               </div>
             </div>
@@ -665,7 +691,7 @@ const RentNumberPage: React.FC = () => {
 
           {currentStep === 2 && (
             <div>
-              <Title level={4}>选择国家地区</Title>
+              <Title level={4}>{t("rentals.selectCountry")}</Title>
               <Paragraph>
                 <div
                   style={{
@@ -676,7 +702,7 @@ const RentNumberPage: React.FC = () => {
                 >
                   <img
                     src={`https://smsactivate.s3.eu-central-1.amazonaws.com/assets/ico/${selectedService?.code}0.webp`}
-                    alt={`${selectedService?.name_cn || selectedService?.name} icon`}
+                    alt={`${getLocalizedName(selectedService)} icon`}
                     style={{
                       width: "32px",
                       height: "32px",
@@ -690,13 +716,16 @@ const RentNumberPage: React.FC = () => {
                     }}
                   />
                   <Text strong>
-                    已选择服务:{" "}
-                    {selectedService?.name_cn || selectedService?.name || "Unknown Service"}
+                    {t("rentals.selectedService")}:{" "}
+                    {getLocalizedName(selectedService) || "Unknown Service"}
                   </Text>
                 </div>
-                已选择时长: <Text strong>{selectedDuration} 小时</Text>
+                {t("rentals.selectedDuration")}:{" "}
+                <Text strong>
+                  {selectedDuration} {t("rentals.hours")}
+                </Text>
                 <br />
-                基础价格:{" "}
+                {t("rentals.basePrice")}:{" "}
                 <Text strong style={{ color: "#722ed1" }}>
                   $
                   {(
@@ -720,21 +749,21 @@ const RentNumberPage: React.FC = () => {
               <div style={{ marginBottom: "16px" }}>
                 <div style={{ display: "flex", gap: "16px", marginBottom: "12px" }}>
                   <Select
-                    placeholder="选择地区"
+                    placeholder={t("rentals.selectRegion")}
                     value={selectedRegion}
                     onChange={setSelectedRegion}
                     style={{ width: "150px" }}
                     allowClear
                   >
-                    <Select.Option value="all">所有地区</Select.Option>
-                    <Select.Option value="Europe">欧洲</Select.Option>
-                    <Select.Option value="Asia">亚洲</Select.Option>
-                    <Select.Option value="Africa">非洲</Select.Option>
-                    <Select.Option value="Americas">美洲</Select.Option>
-                    <Select.Option value="Oceania">大洋洲</Select.Option>
+                    <Select.Option value="all">{t("rentals.allRegions")}</Select.Option>
+                    <Select.Option value="Europe">{t("rentals.europe")}</Select.Option>
+                    <Select.Option value="Asia">{t("rentals.asia")}</Select.Option>
+                    <Select.Option value="Africa">{t("rentals.africa")}</Select.Option>
+                    <Select.Option value="Americas">{t("rentals.americas")}</Select.Option>
+                    <Select.Option value="Oceania">{t("rentals.oceania")}</Select.Option>
                   </Select>
                   <Input
-                    placeholder="搜索国家名称（支持中文和英文）"
+                    placeholder={t("rentals.searchCountryName")}
                     value={countrySearch}
                     onChange={(e) => {
                       setCountrySearch(e.target.value);
@@ -767,7 +796,7 @@ const RentNumberPage: React.FC = () => {
                         <div style={{ display: "flex", alignItems: "center" }}>
                           <img
                             src={country.flag}
-                            alt={`${country.name_cn} flag`}
+                            alt={`${getLocalizedName(country)} flag`}
                             style={{
                               width: "24px",
                               height: "18px",
@@ -776,7 +805,7 @@ const RentNumberPage: React.FC = () => {
                             }}
                           />
                           <div>
-                            <Text strong>{country.name_cn}</Text>
+                            <Text strong>{getLocalizedName(country)}</Text>
                             <br />
                             <div
                               style={{
@@ -814,7 +843,7 @@ const RentNumberPage: React.FC = () => {
 
                       {country.price_multiplier !== 1.0 && (
                         <Text type="secondary" style={{ fontSize: "12px" }}>
-                          价格系数: {country.price_multiplier}x
+                          {t("rentals.priceMultiplier")}: {country.price_multiplier}x
                         </Text>
                       )}
                     </Card>
@@ -833,7 +862,7 @@ const RentNumberPage: React.FC = () => {
                       borderColor: "#722ed1",
                     }}
                   >
-                    显示更多 (还有 {filteredCountries.length - visibleCountries} 个国家)
+                    {t("rentals.showMore", { count: filteredCountries.length - visibleCountries })}
                   </Button>
                 </div>
               )}
@@ -842,11 +871,11 @@ const RentNumberPage: React.FC = () => {
               <div style={{ textAlign: "center", marginTop: "16px" }}>
                 <Text type="secondary">
                   {countrySearch
-                    ? `找到 ${filteredCountries?.length || 0} 个国家`
-                    : `共 ${countries?.length || 0} 个国家，显示 ${Math.min(
-                        visibleCountries,
-                        filteredCountries?.length || 0
-                      )} 个`}
+                    ? t("rentals.foundCountries", { count: filteredCountries?.length || 0 })
+                    : t("rentals.totalCountries", {
+                        count: countries?.length || 0,
+                        visible: Math.min(visibleCountries, filteredCountries?.length || 0),
+                      })}
                 </Text>
               </div>
             </div>
@@ -854,12 +883,12 @@ const RentNumberPage: React.FC = () => {
 
           {currentStep === 3 && (
             <div>
-              <Title level={4}>确认租用信息</Title>
+              <Title level={4}>{t("rentals.confirmRentalInfo")}</Title>
 
               <Card style={{ marginBottom: "24px" }}>
                 <Row gutter={[16, 16]}>
                   <Col span={12}>
-                    <Text strong>选择的服务:</Text>
+                    <Text strong>{t("rentals.selectedService")}:</Text>
                     <br />
                     <div style={{ display: "flex", alignItems: "center" }}>
                       <img
@@ -877,25 +906,26 @@ const RentNumberPage: React.FC = () => {
                           (e.target as HTMLImageElement).style.display = "none";
                         }}
                       />
-                      <Text>
-                        {selectedService?.name_cn || selectedService?.name || "Unknown Service"}
-                      </Text>
+                      <Text>{getLocalizedName(selectedService) || "Unknown Service"}</Text>
                     </div>
                   </Col>
                   <Col span={12}>
-                    <Text strong>租用时长:</Text>
+                    <Text strong>{t("rentals.rentalDuration")}:</Text>
                     <br />
-                    <Text>{selectedDuration} 小时</Text>
+                    <Text>
+                      {selectedDuration} {t("rentals.hours")}
+                    </Text>
                   </Col>
                   <Col span={12}>
-                    <Text strong>选择的国家:</Text>
+                    <Text strong>{t("rentals.selectedCountry")}:</Text>
                     <br />
                     <div style={{ display: "flex", alignItems: "center" }}>
                       <img
                         src={countries.find((c) => c.id === selectedCountry)?.flag}
                         alt={`${
-                          countries.find((c) => c.id === selectedCountry)?.name_cn ||
-                          "Unknown Country"
+                          countries.find((c) => c.id === selectedCountry)
+                            ? getLocalizedName(countries.find((c) => c.id === selectedCountry)!)
+                            : "Unknown Country"
                         } flag`}
                         style={{
                           width: "20px",
@@ -905,13 +935,14 @@ const RentNumberPage: React.FC = () => {
                         }}
                       />
                       <Text>
-                        {countries.find((c) => c.id === selectedCountry)?.name_cn ||
-                          "Unknown Country"}
+                        {countries.find((c) => c.id === selectedCountry)
+                          ? getLocalizedName(countries.find((c) => c.id === selectedCountry)!)
+                          : "Unknown Country"}
                       </Text>
                     </div>
                   </Col>
                   <Col span={12}>
-                    <Text strong>最终价格:</Text>
+                    <Text strong>{t("rentals.finalPrice")}:</Text>
                     <br />
                     <Text strong style={{ fontSize: "18px", color: "#722ed1" }}>
                       ${getFinalPrice()}
@@ -923,16 +954,17 @@ const RentNumberPage: React.FC = () => {
               {/* 余额检查 */}
               {!hasEnoughBalance() && (
                 <Alert
-                  message="余额不足"
-                  description={`当前余额 $${
-                    user?.balance?.toFixed(2) || "0.00"
-                  }，需要 $${getFinalPrice()}`}
+                  message={t("rentals.insufficientBalance")}
+                  description={t("rentals.insufficientBalanceDescription", {
+                    currentBalance: user?.balance?.toFixed(2) || "0.00",
+                    totalPrice: getFinalPrice(),
+                  })}
                   type="warning"
                   showIcon
                   style={{ marginBottom: "24px" }}
                   action={
-                    <Button size="small" onClick={() => navigate("/balance")}>
-                      立即充值
+                    <Button size="small" onClick={() => navigate("balance")}>
+                      {t("rentals.rechargeNow")}
                     </Button>
                   }
                 />
@@ -940,15 +972,15 @@ const RentNumberPage: React.FC = () => {
 
               {/* 服务说明 */}
               <Alert
-                message="租用说明"
-                description={`租用期间，您将获得一个专属手机号码，可以接收多条短信。租用时长结束后，号码将被自动回收。如需延长租用时间，请在到期前续费。`}
+                message={t("rentals.rentalInstructions")}
+                description={t("rentals.rentalInstructionsDescription")}
                 type="info"
                 showIcon
                 style={{ marginBottom: "24px" }}
               />
 
               {/* 费用明细 */}
-              <Card title="费用明细" size="small">
+              <Card title={t("rentals.costBreakdown")} size="small">
                 <div
                   style={{
                     display: "flex",
@@ -956,8 +988,11 @@ const RentNumberPage: React.FC = () => {
                     marginBottom: "8px",
                   }}
                 >
-                  <Text>基础价格:</Text>
-                  <Text>${(selectedService?.base_price || 0).toFixed(2)}/小时</Text>
+                  <Text>{t("rentals.basePrice")}:</Text>
+                  <Text>
+                    ${(selectedService?.base_price || 0).toFixed(2)}
+                    {t("rentals.perHour")}
+                  </Text>
                 </div>
                 <div
                   style={{
@@ -966,7 +1001,7 @@ const RentNumberPage: React.FC = () => {
                     marginBottom: "8px",
                   }}
                 >
-                  <Text>时长系数:</Text>
+                  <Text>{t("rentals.durationMultiplier")}:</Text>
                   <Text>
                     {selectedDuration > 72
                       ? "7x"
@@ -988,14 +1023,14 @@ const RentNumberPage: React.FC = () => {
                     marginBottom: "8px",
                   }}
                 >
-                  <Text>国家系数:</Text>
+                  <Text>{t("rentals.countryMultiplier")}:</Text>
                   <Text>
                     {countries.find((c) => c.id === selectedCountry)?.price_multiplier || 1}x
                   </Text>
                 </div>
                 <Divider style={{ margin: "8px 0" }} />
                 <div style={{ display: "flex", justifyContent: "space-between" }}>
-                  <Text strong>总计:</Text>
+                  <Text strong>{t("rentals.total")}:</Text>
                   <Text strong style={{ color: "#722ed1" }}>
                     ${getFinalPrice()}
                   </Text>
@@ -1008,7 +1043,9 @@ const RentNumberPage: React.FC = () => {
           <div style={{ textAlign: "center", marginTop: "32px" }}>
             <Space size="middle">
               {currentStep > 0 && (
-                <Button onClick={() => setCurrentStep(currentStep - 1)}>上一步</Button>
+                <Button onClick={() => setCurrentStep(currentStep - 1)}>
+                  {t("rentals.previousStep")}
+                </Button>
               )}
 
               {currentStep < 3 && (
@@ -1022,7 +1059,7 @@ const RentNumberPage: React.FC = () => {
                   }
                   style={{ backgroundColor: "#722ed1", borderColor: "#722ed1" }}
                 >
-                  下一步
+                  {t("rentals.nextStep")}
                 </Button>
               )}
 
@@ -1035,11 +1072,11 @@ const RentNumberPage: React.FC = () => {
                   disabled={!hasEnoughBalance()}
                   style={{ backgroundColor: "#722ed1", borderColor: "#722ed1" }}
                 >
-                  确认租用 (${getFinalPrice()})
+                  {t("rentals.confirmRental")} (${getFinalPrice()})
                 </Button>
               )}
 
-              <Button onClick={handleReset}>重新选择</Button>
+              <Button onClick={handleReset}>{t("rentals.reselect")}</Button>
             </Space>
           </div>
         </Spin>

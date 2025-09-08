@@ -27,7 +27,9 @@ import {
   CheckCircleOutlined,
   ExclamationCircleOutlined,
 } from "@ant-design/icons";
-import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
+import { useLanguage } from "../../contexts/LanguageContext";
+import { useLocalizedNavigate } from "../../hooks/useLocalizedNavigate";
 import { activationApi } from "../../services/api";
 
 import { useWebSocket } from "../../hooks/useWebSocket";
@@ -37,7 +39,9 @@ import { countries, serviceCategories } from "../../data/services";
 const { Title, Text } = Typography;
 
 const ActivationsPage: React.FC = () => {
-  const navigate = useNavigate();
+  const navigate = useLocalizedNavigate();
+  const { t } = useTranslation();
+  const { currentLanguage } = useLanguage();
 
   const { isConnected, socket } = useWebSocket();
 
@@ -45,6 +49,16 @@ const ActivationsPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [timers, setTimers] = useState<Record<number, number>>({});
+  const [isMobile, setIsMobile] = useState(false);
+
+  // 根据当前语言获取本地化名称
+  const getLocalizedName = (item: any) => {
+    if (currentLanguage === "zh-CN") {
+      return item.name_cn || item.name;
+    } else {
+      return item.name || item.name_cn;
+    }
+  };
 
   // 获取激活列表
   const fetchActivations = useCallback(async (showLoading = true) => {
@@ -74,7 +88,7 @@ const ActivationsPage: React.FC = () => {
       }
     } catch (error: any) {
       console.error("获取激活列表失败:", error);
-      message.error("获取激活列表失败");
+      message.error(t("activations.fetchActivationsFailed"));
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -85,32 +99,32 @@ const ActivationsPage: React.FC = () => {
   const handleBulkCheck = async () => {
     const activeIds = activeActivations.map((a) => a.id);
     if (activeIds.length === 0) {
-      message.info("没有活跃的激活记录需要检查");
+      message.info(t("activations.noActiveActivations"));
       return;
     }
 
     setRefreshing(true);
     try {
       // 第一步：先刷新列表获取最新状态
-      message.info("正在刷新激活列表...");
+      message.info(t("activations.refreshingActivations"));
       await fetchActivations(false);
 
       // 第二步：执行批量状态检查
-      message.info("正在检查激活状态...");
+      message.info(t("activations.checkingStatus"));
       const response = await activationApi.bulkCheckStatus(activeIds);
       if (response.success) {
         const { updated, total } = response.data;
         if (updated > 0) {
-          message.success(`已更新 ${updated} 个激活状态`);
+          message.success(t("activations.updatedStatus", { count: updated }));
         } else {
-          message.info(`已检查 ${total} 个激活，状态都是最新的`);
+          message.info(t("activations.allStatusUpToDate", { count: total }));
         }
         // 最后再次刷新列表以显示最新状态
         await fetchActivations(false);
       }
     } catch (error: any) {
       console.error("批量检查状态失败:", error);
-      message.error("批量检查状态失败");
+      message.error(t("activations.bulkCheckFailed"));
       // 即使检查失败，也尝试刷新列表
       await fetchActivations(false);
     } finally {
@@ -122,6 +136,18 @@ const ActivationsPage: React.FC = () => {
   useEffect(() => {
     fetchActivations();
   }, [fetchActivations]);
+
+  // 检查屏幕尺寸
+  useEffect(() => {
+    const checkScreenSize = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+
+    checkScreenSize();
+    window.addEventListener("resize", checkScreenSize);
+
+    return () => window.removeEventListener("resize", checkScreenSize);
+  }, []);
 
   // WebSocket 实时更新
   useEffect(() => {
@@ -184,7 +210,7 @@ const ActivationsPage: React.FC = () => {
 
   // 格式化剩余时间
   const formatRemainingTime = (seconds: number): string => {
-    if (seconds <= 0) return "已过期";
+    if (seconds <= 0) return t("activations.expired");
 
     const minutes = Math.floor(seconds / 60);
     const remainingSeconds = seconds % 60;
@@ -204,9 +230,9 @@ const ActivationsPage: React.FC = () => {
   const copyToClipboard = async (text: string, description: string) => {
     try {
       await navigator.clipboard.writeText(text);
-      message.success(`${description}已复制到剪贴板`);
+      message.success(t("activations.copiedToClipboard", { item: description }));
     } catch (error) {
-      message.error("复制失败");
+      message.error(t("activations.copyFailed"));
     }
   };
 
@@ -215,12 +241,12 @@ const ActivationsPage: React.FC = () => {
     try {
       const response = await activationApi.cancel(activation.id);
       if (response.success) {
-        message.success("激活已取消");
+        message.success(t("activations.activationCancelled"));
         fetchActivations(false);
       }
     } catch (error: any) {
       console.error("取消激活失败:", error);
-      message.error("取消激活失败");
+      message.error(t("activations.cancelFailed"));
     }
   };
 
@@ -229,12 +255,12 @@ const ActivationsPage: React.FC = () => {
     try {
       const response = await activationApi.confirm(activation.id);
       if (response.success) {
-        message.success("激活已确认完成！");
+        message.success(t("activations.activationConfirmed"));
         fetchActivations(false);
       }
     } catch (error: any) {
       console.error("确认激活失败:", error);
-      message.error("确认激活失败");
+      message.error(t("activations.confirmFailed"));
     }
   };
 
@@ -243,12 +269,12 @@ const ActivationsPage: React.FC = () => {
     try {
       const response = await activationApi.retry(activation.id);
       if (response.success) {
-        message.success("已请求重发短信，请稍候...");
+        message.success(t("activations.retryRequested"));
         fetchActivations(false);
       }
     } catch (error: any) {
       console.error("请求重发短信失败:", error);
-      message.error("请求重发短信失败");
+      message.error(t("activations.retryFailed"));
     }
   };
 
@@ -261,8 +287,8 @@ const ActivationsPage: React.FC = () => {
       operator: activation.operator || "any",
     });
 
-    navigate(`/get-number?${params.toString()}`);
-    message.info("已为您填入相同设置，请确认订单");
+    navigate(`get-number?${params.toString()}`);
+    message.info(t("activations.reorderSettingsFilled"));
   };
 
   // 获取服务图标
@@ -287,33 +313,33 @@ const ActivationsPage: React.FC = () => {
       case "0":
         return {
           color: "processing",
-          text: "等待短信",
+          text: t("activations.waitingForSms"),
           icon: <ClockCircleOutlined />,
         };
       case "1":
         return {
           color: "warning",
-          text: "等待重试",
+          text: t("activations.waitingForRetry"),
           icon: <ExclamationCircleOutlined />,
         };
       case "3":
         return {
           color: "success",
-          text: "已收到短信",
+          text: t("activations.smsReceived"),
           icon: <CheckCircleOutlined />,
         };
       case "6":
-        return { color: "error", text: "已取消", icon: <CloseOutlined /> };
+        return { color: "error", text: t("activations.cancelled"), icon: <CloseOutlined /> };
       case "8":
         return {
           color: "success",
-          text: "激活完成",
+          text: t("activations.activationCompleted"),
           icon: <CheckCircleOutlined />,
         };
       default:
         return {
           color: "default",
-          text: activation.status_text || "未知状态",
+          text: activation.status_text || t("activations.unknownStatus"),
           icon: <MessageOutlined />,
         };
     }
@@ -324,7 +350,7 @@ const ActivationsPage: React.FC = () => {
       <div style={{ textAlign: "center", padding: "50px" }}>
         <Spin size="large" />
         <div style={{ marginTop: "16px" }}>
-          <Text type="secondary">正在加载激活记录...</Text>
+          <Text type="secondary">{t("activations.loadingActivations")}</Text>
         </div>
       </div>
     );
@@ -333,62 +359,92 @@ const ActivationsPage: React.FC = () => {
   const activeActivations = activations.filter((a) => a.status !== "6" && a.status !== "8");
 
   return (
-    <div>
+    <div style={{ padding: isMobile ? "16px" : "24px" }}>
       <div
         style={{
           display: "flex",
           justifyContent: "space-between",
-          alignItems: "center",
-          marginBottom: "24px",
+          alignItems: isMobile ? "flex-start" : "center",
+          marginBottom: isMobile ? "16px" : "24px",
+          flexDirection: isMobile ? "column" : "row",
+          gap: isMobile ? "12px" : "0",
         }}
       >
-        <Title level={2} style={{ margin: 0 }}>
-          激活记录
+        <Title
+          level={2}
+          style={{
+            margin: 0,
+            fontSize: isMobile ? "18px" : "24px",
+          }}
+        >
+          {t("activations.activationRecords")}
         </Title>
-        <Space>
+        <Space
+          direction={isMobile ? "vertical" : "horizontal"}
+          size={isMobile ? "small" : "middle"}
+          style={{ width: isMobile ? "100%" : "auto" }}
+        >
           <Badge count={activeActivations.length} style={{ backgroundColor: "#52c41a" }}>
-            <Text type="secondary">活跃激活</Text>
+            <Text type="secondary" style={{ fontSize: isMobile ? "12px" : "14px" }}>
+              {t("activations.activeActivations")}
+            </Text>
           </Badge>
-          <Tooltip title="先刷新列表，然后检查所有活跃激活的最新状态">
+          <Tooltip title={t("activations.refreshAndCheckTooltip")}>
             <Button
               icon={<ReloadOutlined />}
               onClick={handleBulkCheck}
               loading={refreshing}
               type="primary"
+              size={isMobile ? "small" : "middle"}
+              style={{ width: isMobile ? "100%" : "auto" }}
             >
-              {refreshing ? "处理中..." : "刷新并检查"}
+              {refreshing ? t("activations.processing") : t("activations.refreshAndCheck")}
             </Button>
           </Tooltip>
         </Space>
       </div>
 
       {/* WebSocket 连接状态 */}
-      <div style={{ marginBottom: "16px" }}>
+      <div style={{ marginBottom: isMobile ? "12px" : "16px" }}>
         <Alert
           message={
-            <Space size="small">
+            <Space size="small" direction={isMobile ? "vertical" : "horizontal"}>
               <Badge
                 status={isConnected ? "success" : "error"}
-                text={isConnected ? "实时连接" : "连接断开"}
+                text={
+                  isConnected
+                    ? t("activations.realTimeConnected")
+                    : t("activations.connectionDisconnected")
+                }
               />
-              <span style={{ fontSize: "14px", fontWeight: 500 }}>
-                {isConnected ? "系统运行中" : "系统离线"}
+              <span
+                style={{
+                  fontSize: isMobile ? "12px" : "14px",
+                  fontWeight: 500,
+                }}
+              >
+                {isConnected ? t("activations.systemRunning") : t("activations.systemOffline")}
               </span>
             </Space>
           }
           description={
-            <div style={{ marginTop: "8px", fontSize: "13px" }}>
+            <div
+              style={{
+                marginTop: isMobile ? "4px" : "8px",
+                fontSize: isMobile ? "11px" : "13px",
+              }}
+            >
               {isConnected ? (
-                <Text type="secondary">自动检查激活状态 • 实时推送短信验证码</Text>
+                <Text type="secondary">{t("activations.autoCheckAndPush")}</Text>
               ) : (
-                <Text type="warning">连接已断开，请刷新页面重新连接</Text>
+                <Text type="warning">{t("activations.connectionDisconnectedRefresh")}</Text>
               )}
             </div>
           }
           type={isConnected ? "success" : "warning"}
           showIcon
           style={{
-            marginBottom: "16px",
+            marginBottom: isMobile ? "12px" : "16px",
             borderRadius: "8px",
             border: "none",
             boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
@@ -397,19 +453,30 @@ const ActivationsPage: React.FC = () => {
       </div>
 
       {activeActivations.length === 0 ? (
-        <Card>
+        <Card size={isMobile ? "small" : "default"}>
           <Empty
-            image={<MessageOutlined style={{ fontSize: "64px", color: "#d9d9d9" }} />}
-            description="暂无活跃的激活记录"
-            style={{ padding: "50px 0" }}
+            image={
+              <MessageOutlined style={{ fontSize: isMobile ? "48px" : "64px", color: "#d9d9d9" }} />
+            }
+            description={
+              <Text style={{ fontSize: isMobile ? "14px" : "16px" }}>
+                {t("activations.noActiveRecords")}
+              </Text>
+            }
+            style={{ padding: isMobile ? "30px 0" : "50px 0" }}
           >
-            <Button type="primary" onClick={() => navigate("/get-number")}>
-              获取新号码
+            <Button
+              type="primary"
+              onClick={() => navigate("get-number")}
+              size={isMobile ? "small" : "middle"}
+              style={{ width: isMobile ? "100%" : "auto" }}
+            >
+              {t("activations.getNewNumber")}
             </Button>
           </Empty>
         </Card>
       ) : (
-        <Row gutter={[16, 16]}>
+        <Row gutter={isMobile ? [8, 8] : [16, 16]}>
           {activeActivations.map((activation) => {
             const country = getCountryInfo(activation.country_id);
             const statusInfo = getStatusInfo(activation);
@@ -427,25 +494,38 @@ const ActivationsPage: React.FC = () => {
                     boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
                     border: activation.sms_code ? "2px solid #52c41a" : "1px solid #d9d9d9",
                   }}
-                  bodyStyle={{ padding: "16px" }}
+                  styles={{
+                    body: {
+                      padding: isMobile ? "12px" : "16px",
+                    },
+                  }}
                 >
                   {/* 头部 - 服务和国家 */}
                   <div
                     style={{
                       display: "flex",
                       alignItems: "center",
-                      marginBottom: "12px",
+                      marginBottom: isMobile ? "8px" : "12px",
+                      flexDirection: isMobile ? "column" : "row",
+                      gap: isMobile ? "8px" : "0",
                     }}
                   >
-                    <div style={{ display: "flex", alignItems: "center", flex: 1 }}>
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        flex: 1,
+                        width: isMobile ? "100%" : "auto",
+                      }}
+                    >
                       {serviceIcon && (
                         <img
                           src={serviceIcon}
                           alt={activation.service_name}
                           style={{
-                            width: "24px",
-                            height: "24px",
-                            marginRight: "8px",
+                            width: isMobile ? "20px" : "24px",
+                            height: isMobile ? "20px" : "24px",
+                            marginRight: isMobile ? "6px" : "8px",
                             borderRadius: "4px",
                           }}
                           onError={(e) => {
@@ -453,11 +533,16 @@ const ActivationsPage: React.FC = () => {
                           }}
                         />
                       )}
-                      <div>
-                        <Text strong style={{ fontSize: "14px" }}>
+                      <div style={{ flex: 1 }}>
+                        <Text
+                          strong
+                          style={{
+                            fontSize: isMobile ? "13px" : "14px",
+                            display: "block",
+                          }}
+                        >
                           {activation.service_name}
                         </Text>
-                        <br />
                         <div
                           style={{
                             display: "flex",
@@ -470,28 +555,40 @@ const ActivationsPage: React.FC = () => {
                               src={country.flag}
                               alt={country.name_cn}
                               style={{
-                                width: "16px",
-                                height: "12px",
+                                width: isMobile ? "14px" : "16px",
+                                height: isMobile ? "10px" : "12px",
                                 marginRight: "4px",
                                 borderRadius: "2px",
                               }}
                             />
                           )}
-                          <Text type="secondary" style={{ fontSize: "12px" }}>
-                            {activation.country_name}
+                          <Text
+                            type="secondary"
+                            style={{
+                              fontSize: isMobile ? "11px" : "12px",
+                            }}
+                          >
+                            {country ? getLocalizedName(country) : activation.country_name}
                           </Text>
                         </div>
                       </div>
                     </div>
 
-                    <Tag color={statusInfo.color} icon={statusInfo.icon}>
+                    <Tag
+                      color={statusInfo.color}
+                      icon={statusInfo.icon}
+                      style={{
+                        fontSize: isMobile ? "10px" : "12px",
+                        marginLeft: isMobile ? "0" : "8px",
+                      }}
+                    >
                       {statusInfo.text}
                     </Tag>
                   </div>
 
                   {/* 手机号码 */}
                   {activation.phone_number && (
-                    <div style={{ marginBottom: "12px" }}>
+                    <div style={{ marginBottom: isMobile ? "8px" : "12px" }}>
                       <div
                         style={{
                           display: "flex",
@@ -499,12 +596,17 @@ const ActivationsPage: React.FC = () => {
                           justifyContent: "space-between",
                         }}
                       >
-                        <Space>
-                          <PhoneOutlined style={{ color: "#1890ff" }} />
+                        <Space size="small">
+                          <PhoneOutlined
+                            style={{
+                              color: "#1890ff",
+                              fontSize: isMobile ? "14px" : "16px",
+                            }}
+                          />
                           <Text
                             strong
                             style={{
-                              fontSize: "16px",
+                              fontSize: isMobile ? "14px" : "16px",
                               fontFamily: "monospace",
                             }}
                           >
@@ -515,7 +617,13 @@ const ActivationsPage: React.FC = () => {
                           type="text"
                           size="small"
                           icon={<CopyOutlined />}
-                          onClick={() => copyToClipboard(activation.phone_number!, "手机号码")}
+                          onClick={() =>
+                            copyToClipboard(activation.phone_number!, t("activations.phoneNumber"))
+                          }
+                          style={{
+                            padding: isMobile ? "2px 4px" : "4px 8px",
+                            fontSize: isMobile ? "10px" : "12px",
+                          }}
                         />
                       </div>
                     </div>
@@ -528,8 +636,8 @@ const ActivationsPage: React.FC = () => {
                         backgroundColor: "#f6ffed",
                         border: "1px solid #b7eb8f",
                         borderRadius: "6px",
-                        padding: "8px",
-                        marginBottom: "12px",
+                        padding: isMobile ? "6px" : "8px",
+                        marginBottom: isMobile ? "8px" : "12px",
                       }}
                     >
                       <div
@@ -539,12 +647,17 @@ const ActivationsPage: React.FC = () => {
                           justifyContent: "space-between",
                         }}
                       >
-                        <Space>
-                          <MessageOutlined style={{ color: "#52c41a" }} />
+                        <Space size="small">
+                          <MessageOutlined
+                            style={{
+                              color: "#52c41a",
+                              fontSize: isMobile ? "14px" : "16px",
+                            }}
+                          />
                           <Text
                             strong
                             style={{
-                              fontSize: "18px",
+                              fontSize: isMobile ? "16px" : "18px",
                               fontFamily: "monospace",
                               color: "#52c41a",
                             }}
@@ -556,7 +669,13 @@ const ActivationsPage: React.FC = () => {
                           type="text"
                           size="small"
                           icon={<CopyOutlined />}
-                          onClick={() => copyToClipboard(activation.sms_code!, "验证码")}
+                          onClick={() =>
+                            copyToClipboard(activation.sms_code!, t("activations.verificationCode"))
+                          }
+                          style={{
+                            padding: isMobile ? "2px 4px" : "4px 8px",
+                            fontSize: isMobile ? "10px" : "12px",
+                          }}
                         />
                       </div>
                     </div>
@@ -566,17 +685,24 @@ const ActivationsPage: React.FC = () => {
                         backgroundColor: "#fafafa",
                         border: "1px dashed #d9d9d9",
                         borderRadius: "6px",
-                        padding: "8px",
-                        marginBottom: "12px",
+                        padding: isMobile ? "6px" : "8px",
+                        marginBottom: isMobile ? "8px" : "12px",
                         textAlign: "center",
                       }}
                     >
-                      <Text type="secondary">等待短信验证码...</Text>
+                      <Text
+                        type="secondary"
+                        style={{
+                          fontSize: isMobile ? "11px" : "12px",
+                        }}
+                      >
+                        {t("activations.waitingForSmsCode")}
+                      </Text>
                     </div>
                   )}
 
                   {/* 剩余时间 */}
-                  <div style={{ marginBottom: "12px" }}>
+                  <div style={{ marginBottom: isMobile ? "8px" : "12px" }}>
                     <div
                       style={{
                         display: "flex",
@@ -585,13 +711,18 @@ const ActivationsPage: React.FC = () => {
                         marginBottom: "4px",
                       }}
                     >
-                      <Text type="secondary" style={{ fontSize: "12px" }}>
-                        剩余时间
+                      <Text
+                        type="secondary"
+                        style={{
+                          fontSize: isMobile ? "10px" : "12px",
+                        }}
+                      >
+                        {t("activations.remainingTime")}
                       </Text>
                       <Text
                         strong
                         style={{
-                          fontSize: "12px",
+                          fontSize: isMobile ? "10px" : "12px",
                           color: remainingTime < 300 ? "#ff4d4f" : "#1890ff",
                         }}
                       >
@@ -607,7 +738,7 @@ const ActivationsPage: React.FC = () => {
                   </div>
 
                   {/* 价格信息 */}
-                  <div style={{ marginBottom: "12px" }}>
+                  <div style={{ marginBottom: isMobile ? "8px" : "12px" }}>
                     <div
                       style={{
                         display: "flex",
@@ -615,31 +746,59 @@ const ActivationsPage: React.FC = () => {
                         alignItems: "center",
                       }}
                     >
-                      <Text type="secondary" style={{ fontSize: "12px" }}>
-                        {activation.is_freeprice ? "实际价格" : "费用"}
+                      <Text
+                        type="secondary"
+                        style={{
+                          fontSize: isMobile ? "10px" : "12px",
+                        }}
+                      >
+                        {activation.is_freeprice
+                          ? t("activations.actualPrice")
+                          : t("activations.cost")}
                       </Text>
-                      <Text strong style={{ color: "#52c41a" }}>
+                      <Text
+                        strong
+                        style={{
+                          color: "#52c41a",
+                          fontSize: isMobile ? "12px" : "14px",
+                        }}
+                      >
                         ${activation.actual_cost || activation.cost}
                       </Text>
                     </div>
                     {activation.is_freeprice && activation.max_price && (
-                      <Text type="secondary" style={{ fontSize: "11px" }}>
-                        最大价格: ${activation.max_price}
+                      <Text
+                        type="secondary"
+                        style={{
+                          fontSize: isMobile ? "9px" : "11px",
+                        }}
+                      >
+                        {t("activations.maxPrice")}: ${activation.max_price}
                       </Text>
                     )}
                   </div>
 
                   {/* 操作按钮 */}
-                  <div style={{ display: "flex", gap: "8px" }}>
-                    <Tooltip title="使用相同设置重新订购">
+                  <div
+                    style={{
+                      display: "flex",
+                      gap: isMobile ? "4px" : "8px",
+                      flexDirection: isMobile ? "column" : "row",
+                    }}
+                  >
+                    <Tooltip title={t("activations.reorderWithSameSettings")}>
                       <Button
                         type="default"
                         size="small"
                         icon={<RedoOutlined />}
                         onClick={() => handleReorder(activation)}
-                        style={{ flex: 1 }}
+                        style={{
+                          flex: 1,
+                          fontSize: isMobile ? "10px" : "12px",
+                          height: isMobile ? "28px" : "32px",
+                        }}
                       >
-                        重新订购
+                        {t("activations.reorder")}
                       </Button>
                     </Tooltip>
 
@@ -650,9 +809,13 @@ const ActivationsPage: React.FC = () => {
                         size="small"
                         icon={<ReloadOutlined />}
                         onClick={() => handleRetry(activation)}
-                        style={{ flex: 1 }}
+                        style={{
+                          flex: 1,
+                          fontSize: isMobile ? "10px" : "12px",
+                          height: isMobile ? "28px" : "32px",
+                        }}
                       >
-                        重发短信
+                        {t("activations.resendSms")}
                       </Button>
                     )}
 
@@ -663,9 +826,13 @@ const ActivationsPage: React.FC = () => {
                         size="small"
                         icon={<CheckCircleOutlined />}
                         onClick={() => handleConfirm(activation)}
-                        style={{ flex: 1 }}
+                        style={{
+                          flex: 1,
+                          fontSize: isMobile ? "10px" : "12px",
+                          height: isMobile ? "28px" : "32px",
+                        }}
                       >
-                        确认完成
+                        {t("activations.confirmComplete")}
                       </Button>
                     )}
 
@@ -676,14 +843,24 @@ const ActivationsPage: React.FC = () => {
                       activation.status !== "6" &&
                       activation.status !== "8" && (
                         <Popconfirm
-                          title="确认取消激活?"
-                          description="取消后将返还部分费用到您的账户"
+                          title={t("activations.confirmCancelActivation")}
+                          description={t("activations.cancelRefundDescription")}
                           onConfirm={() => handleCancel(activation)}
-                          okText="确认"
-                          cancelText="取消"
+                          okText={t("activations.confirm")}
+                          cancelText={t("activations.cancel")}
                         >
-                          <Button type="default" size="small" icon={<CloseOutlined />} danger>
-                            取消
+                          <Button
+                            type="default"
+                            size="small"
+                            icon={<CloseOutlined />}
+                            danger
+                            style={{
+                              flex: 1,
+                              fontSize: isMobile ? "10px" : "12px",
+                              height: isMobile ? "28px" : "32px",
+                            }}
+                          >
+                            {t("activations.cancel")}
                           </Button>
                         </Popconfirm>
                       )}
@@ -692,13 +869,19 @@ const ActivationsPage: React.FC = () => {
                   {/* 额外信息 */}
                   <div
                     style={{
-                      marginTop: "8px",
-                      paddingTop: "8px",
+                      marginTop: isMobile ? "6px" : "8px",
+                      paddingTop: isMobile ? "6px" : "8px",
                       borderTop: "1px solid #f0f0f0",
                     }}
                   >
-                    <Text type="secondary" style={{ fontSize: "11px" }}>
-                      订单 #{activation.activation_id} •{" "}
+                    <Text
+                      type="secondary"
+                      style={{
+                        fontSize: isMobile ? "9px" : "11px",
+                        lineHeight: isMobile ? "1.2" : "1.4",
+                      }}
+                    >
+                      {t("activations.orderNumber")} #{activation.activation_id} •{" "}
                       {new Date(activation.created_at).toLocaleString()}
                     </Text>
                   </div>

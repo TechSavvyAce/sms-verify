@@ -1,17 +1,18 @@
 import React, { useState } from "react";
-import { Layout, Button, Dropdown, Avatar, Badge, Space, Typography, Modal } from "antd";
+import { Layout, Button, Dropdown, Avatar, Space, Typography, Modal } from "antd";
 import {
   MenuFoldOutlined,
   MenuUnfoldOutlined,
-  BellOutlined,
   UserOutlined,
   SettingOutlined,
   LogoutOutlined,
   WalletOutlined,
   QuestionCircleOutlined,
 } from "@ant-design/icons";
+import { useTranslation } from "react-i18next";
 import { useAuthStore } from "../../stores/authStore";
-import { useNavigate } from "react-router-dom";
+import { useLocalizedNavigate } from "../../hooks/useLocalizedNavigate";
+import LanguageSwitcher from "../Common/LanguageSwitcher";
 
 const { Header } = Layout;
 const { Text } = Typography;
@@ -23,8 +24,9 @@ interface AppHeaderProps {
 }
 
 const AppHeader: React.FC<AppHeaderProps> = ({ collapsed, onCollapse, isMobile }) => {
+  const { t } = useTranslation();
   const { user, logout } = useAuthStore();
-  const navigate = useNavigate();
+  const navigate = useLocalizedNavigate();
   const [logoutModalVisible, setLogoutModalVisible] = useState(false);
 
   const handleLogout = () => {
@@ -33,7 +35,7 @@ const AppHeader: React.FC<AppHeaderProps> = ({ collapsed, onCollapse, isMobile }
 
   const confirmLogout = () => {
     logout();
-    navigate("/login");
+    navigate("login");
     setLogoutModalVisible(false);
   };
 
@@ -41,17 +43,16 @@ const AppHeader: React.FC<AppHeaderProps> = ({ collapsed, onCollapse, isMobile }
     {
       key: "profile",
       icon: <UserOutlined />,
-      label: "个人资料",
-      onClick: () => navigate("/profile"),
+      label: t("header.personalProfile"),
+      onClick: () => navigate("profile"),
     },
     {
       key: "balance",
       icon: <WalletOutlined />,
-      label: `余额: $${(user?.balance && typeof user.balance === "number"
-        ? user.balance
-        : 0
-      ).toFixed(2)}`,
-      onClick: () => navigate("/balance"),
+      label: t("header.balance", {
+        balance: (user?.balance && typeof user.balance === "number" ? user.balance : 0).toFixed(2),
+      }),
+      onClick: () => navigate("balance"),
     },
     {
       type: "divider" as const,
@@ -59,13 +60,13 @@ const AppHeader: React.FC<AppHeaderProps> = ({ collapsed, onCollapse, isMobile }
     {
       key: "settings",
       icon: <SettingOutlined />,
-      label: "设置",
-      onClick: () => navigate("/profile?tab=settings"),
+      label: t("common.settings"),
+      onClick: () => navigate("profile?tab=settings"),
     },
     {
       key: "help",
       icon: <QuestionCircleOutlined />,
-      label: "帮助中心",
+      label: t("header.helpCenter"),
       onClick: () => window.open("https://help.example.com", "_blank"),
     },
     {
@@ -74,7 +75,7 @@ const AppHeader: React.FC<AppHeaderProps> = ({ collapsed, onCollapse, isMobile }
     {
       key: "logout",
       icon: <LogoutOutlined />,
-      label: "退出登录",
+      label: t("common.logout"),
       onClick: handleLogout,
     },
   ];
@@ -108,7 +109,7 @@ const AppHeader: React.FC<AppHeaderProps> = ({ collapsed, onCollapse, isMobile }
           {!isMobile && (
             <div style={{ marginLeft: 16 }}>
               <Text strong style={{ fontSize: "16px", color: "#1890ff" }}>
-                短信验证平台
+                {t("header.smsPlatform")}
               </Text>
             </div>
           )}
@@ -117,17 +118,8 @@ const AppHeader: React.FC<AppHeaderProps> = ({ collapsed, onCollapse, isMobile }
         {/* 右侧：用户信息和操作 */}
         <div style={{ paddingRight: 24 }}>
           <Space size="middle">
-            {/* 通知铃铛 */}
-            <Badge count={0} size="small">
-              <Button
-                type="text"
-                icon={<BellOutlined />}
-                size="large"
-                onClick={() => {
-                  // TODO: 实现通知功能
-                }}
-              />
-            </Badge>
+            {/* 语言切换器 */}
+            <LanguageSwitcher size="middle" type="text" showText={!isMobile} />
 
             {/* 用户菜单 */}
             <Dropdown
@@ -175,7 +167,7 @@ const AppHeader: React.FC<AppHeaderProps> = ({ collapsed, onCollapse, isMobile }
                         lineHeight: 1.2,
                       }}
                     >
-                      {user?.username || "用户"}
+                      {user?.username || t("common.user")}
                     </Text>
                     <Text
                       style={{
@@ -200,15 +192,15 @@ const AppHeader: React.FC<AppHeaderProps> = ({ collapsed, onCollapse, isMobile }
 
       {/* 退出登录确认对话框 */}
       <Modal
-        title="确认退出"
+        title={t("header.confirmLogout")}
         open={logoutModalVisible}
         onOk={confirmLogout}
         onCancel={() => setLogoutModalVisible(false)}
-        okText="确认退出"
-        cancelText="取消"
+        okText={t("header.confirmLogoutButton")}
+        cancelText={t("header.cancelButton")}
         centered
       >
-        <p>您确定要退出登录吗？</p>
+        <p>{t("header.logoutConfirmation")}</p>
       </Modal>
     </>
   );

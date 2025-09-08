@@ -1,0 +1,94 @@
+/* Legal Pages Styles */
+.toc-container {
+  position: sticky;
+  top: 120px;
+}
+
+/* Mobile responsiveness */
+@media (max-width: 992px) {
+  .toc-container {
+    position: static;
+    top: auto;
+    margin-bottom: 24px;
+  }
+  
+  .toc-container .ant-card {
+    margin-bottom: 0;
+  }
+  
+  .toc-container .ant-card-body {
+    max-height: 200px;
+    overflow-y: auto;
+  }
+}
+
+/* Improve anchor link styling */
+.ant-anchor-link {
+  padding: 4px 0 !important;
+}
+
+.ant-anchor-link-title {
+  font-size: 13px !important;
+  line-height: 1.4 !important;
+  color: #666 !important;
+  transition: color 0.3s ease;
+}
+
+.ant-anchor-link-title:hover {
+  color: #1890ff !important;
+}
+
+.ant-anchor-link-active .ant-anchor-link-title {
+  color: #1890ff !important;
+  font-weight: 500;
+}
+
+/* Improve section spacing */
+.legal-section {
+  scroll-margin-top: 120px;
+}
+
+/* Better mobile layout */
+@media (max-width: 768px) {
+  .toc-container .ant-card-title {
+    font-size: 14px;
+  }
+  
+  .toc-container .ant-card-body {
+    padding: 12px;
+  }
+  
+  .legal-section {
+    margin-bottom: 24px !important;
+  }
+  
+  .legal-section h3 {
+    font-size: 18px !important;
+    margin-bottom: 12px !important;
+  }
+  
+  .legal-section p {
+    font-size: 14px !important;
+    line-height: 1.6 !important;
+  }
+  
+  .legal-section ul {
+    font-size: 14px !important;
+  }
+  
+  .legal-section li {
+    margin-bottom: 8px !important;
+  }
+}
+
+/* Button spacing on mobile */
+@media (max-width: 576px) {
+  .ant-space-vertical .ant-space-item {
+    margin-bottom: 16px !important;
+  }
+  
+  .ant-btn {
+    width: 100% !important;
+    max-width: 280px !important;
+  }
+}

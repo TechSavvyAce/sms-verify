@@ -13,6 +13,7 @@ import {
   Empty,
 } from "antd";
 import { WalletOutlined, SafetyCertificateOutlined } from "@ant-design/icons";
+import { useTranslation } from "react-i18next";
 import { useAuthStore } from "../../stores/authStore";
 import { userApi } from "../../services/api";
 import { getApiErrorMessage } from "../../utils/errorHelpers";
@@ -46,6 +47,7 @@ interface UserProfile {
 }
 
 const BalancePage: React.FC = () => {
+  const { t } = useTranslation();
   const { user } = useAuthStore();
   const { isConnected } = useWebSocket();
   const [loading, setLoading] = useState(false);
@@ -63,7 +65,7 @@ const BalancePage: React.FC = () => {
   useEffect(() => {
     const handlePaymentSuccess = (event: CustomEvent) => {
       const data = event.detail;
-      message.success(`充值成功！已到账 $${data.amount}`);
+      message.success(t("balance.paymentSuccess", { amount: data.amount }));
       loadProfileData();
       localStorage.removeItem("pendingPayment");
     };
@@ -84,7 +86,7 @@ const BalancePage: React.FC = () => {
         setProfileData(profile);
       }
     } catch (error: any) {
-      message.error(getApiErrorMessage(error.response?.data?.error, "加载个人资料失败"));
+      message.error(getApiErrorMessage(error.response?.data?.error, t("balance.loadProfileError")));
     } finally {
       setLoading(false);
     }
@@ -92,13 +94,13 @@ const BalancePage: React.FC = () => {
 
   const handleFundsUpdate = async () => {
     await loadProfileData();
-    message.success("充值成功！");
+    message.success(t("balance.fundsUpdateSuccess"));
   };
 
   if (!user) {
     return (
       <div style={{ textAlign: "center", padding: "50px" }}>
-        <Empty description="请先登录" />
+        <Empty description={t("balance.pleaseLogin")} />
       </div>
     );
   }
@@ -113,7 +115,7 @@ const BalancePage: React.FC = () => {
           fontSize: "24px",
         }}
       >
-        账户充值
+        {t("balance.accountRecharge")}
       </Title>
 
       <Spin spinning={loading}>
@@ -121,11 +123,14 @@ const BalancePage: React.FC = () => {
           <Row gutter={[24, 24]}>
             {/* Balance Overview */}
             <Col xs={24} sm={24} md={24} lg={24} xl={24}>
-              <Card title="余额概览" extra={<WalletOutlined style={{ color: "#52c41a" }} />}>
+              <Card
+                title={t("balance.balanceOverview")}
+                extra={<WalletOutlined style={{ color: "#52c41a" }} />}
+              >
                 <Row gutter={[24, 16]}>
                   <Col xs={24} sm={8} md={8} lg={8} xl={8}>
                     <Statistic
-                      title="当前余额"
+                      title={t("balance.currentBalance")}
                       value={profileData?.balance || user?.balance || 0}
                       precision={2}
                       prefix="$"
@@ -137,7 +142,7 @@ const BalancePage: React.FC = () => {
                   </Col>
                   <Col xs={24} sm={8} md={8} lg={8} xl={8}>
                     <Statistic
-                      title="累计充值"
+                      title={t("balance.totalRecharged")}
                       value={profileData?.total_recharged || user?.total_recharged || 0}
                       precision={2}
                       prefix="$"
@@ -149,7 +154,7 @@ const BalancePage: React.FC = () => {
                   </Col>
                   <Col xs={24} sm={8} md={8} lg={8} xl={8}>
                     <Statistic
-                      title="累计消费"
+                      title={t("balance.totalSpent")}
                       value={profileData?.total_spent || user?.total_spent || 0}
                       precision={2}
                       prefix="$"
@@ -166,15 +171,15 @@ const BalancePage: React.FC = () => {
             {/* Add Funds Section */}
             <Col xs={24} sm={24} md={24} lg={24} xl={24}>
               <Card
-                title="充值"
+                title={t("balance.addFunds")}
                 extra={
                   <Space direction="horizontal" size="small" className="space-responsive">
                     <Badge
                       status={isConnected ? "success" : "error"}
-                      text={isConnected ? "实时同步" : "离线模式"}
+                      text={isConnected ? t("balance.realTimeSync") : t("balance.offlineMode")}
                     />
                     <Text type="secondary" className="mobile-hide">
-                      支持多种支付方式
+                      {t("balance.multiplePaymentMethods")}
                     </Text>
                   </Space>
                 }
@@ -189,9 +194,9 @@ const BalancePage: React.FC = () => {
                         }}
                         className="wallet-icon-large"
                       />
-                      <Title level={4}>快速充值</Title>
+                      <Title level={4}>{t("balance.quickRecharge")}</Title>
                       <Text type="secondary" style={{ display: "block", marginBottom: "16px" }}>
-                        选择充值金额，使用安全支付方式完成充值
+                        {t("balance.quickRechargeDescription")}
                       </Text>
                       <Button
                         type="primary"
@@ -200,7 +205,7 @@ const BalancePage: React.FC = () => {
                         icon={<WalletOutlined />}
                         className="mobile-full-width"
                       >
-                        立即充值
+                        {t("balance.rechargeNow")}
                       </Button>
                     </div>
                   </Col>
@@ -213,9 +218,9 @@ const BalancePage: React.FC = () => {
                         }}
                         className="wallet-icon-large"
                       />
-                      <Title level={4}>安全支付</Title>
+                      <Title level={4}>{t("balance.securePayment")}</Title>
                       <Text type="secondary" style={{ display: "block", marginBottom: "16px" }}>
-                        使用 onetimeping.eu 进行安全的加密货币支付
+                        {t("balance.securePaymentDescription")}
                       </Text>
                     </div>
                   </Col>

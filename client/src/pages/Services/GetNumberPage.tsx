@@ -18,6 +18,7 @@ import {
   Tooltip,
   Collapse,
   InputNumber,
+  Dropdown,
 } from "antd";
 import { MessageOutlined, ArrowRightOutlined, ClockCircleOutlined } from "@ant-design/icons";
 import { useAuthStore } from "../../stores/authStore";
@@ -25,10 +26,14 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { serviceCategories, countries, calculatePrice } from "../../data/services";
 import { activationApi } from "../../services/api";
 import { getApiErrorMessage } from "../../utils/errorHelpers";
+import { useTranslation } from "react-i18next";
+import { useLanguage } from "../../contexts/LanguageContext";
 
 const { Title, Paragraph, Text } = Typography;
 
 const GetNumberPage: React.FC = () => {
+  const { t } = useTranslation();
+  const { currentLanguage } = useLanguage();
   const navigate = useNavigate();
   const location = useLocation();
   const { user } = useAuthStore();
@@ -194,19 +199,19 @@ const GetNumberPage: React.FC = () => {
   // 确认订单（支持多个号码）
   const handleConfirmOrder = async () => {
     if (!selectedService || selectedCountry === null) {
-      message.error("请选择服务和国家");
+      message.error(t("services.pleaseSelectServiceAndCountry"));
       return;
     }
 
     // 验证 FreePrice 模式
     if (useFreePrice && (!maxPrice || maxPrice <= 0)) {
-      message.error("FreePrice 模式下必须设置有效的最大价格");
+      message.error(t("services.freePriceMaxPriceRequired"));
       return;
     }
 
     // 余额检查基于总价
     if (!hasEnoughBalance()) {
-      message.error("余额不足，请先充值");
+      message.error(t("services.insufficientBalance"));
       return;
     }
 
@@ -260,17 +265,26 @@ const GetNumberPage: React.FC = () => {
         if (successCount === 1 && firstActivation) {
           if (useFreePrice && maxPrice > 0) {
             message.success(
-              `FreePrice 订单创建成功！已分配号码: ${firstActivation.phone_number} | 实际价格: ${
-                firstActivation.actual_cost || firstActivation.cost
-              } USD`,
+              t("services.freePriceOrderCreated", {
+                phoneNumber: firstActivation.phone_number,
+                actualCost: firstActivation.actual_cost || firstActivation.cost,
+              }),
               5
             );
           } else {
-            message.success(`订单创建成功！已分配号码: ${firstActivation.phone_number}`, 5);
+            message.success(
+              t("services.orderCreatedSuccessfully", {
+                phoneNumber: firstActivation.phone_number,
+              }),
+              5
+            );
           }
         } else {
           message.success(
-            `已成功创建 ${successCount} 个订单${failureCount ? `，失败 ${failureCount} 个` : ""}`,
+            t("services.multipleOrdersCreated", {
+              successCount,
+              failureCount: failureCount ? t("services.failureCount", { count: failureCount }) : "",
+            }),
             5
           );
         }
@@ -296,16 +310,16 @@ const GetNumberPage: React.FC = () => {
         setQuantity(1);
 
         // 跳转到激活记录页面
-        navigate("/activations");
+        navigate("activations");
       } else {
-        throw new Error("订单创建失败");
+        throw new Error(t("services.orderCreationFailed"));
       }
     } catch (error: any) {
       console.error("创建激活订单失败:", error);
-      let errorMessage = "订单创建失败，请重试";
+      let errorMessage = t("services.orderCreationFailedRetry");
       if (error.response?.data?.error) {
         const backendError = error.response.data.error;
-        errorMessage = getApiErrorMessage(backendError, "订单创建失败，请重试");
+        errorMessage = getApiErrorMessage(backendError, t("services.orderCreationFailedRetry"));
       }
       message.error(errorMessage);
     } finally {
@@ -379,11 +393,20 @@ const GetNumberPage: React.FC = () => {
     return serviceCategories;
   };
 
+  // 根据当前语言获取本地化名称
+  const getLocalizedName = (item: any) => {
+    if (currentLanguage === "zh-CN") {
+      return item.name_cn || item.name;
+    } else {
+      return item.name || item.name_cn;
+    }
+  };
+
   // 步骤配置
   const steps = [
-    { title: "选择服务", description: "选择您需要的验证码服务" },
-    { title: "选择国家", description: "选择手机号码所属国家" },
-    { title: "确认订单", description: "确认订单信息并支付" },
+    { title: t("services.selectService") },
+    { title: t("services.selectCountry") },
+    { title: t("services.confirmOrder") },
   ];
 
   return (
@@ -398,7 +421,7 @@ const GetNumberPage: React.FC = () => {
                 marginBottom: "24px",
               }}
             />
-            <Title level={2}>获取验证码服务</Title>
+            <Title level={2}>{t("services.getVerificationCode")}</Title>
             <Paragraph
               style={{
                 fontSize: "16px",
@@ -406,13 +429,12 @@ const GetNumberPage: React.FC = () => {
                 margin: "0 auto 32px",
               }}
             >
-              选择服务平台和国家地区，我们将为您提供临时手机号码来接收短信验证码。
-              支持全球主流平台，快速稳定，价格透明。
+              {t("services.serviceDescription")}
             </Paragraph>
 
             {/* 余额显示 */}
             <div style={{ marginBottom: "24px" }}>
-              <Text type="secondary">当前余额: </Text>
+              <Text type="secondary">{t("services.currentBalance")}: </Text>
               <Text strong style={{ fontSize: "18px", color: "#1890ff" }}>
                 ${user?.balance?.toFixed(2) || "0.00"}
               </Text>
@@ -424,7 +446,7 @@ const GetNumberPage: React.FC = () => {
               icon={<ArrowRightOutlined />}
               onClick={() => setModalVisible(true)}
             >
-              开始选择服务
+              {t("services.startSelecting")}
             </Button>
           </Col>
         </Row>
@@ -432,7 +454,7 @@ const GetNumberPage: React.FC = () => {
 
       {/* 服务选择模态框 */}
       <Modal
-        title="选择验证码服务"
+        title={t("services.selectService")}
         open={modalVisible}
         onCancel={() => setModalVisible(false)}
         footer={null}
@@ -442,7 +464,7 @@ const GetNumberPage: React.FC = () => {
         {/* 步骤条 */}
         <Steps current={currentStep} style={{ marginBottom: "32px" }}>
           {steps.map((step, index) => (
-            <Steps.Step key={index} title={step.title} description={step.description} />
+            <Steps.Step key={index} title={step.title} />
           ))}
         </Steps>
 
@@ -466,21 +488,21 @@ const GetNumberPage: React.FC = () => {
               <div style={{ marginBottom: "16px" }}>
                 <Progress type="circle" percent={75} />
               </div>
-              <Text strong>正在处理您的订单...</Text>
+              <Text strong>{t("services.processingOrder")}</Text>
               <br />
-              <Text type="secondary">请稍候，正在分配手机号码</Text>
+              <Text type="secondary">{t("services.pleaseWait")}</Text>
             </div>
           </div>
         )}
 
         {currentStep === 0 && (
           <div>
-            <Title level={4}>选择验证码服务</Title>
+            <Title level={4}>{t("services.selectService")}</Title>
 
             {/* 服务搜索 */}
             <div style={{ marginBottom: "24px" }}>
               <Input
-                placeholder="搜索服务名称或分类（支持中文和英文）"
+                placeholder={t("services.searchService")}
                 value={serviceSearch}
                 onChange={(e) => {
                   setServiceSearch(e.target.value);
@@ -496,244 +518,303 @@ const GetNumberPage: React.FC = () => {
               // 搜索结果 - 显示所有匹配的服务
               <div>
                 <div style={{ marginBottom: "16px" }}>
-                  <Text type="secondary">找到 {filteredServices.length} 个相关服务</Text>
+                  <Text type="secondary">
+                    {t("services.foundServices", { count: filteredServices.length })}
+                  </Text>
                 </div>
-                <Row gutter={[16, 16]}>
+                <div style={{ maxHeight: "400px", overflowY: "auto" }}>
                   {filteredServices.map((service) => (
-                    <Col xs={24} sm={12} lg={8} key={service.code}>
-                      <Card
-                        hoverable
-                        style={{ cursor: "pointer" }}
-                        onClick={() => handleServiceSelect(service)}
-                      >
-                        <div style={{ textAlign: "center", marginBottom: "16px" }}>
-                          <img
-                            src={`https://smsactivate.s3.eu-central-1.amazonaws.com/assets/ico/${service.code}0.webp`}
-                            alt={`${service.name_cn || service.name} icon`}
-                            style={{
-                              width: "48px",
-                              height: "48px",
-                              borderRadius: "8px",
-                              objectFit: "cover",
-                            }}
-                            onError={(e) => {
-                              // Fallback to emoji if image fails to load
-                              const target = e.target as HTMLImageElement;
-                              target.style.display = "none";
-                              const fallback = target.nextElementSibling as HTMLElement;
-                              if (fallback) fallback.style.display = "block";
-                            }}
-                          />
-                          <div
-                            style={{
-                              fontSize: "32px",
-                              marginBottom: "8px",
-                              display: "none",
-                            }}
-                          >
-                            📱
-                          </div>
+                    <div
+                      key={service.code}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        padding: "12px 16px",
+                        border: "1px solid #f0f0f0",
+                        borderRadius: "8px",
+                        marginBottom: "8px",
+                        cursor: "pointer",
+                        transition: "all 0.2s",
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.borderColor = "#1890ff";
+                        e.currentTarget.style.backgroundColor = "#f6ffed";
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.borderColor = "#f0f0f0";
+                        e.currentTarget.style.backgroundColor = "transparent";
+                      }}
+                      onClick={() => handleServiceSelect(service)}
+                    >
+                      <div style={{ marginRight: "16px" }}>
+                        <img
+                          src={`https://smsactivate.s3.eu-central-1.amazonaws.com/assets/ico/${service.code}0.webp`}
+                          alt={`${service.name_cn || service.name} icon`}
+                          style={{
+                            width: "40px",
+                            height: "40px",
+                            borderRadius: "6px",
+                            objectFit: "cover",
+                          }}
+                          onError={(e) => {
+                            const target = e.target as HTMLImageElement;
+                            target.style.display = "none";
+                            const fallback = target.nextElementSibling as HTMLElement;
+                            if (fallback) fallback.style.display = "block";
+                          }}
+                        />
+                        <div
+                          style={{
+                            fontSize: "24px",
+                            display: "none",
+                            width: "40px",
+                            height: "40px",
+                            textAlign: "center",
+                            lineHeight: "40px",
+                          }}
+                        >
+                          📱
                         </div>
-                        <div style={{ marginBottom: "12px" }}>
-                          <Tag color="blue" style={{ marginBottom: "8px" }}>
-                            {service.category_cn || service.category}
-                          </Tag>
-                          <Title level={5} style={{ margin: 0 }}>
-                            {service.name_cn || service.name}
-                          </Title>
-                        </div>
+                      </div>
 
-                        <div style={{ marginBottom: "12px" }}>
-                          <Text type="secondary">成功率: </Text>
-                          <Progress
-                            percent={service.success_rate}
-                            size="small"
-                            showInfo={false}
-                            strokeColor={
-                              service.success_rate >= 95
-                                ? "#52c41a"
-                                : service.success_rate >= 90
-                                  ? "#faad14"
-                                  : "#ff4d4f"
-                            }
-                          />
-                          <Text strong style={{ marginLeft: "8px" }}>
-                            {service.success_rate}%
+                      <div style={{ flex: 1 }}>
+                        <div style={{ display: "flex", alignItems: "center", marginBottom: "4px" }}>
+                          <Tag color="blue" style={{ marginRight: "8px", fontSize: "12px" }}>
+                            {getLocalizedName({
+                              name: service.category,
+                              name_cn: service.category_cn,
+                            })}
+                          </Tag>
+                          <Text strong style={{ fontSize: "16px" }}>
+                            {getLocalizedName(service)}
                           </Text>
                         </div>
 
-                        <div style={{ marginBottom: "12px" }}>
-                          <div
-                            style={{
-                              display: "flex",
-                              justifyContent: "space-between",
-                              alignItems: "center",
-                            }}
-                          >
-                            <Text type="secondary">
-                              <ClockCircleOutlined style={{ marginRight: "4px" }} />
-                              预计 2-5 分钟
+                        <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
+                          <div style={{ display: "flex", alignItems: "center" }}>
+                            <Text type="secondary" style={{ fontSize: "12px", marginRight: "4px" }}>
+                              {t("services.successRate")}:
                             </Text>
-                            <Text type="secondary">可用: {service.available}</Text>
+                            <Progress
+                              percent={service.success_rate}
+                              size="small"
+                              showInfo={false}
+                              strokeColor={
+                                service.success_rate >= 95
+                                  ? "#52c41a"
+                                  : service.success_rate >= 90
+                                    ? "#faad14"
+                                    : "#ff4d4f"
+                              }
+                              style={{ width: "60px", marginRight: "4px" }}
+                            />
+                            <Text strong style={{ fontSize: "12px" }}>
+                              {service.success_rate}%
+                            </Text>
                           </div>
-                        </div>
 
-                        <div style={{ textAlign: "right" }}>
-                          <Tag color="green" style={{ fontSize: "16px", padding: "4px 8px" }}>
-                            ${service.price}
-                          </Tag>
+                          <div style={{ display: "flex", alignItems: "center" }}>
+                            <ClockCircleOutlined style={{ marginRight: "4px", fontSize: "12px" }} />
+                            <Text type="secondary" style={{ fontSize: "12px" }}>
+                              {t("services.estimatedTime")}
+                            </Text>
+                          </div>
+
+                          <Text type="secondary" style={{ fontSize: "12px" }}>
+                            {t("services.available")}: {service.available}
+                          </Text>
                         </div>
-                      </Card>
-                    </Col>
+                      </div>
+
+                      <div style={{ textAlign: "right" }}>
+                        <Tag color="green" style={{ fontSize: "16px", padding: "4px 12px" }}>
+                          ${service.price}
+                        </Tag>
+                      </div>
+                    </div>
                   ))}
-                </Row>
+                </div>
               </div>
             ) : (
               // 分类浏览 - 显示服务分类
               <div>
                 <div style={{ marginBottom: "16px" }}>
-                  <Text type="secondary">选择服务分类或使用搜索快速查找</Text>
+                  <Text type="secondary">{t("services.selectServiceCategory")}</Text>
                 </div>
-                <Row gutter={[16, 16]}>
+                <div style={{ marginBottom: "16px" }}>
                   {getServiceCategories().map((category) => (
-                    <Col xs={24} sm={12} lg={6} key={category.code}>
-                      <Card
-                        hoverable
-                        style={{ textAlign: "center", cursor: "pointer" }}
-                        onClick={() => setSelectedCategory(category.code)}
-                      >
-                        <div style={{ fontSize: "32px", marginBottom: "8px" }}>{category.icon}</div>
-                        <Title level={5}>{category.name_cn || category.name}</Title>
-                        <Text type="secondary">{category.services.length} 个服务</Text>
-                      </Card>
-                    </Col>
-                  ))}
-                </Row>
-
-                {selectedCategory && (
-                  <div style={{ marginTop: "32px" }}>
-                    <Divider />
                     <div
+                      key={category.code}
                       style={{
-                        display: "flex",
-                        justifyContent: "space-between",
-                        alignItems: "center",
-                        marginBottom: "16px",
+                        border: "1px solid #f0f0f0",
+                        borderRadius: "8px",
+                        marginBottom: "8px",
+                        overflow: "hidden",
                       }}
                     >
-                      <Title level={4} style={{ margin: 0 }}>
-                        {serviceCategories.find((c) => c.code === selectedCategory)?.name_cn ||
-                          serviceCategories.find((c) => c.code === selectedCategory)?.name}
-                      </Title>
-                      <Button
-                        type="link"
-                        onClick={() => setSelectedCategory("")}
-                        icon={<ArrowRightOutlined />}
+                      {/* Category Header */}
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          padding: "12px 16px",
+                          backgroundColor:
+                            selectedCategory === category.code ? "#e6f7ff" : "#fafafa",
+                          cursor: "pointer",
+                          transition: "all 0.2s",
+                        }}
+                        onClick={() =>
+                          setSelectedCategory(
+                            selectedCategory === category.code ? "" : category.code
+                          )
+                        }
                       >
-                        返回分类
-                      </Button>
-                    </div>
-                    <Row gutter={[16, 16]}>
-                      {serviceCategories
-                        .find((c) => c.code === selectedCategory)
-                        ?.services.map((service) => (
-                          <Col xs={24} sm={12} lg={8} key={service.code}>
-                            <Card
-                              hoverable
-                              style={{ cursor: "pointer" }}
-                              onClick={() => handleServiceSelect(service)}
+                        <span style={{ fontSize: "20px", marginRight: "12px" }}>
+                          {category.icon}
+                        </span>
+                        <Text
+                          strong
+                          style={{
+                            fontSize: "16px",
+                            color: selectedCategory === category.code ? "#1890ff" : "#262626",
+                            flex: 1,
+                          }}
+                        >
+                          {getLocalizedName(category)}
+                        </Text>
+                        <Tag
+                          color={selectedCategory === category.code ? "blue" : "default"}
+                          style={{ fontSize: "12px", padding: "2px 8px" }}
+                        >
+                          {category.services.length}
+                        </Tag>
+                        <span
+                          style={{
+                            marginLeft: "12px",
+                            fontSize: "14px",
+                            color: "#8c8c8c",
+                            transform:
+                              selectedCategory === category.code ? "rotate(90deg)" : "rotate(0deg)",
+                            transition: "transform 0.2s",
+                          }}
+                        >
+                          ▶
+                        </span>
+                      </div>
+
+                      {/* Services List */}
+                      {selectedCategory === category.code && (
+                        <div style={{ maxHeight: "300px", overflowY: "auto" }}>
+                          {category.services.map((service, index) => (
+                            <div
+                              key={service.code}
+                              style={{
+                                display: "flex",
+                                alignItems: "center",
+                                padding: "12px 16px",
+                                borderBottom:
+                                  index === category.services.length - 1
+                                    ? "none"
+                                    : "1px solid #f0f0f0",
+                                cursor: "pointer",
+                                transition: "all 0.2s",
+                                backgroundColor: "#fff",
+                              }}
+                              onMouseEnter={(e) => {
+                                e.currentTarget.style.backgroundColor = "#f6ffed";
+                              }}
+                              onMouseLeave={(e) => {
+                                e.currentTarget.style.backgroundColor = "#fff";
+                              }}
+                              onClick={() =>
+                                handleServiceSelect({
+                                  ...service,
+                                  category: category.name,
+                                  category_cn: category.name_cn,
+                                  categoryCode: category.code,
+                                })
+                              }
                             >
-                              <div
+                              <img
+                                src={`https://smsactivate.s3.eu-central-1.amazonaws.com/assets/ico/${service.code}0.webp`}
+                                alt={`${service.name_cn || service.name} icon`}
                                 style={{
-                                  textAlign: "center",
-                                  marginBottom: "16px",
+                                  width: "32px",
+                                  height: "32px",
+                                  marginRight: "12px",
+                                  borderRadius: "6px",
+                                  objectFit: "cover",
                                 }}
-                              >
-                                <img
-                                  src={`https://smsactivate.s3.eu-central-1.amazonaws.com/assets/ico/${service.code}0.webp`}
-                                  alt={`${service.name_cn || service.name} icon`}
+                                onError={(e) => {
+                                  const target = e.target as HTMLImageElement;
+                                  target.style.display = "none";
+                                }}
+                              />
+
+                              <div style={{ flex: 1 }}>
+                                <Text
+                                  strong
                                   style={{
-                                    width: "48px",
-                                    height: "48px",
-                                    borderRadius: "8px",
-                                    objectFit: "cover",
-                                  }}
-                                  onError={(e) => {
-                                    // Fallback to emoji if image fails to load
-                                    const target = e.target as HTMLImageElement;
-                                    target.style.display = "none";
-                                    const fallback = target.nextElementSibling as HTMLElement;
-                                    if (fallback) fallback.style.display = "block";
-                                  }}
-                                />
-                                <div
-                                  style={{
-                                    fontSize: "32px",
-                                    marginBottom: "8px",
-                                    display: "none",
+                                    fontSize: "14px",
+                                    display: "block",
+                                    marginBottom: "4px",
                                   }}
                                 >
-                                  📱
-                                </div>
-                              </div>
-                              <div style={{ marginBottom: "12px" }}>
-                                <Title level={5} style={{ margin: 0 }}>
-                                  {service.name_cn || service.name}
-                                </Title>
-                              </div>
-
-                              <div style={{ marginBottom: "12px" }}>
-                                <Text type="secondary">成功率: </Text>
-                                <Progress
-                                  percent={service.success_rate}
-                                  size="small"
-                                  showInfo={false}
-                                  strokeColor={
-                                    service.success_rate >= 95
-                                      ? "#52c41a"
-                                      : service.success_rate >= 90
-                                        ? "#faad14"
-                                        : "#ff4d4f"
-                                  }
-                                />
-                                <Text strong style={{ marginLeft: "8px" }}>
-                                  {service.success_rate}%
+                                  {getLocalizedName(service)}
                                 </Text>
-                              </div>
+                                <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                                  <div style={{ display: "flex", alignItems: "center" }}>
+                                    <Text
+                                      type="secondary"
+                                      style={{ fontSize: "11px", marginRight: "4px" }}
+                                    >
+                                      {t("services.successRate")}:
+                                    </Text>
+                                    <Progress
+                                      percent={service.success_rate}
+                                      size="small"
+                                      showInfo={false}
+                                      strokeColor={
+                                        service.success_rate >= 95
+                                          ? "#52c41a"
+                                          : service.success_rate >= 90
+                                            ? "#faad14"
+                                            : "#ff4d4f"
+                                      }
+                                      style={{ width: "50px", marginRight: "4px" }}
+                                    />
+                                    <Text strong style={{ fontSize: "11px" }}>
+                                      {service.success_rate}%
+                                    </Text>
+                                  </div>
 
-                              <div style={{ marginBottom: "12px" }}>
-                                <div
-                                  style={{
-                                    display: "flex",
-                                    justifyContent: "space-between",
-                                    alignItems: "center",
-                                  }}
-                                >
-                                  <Text type="secondary">
-                                    <ClockCircleOutlined style={{ marginRight: "4px" }} />
-                                    预计 2-5 分钟
+                                  <div style={{ display: "flex", alignItems: "center" }}>
+                                    <ClockCircleOutlined
+                                      style={{ marginRight: "4px", fontSize: "11px" }}
+                                    />
+                                    <Text type="secondary" style={{ fontSize: "11px" }}>
+                                      {t("services.estimatedTime")}
+                                    </Text>
+                                  </div>
+
+                                  <Text type="secondary" style={{ fontSize: "11px" }}>
+                                    {t("services.available")}: {service.available}
                                   </Text>
-                                  <Text type="secondary">可用: {service.available}</Text>
                                 </div>
                               </div>
 
                               <div style={{ textAlign: "right" }}>
-                                <Tag
-                                  color="green"
-                                  style={{
-                                    fontSize: "16px",
-                                    padding: "4px 8px",
-                                  }}
-                                >
+                                <Tag color="green" style={{ fontSize: "14px", padding: "4px 8px" }}>
                                   ${service.price}
                                 </Tag>
                               </div>
-                            </Card>
-                          </Col>
-                        ))}
-                    </Row>
-                  </div>
-                )}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
           </div>
@@ -741,7 +822,7 @@ const GetNumberPage: React.FC = () => {
 
         {currentStep === 1 && (
           <div>
-            <Title level={4}>选择国家地区</Title>
+            <Title level={4}>{t("services.selectCountry")}</Title>
             <Paragraph>
               <div
                 style={{
@@ -765,9 +846,12 @@ const GetNumberPage: React.FC = () => {
                     target.style.display = "none";
                   }}
                 />
-                <Text strong>已选择服务: {selectedService?.name}</Text>
+                <Text strong>
+                  {t("services.selectedService")}:{" "}
+                  {selectedService ? getLocalizedName(selectedService) : ""}
+                </Text>
               </div>
-              基础价格:{" "}
+              {t("services.basePrice")}:{" "}
               <Text strong style={{ color: "#1890ff" }}>
                 ${selectedService?.price}
               </Text>
@@ -776,16 +860,16 @@ const GetNumberPage: React.FC = () => {
             {/* 余额提醒 */}
             {!hasEnoughBalance() && (
               <Alert
-                message="余额不足提醒"
-                description={`当前余额 $${
-                  user?.balance?.toFixed(2) || "0.00"
-                }，不足以购买此服务。请先充值。`}
+                message={t("services.insufficientBalance")}
+                description={t("services.insufficientBalanceDescription", {
+                  currentBalance: user?.balance?.toFixed(2) || "0.00",
+                })}
                 type="warning"
                 showIcon
                 style={{ marginBottom: "16px" }}
                 action={
-                  <Button size="small" type="primary" onClick={() => navigate("/balance")}>
-                    立即充值
+                  <Button size="small" type="primary" onClick={() => navigate("balance")}>
+                    {t("dashboard.rechargeNow")}
                   </Button>
                 }
               />
@@ -794,7 +878,7 @@ const GetNumberPage: React.FC = () => {
             {/* 国家搜索 */}
             <div style={{ marginBottom: "16px" }}>
               <Input
-                placeholder="搜索国家名称（支持中文和英文）"
+                placeholder={t("services.searchCountry")}
                 value={countrySearch}
                 onChange={(e) => {
                   setCountrySearch(e.target.value);
@@ -826,7 +910,7 @@ const GetNumberPage: React.FC = () => {
                       <div style={{ display: "flex", alignItems: "center" }}>
                         <img
                           src={country.flag}
-                          alt={`${country.name_cn} flag`}
+                          alt={`${getLocalizedName(country)} flag`}
                           style={{
                             width: "24px",
                             height: "18px",
@@ -834,7 +918,7 @@ const GetNumberPage: React.FC = () => {
                             borderRadius: "2px",
                           }}
                         />
-                        <Text strong>{country.name_cn}</Text>
+                        <Text strong>{getLocalizedName(country)}</Text>
                       </div>
                       <Tag color="green">
                         ${(selectedService?.price * country.price_multiplier).toFixed(2)}
@@ -843,7 +927,7 @@ const GetNumberPage: React.FC = () => {
 
                     {country.price_multiplier !== 1.0 && (
                       <Text type="secondary" style={{ fontSize: "12px" }}>
-                        价格系数: {country.price_multiplier}x
+                        {t("services.priceMultiplier")}: {country.price_multiplier}x
                       </Text>
                     )}
                   </Card>
@@ -859,7 +943,7 @@ const GetNumberPage: React.FC = () => {
                   onClick={handleShowMore}
                   style={{ backgroundColor: "#1890ff", borderColor: "#1890ff" }}
                 >
-                  显示更多 (还有 {filteredCountries.length - visibleCountries} 个国家)
+                  {t("services.showMore", { count: filteredCountries.length - visibleCountries })}
                 </Button>
               </div>
             )}
@@ -868,11 +952,11 @@ const GetNumberPage: React.FC = () => {
             <div style={{ textAlign: "center", marginTop: "16px" }}>
               <Text type="secondary">
                 {countrySearch
-                  ? `找到 ${filteredCountries.length} 个国家`
-                  : `共 ${countries.length} 个国家，显示 ${Math.min(
-                      visibleCountries,
-                      filteredCountries.length
-                    )} 个`}
+                  ? t("services.foundCountries", { count: filteredCountries.length })
+                  : t("services.totalCountries", {
+                      total: countries.length,
+                      visible: Math.min(visibleCountries, filteredCountries.length),
+                    })}
               </Text>
             </div>
           </div>
@@ -880,12 +964,12 @@ const GetNumberPage: React.FC = () => {
 
         {currentStep === 2 && (
           <div>
-            <Title level={4}>确认订单信息</Title>
+            <Title level={4}>{t("services.confirmOrder")}</Title>
 
             <Card style={{ marginBottom: "24px" }}>
               <Row gutter={[16, 16]}>
                 <Col span={12}>
-                  <Text strong>选择的服务:</Text>
+                  <Text strong>{t("services.selectedService")}:</Text>
                   <br />
                   <div style={{ display: "flex", alignItems: "center" }}>
                     <img
@@ -901,16 +985,16 @@ const GetNumberPage: React.FC = () => {
                         (e.target as HTMLImageElement).style.display = "none";
                       }}
                     />
-                    <Text>{selectedService?.name_cn || selectedService?.name}</Text>
+                    <Text>{selectedService ? getLocalizedName(selectedService) : ""}</Text>
                   </div>
                 </Col>
                 <Col span={12}>
-                  <Text strong>选择的国家:</Text>
+                  <Text strong>{t("services.selectedCountry")}:</Text>
                   <br />
                   <div style={{ display: "flex", alignItems: "center" }}>
                     <img
                       src={countries.find((c) => c.id === selectedCountry)?.flag}
-                      alt={`${countries.find((c) => c.id === selectedCountry)?.name_cn} flag`}
+                      alt={`${countries.find((c) => c.id === selectedCountry) ? getLocalizedName(countries.find((c) => c.id === selectedCountry)!) : ""} flag`}
                       style={{
                         width: "20px",
                         height: "15px",
@@ -918,14 +1002,18 @@ const GetNumberPage: React.FC = () => {
                         borderRadius: "2px",
                       }}
                     />
-                    <Text>{countries.find((c) => c.id === selectedCountry)?.name_cn}</Text>
+                    <Text>
+                      {countries.find((c) => c.id === selectedCountry)
+                        ? getLocalizedName(countries.find((c) => c.id === selectedCountry)!)
+                        : ""}
+                    </Text>
                   </div>
                 </Col>
 
                 {/* 数量选择 */}
                 <Col span={24}>
                   <div style={{ marginTop: "4px" }}>
-                    <Text strong>数量:</Text>
+                    <Text strong>{t("services.quantity")}:</Text>
                     <Space style={{ marginLeft: "8px" }}>
                       <InputNumber
                         min={1}
@@ -934,19 +1022,19 @@ const GetNumberPage: React.FC = () => {
                         onChange={(val) => setQuantity(Number(val) || 1)}
                       />
                       <Text type="secondary" style={{ fontSize: 12 }}>
-                        一次可下单多个号码
+                        {t("services.multipleNumbersHint")}
                       </Text>
                     </Space>
                   </div>
                 </Col>
 
                 <Col span={12}>
-                  <Text strong>基础价格:</Text>
+                  <Text strong>{t("services.basePrice")}:</Text>
                   <br />
                   <Text>${selectedService?.price}</Text>
                 </Col>
                 <Col span={12}>
-                  <Text strong>最终价格:</Text>
+                  <Text strong>{t("services.finalPrice")}:</Text>
                   <br />
                   <Text strong style={{ fontSize: "18px", color: "#1890ff" }}>
                     ${getFinalPrice()} x {quantity} = ${getTotalPrice()}
@@ -962,90 +1050,91 @@ const GetNumberPage: React.FC = () => {
                         onClick={() => setShowAdvancedOptions(!showAdvancedOptions)}
                         style={{ padding: 0, height: "auto" }}
                       >
-                        {showAdvancedOptions ? "收起" : "展开"} 高级选项
+                        {showAdvancedOptions ? t("services.collapse") : t("services.expand")}{" "}
+                        {t("services.advancedOptions")}
                         <Text type="secondary" style={{ marginLeft: "8px", fontSize: "12px" }}>
-                          (运营商、转发、激活类型等可选配置)
+                          ({t("services.advancedOptionsHint")})
                         </Text>
                       </Button>
                     </div>
 
                     {showAdvancedOptions && (
                       <Collapse defaultActiveKey={["1"]} ghost>
-                        <Collapse.Panel header="基础选项" key="1">
+                        <Collapse.Panel header={t("services.basicOptions")} key="1">
                           <Space direction="vertical" style={{ width: "100%" }}>
                             {/* 转发选项 */}
                             <div>
-                              <Text>转发选项:</Text>
+                              <Text>{t("services.forwardOptions")}:</Text>
                               <Space>
                                 <Tag
                                   color={forward === 0 ? "blue" : "default"}
                                   style={{ cursor: "pointer" }}
                                   onClick={() => setForward(0)}
                                 >
-                                  不转发 (0)
+                                  {t("services.noForward")}
                                 </Tag>
                                 <Tag
                                   color={forward === 1 ? "blue" : "default"}
                                   style={{ cursor: "pointer" }}
                                   onClick={() => setForward(1)}
                                 >
-                                  转发 (1)
+                                  {t("services.forward")}
                                 </Tag>
                               </Space>
                             </div>
 
                             {/* 激活类型 */}
                             <div>
-                              <Text>激活类型:</Text>
+                              <Text>{t("services.activationType")}:</Text>
                               <Space>
                                 <Tag
                                   color={activationType === 0 ? "blue" : "default"}
                                   style={{ cursor: "pointer" }}
                                   onClick={() => setActivationType(0)}
                                 >
-                                  SMS (0)
+                                  {t("services.sms")}
                                 </Tag>
                                 <Tag
                                   color={activationType === 1 ? "blue" : "default"}
                                   style={{ cursor: "pointer" }}
                                   onClick={() => setActivationType(1)}
                                 >
-                                  号码 (1)
+                                  {t("services.number")}
                                 </Tag>
                                 <Tag
                                   color={activationType === 2 ? "blue" : "default"}
                                   style={{ cursor: "pointer" }}
                                   onClick={() => setActivationType(2)}
                                 >
-                                  语音 (2)
+                                  {t("services.voice")}
                                 </Tag>
                               </Space>
                             </div>
 
                             {/* 语言选择 */}
                             <div>
-                              <Text>语言:</Text>
+                              <Text>{t("services.language")}:</Text>
                               <Space>
                                 <Tag
                                   color={language === "en" ? "blue" : "default"}
                                   style={{ cursor: "pointer" }}
                                   onClick={() => setLanguage("en")}
                                 >
-                                  英语 (en)
+                                  {t("services.english")}
                                 </Tag>
                                 <Tag
                                   color={language === "ru" ? "blue" : "default"}
                                   style={{ cursor: "pointer" }}
                                   onClick={() => setLanguage("ru")}
                                 >
-                                  俄语 (ru)
+                                  {t("services.russian")}
                                 </Tag>
                                 <Tag
                                   color={language === "cn" ? "blue" : "default"}
                                   style={{ cursor: "pointer" }}
                                   onClick={() => setLanguage("cn")}
                                 >
-                                  中文 (cn)
+                                  {t("services.chinese")}
                                 </Tag>
                               </Space>
                             </div>
@@ -1053,7 +1142,7 @@ const GetNumberPage: React.FC = () => {
                             {/* 运营商选择 */}
                             {supportsOperatorSelection(selectedCountry!) && (
                               <div>
-                                <Text>运营商选择:</Text>
+                                <Text>{t("services.operatorSelection")}:</Text>
                                 <div style={{ marginTop: "8px" }}>
                                   {loadingOperators ? (
                                     <div
@@ -1064,7 +1153,7 @@ const GetNumberPage: React.FC = () => {
                                       }}
                                     >
                                       <Progress type="circle" percent={75} size="small" />
-                                      <Text type="secondary">正在加载运营商列表...</Text>
+                                      <Text type="secondary">{t("services.loadingOperators")}</Text>
                                     </div>
                                   ) : (
                                     getOperatorOptions(selectedCountry!).map((operator) => (
@@ -1079,7 +1168,7 @@ const GetNumberPage: React.FC = () => {
                                         }}
                                         onClick={() => setSelectedOperator(operator)}
                                       >
-                                        {operator === "any" ? "任意运营商" : operator}
+                                        {operator === "any" ? t("services.anyOperator") : operator}
                                       </Tag>
                                     ))
                                   )}
@@ -1089,44 +1178,42 @@ const GetNumberPage: React.FC = () => {
                           </Space>
                         </Collapse.Panel>
 
-                        <Collapse.Panel header="高级可选选项" key="2">
+                        <Collapse.Panel header={t("services.advancedOptionalOptions")} key="2">
                           <Space direction="vertical" style={{ width: "100%" }}>
                             {/* 推荐ID */}
                             <div>
-                              <Text>推荐ID:</Text>
+                              <Text>{t("services.referralId")}:</Text>
                               <Input
                                 value={ref}
                                 onChange={(e) => setRef(e.target.value)}
-                                placeholder="推荐ID (可选)"
+                                placeholder={t("services.referralIdPlaceholder")}
                                 style={{ width: "200px" }}
                               />
                               <Text type="secondary" style={{ fontSize: "12px" }}>
-                                用于推荐系统追踪，通常留空
+                                {t("services.referralIdDescription")}
                               </Text>
                             </div>
 
                             {/* 电话号码排除 */}
                             <div>
-                              <Text>电话号码排除:</Text>
+                              <Text>{t("services.phoneException")}:</Text>
                               <Input
                                 value={phoneException}
                                 onChange={(e) => setPhoneException(e.target.value)}
-                                placeholder="例如: 7918,7900111 (俄罗斯号码前缀)"
+                                placeholder={t("services.phoneExceptionPlaceholder")}
                                 style={{ width: "300px" }}
                               />
                               <Text type="secondary" style={{ fontSize: "12px" }}>
-                                排除特定前缀的俄罗斯号码，用逗号分隔，通常留空
+                                {t("services.phoneExceptionDescription")}
                               </Text>
                             </div>
                           </Space>
                         </Collapse.Panel>
 
-                        <Collapse.Panel header="FreePrice 模式 (可选)" key="3">
+                        <Collapse.Panel header={t("services.freePriceMode")} key="3">
                           <div>
                             <div style={{ marginBottom: "8px" }}>
-                              <Text type="secondary">
-                                设置最大价格，系统将为您找到最佳价格的号码
-                              </Text>
+                              <Text type="secondary">{t("services.freePriceDescription")}</Text>
                             </div>
                             <div
                               style={{
@@ -1140,7 +1227,9 @@ const GetNumberPage: React.FC = () => {
                                 size="small"
                                 onClick={() => setUseFreePrice(!useFreePrice)}
                               >
-                                {useFreePrice ? "启用" : "启用 FreePrice"}
+                                {useFreePrice
+                                  ? t("services.enabled")
+                                  : t("services.enableFreePrice")}
                               </Button>
                               {useFreePrice && (
                                 <div
@@ -1150,10 +1239,10 @@ const GetNumberPage: React.FC = () => {
                                     gap: "8px",
                                   }}
                                 >
-                                  <Text type="secondary">最大价格:</Text>
+                                  <Text type="secondary">{t("services.maxPrice")}:</Text>
                                   <Input
                                     type="number"
-                                    placeholder="输入最大价格"
+                                    placeholder={t("services.maxPricePlaceholder")}
                                     value={maxPrice || ""}
                                     onChange={(e) => setMaxPrice(Number(e.target.value) || 0)}
                                     style={{ width: "120px" }}
@@ -1167,11 +1256,14 @@ const GetNumberPage: React.FC = () => {
                             {useFreePrice && maxPrice > 0 && (
                               <div style={{ marginTop: "8px" }}>
                                 <Text type="secondary" style={{ fontSize: "12px" }}>
-                                  💡 系统将尝试找到价格不超过 {maxPrice} USD 的最佳号码
+                                  {t("services.freePriceTip", { maxPrice })}
                                 </Text>
                                 <div style={{ marginTop: "4px" }}>
                                   <Text type="secondary" style={{ fontSize: "12px" }}>
-                                    📊 当前单价: ${getFinalPrice()} | 最大价格: ${maxPrice}
+                                    {t("services.currentPrice", {
+                                      currentPrice: getFinalPrice(),
+                                      maxPrice,
+                                    })}
                                   </Text>
                                 </div>
                               </div>
@@ -1188,16 +1280,17 @@ const GetNumberPage: React.FC = () => {
             {/* 余额检查 */}
             {!hasEnoughBalance() && (
               <Alert
-                message="余额不足"
-                description={`当前余额 $${
-                  user?.balance?.toFixed(2) || "0.00"
-                }，需要 $${getTotalPrice()}`}
+                message={t("services.insufficientBalanceAlert")}
+                description={t("services.insufficientBalanceDescription", {
+                  currentBalance: user?.balance?.toFixed(2) || "0.00",
+                  totalPrice: getTotalPrice(),
+                })}
                 type="warning"
                 showIcon
                 style={{ marginBottom: "24px" }}
                 action={
-                  <Button size="small" onClick={() => navigate("/balance")}>
-                    立即充值
+                  <Button size="small" onClick={() => navigate("balance")}>
+                    {t("services.rechargeNow")}
                   </Button>
                 }
               />
@@ -1205,8 +1298,8 @@ const GetNumberPage: React.FC = () => {
 
             {/* 服务说明 */}
             <Alert
-              message="服务说明"
-              description="选择确认后，系统将为您分配一个临时手机号码。您可以使用该号码接收短信验证码，服务完成后号码将被回收。"
+              message={t("services.serviceInstructions")}
+              description={t("services.serviceInstructionsDescription")}
               type="info"
               showIcon
               style={{ marginBottom: "24px" }}
@@ -1216,24 +1309,31 @@ const GetNumberPage: React.FC = () => {
             <Card size="small" style={{ marginBottom: "24px" }}>
               <Row gutter={[16, 16]}>
                 <Col span={12}>
-                  <Text type="secondary">服务类型:</Text>
+                  <Text type="secondary">{t("services.serviceType")}:</Text>
                   <br />
-                  <Text>{selectedService?.category_cn || selectedService?.category}</Text>
+                  <Text>
+                    {selectedService
+                      ? getLocalizedName({
+                          name: selectedService.category,
+                          name_cn: selectedService.category_cn,
+                        })
+                      : ""}
+                  </Text>
                 </Col>
                 <Col span={12}>
-                  <Text type="secondary">预计分配时间:</Text>
+                  <Text type="secondary">{t("services.estimatedAllocationTime")}:</Text>
                   <br />
-                  <Text>1-3 分钟</Text>
+                  <Text>{t("services.estimatedTime")}</Text>
                 </Col>
                 <Col span={12}>
-                  <Text type="secondary">号码有效期:</Text>
+                  <Text type="secondary">{t("services.numberValidity")}:</Text>
                   <br />
-                  <Text>20 分钟</Text>
+                  <Text>{t("services.validityTime")}</Text>
                 </Col>
                 <Col span={12}>
-                  <Text type="secondary">支持服务:</Text>
+                  <Text type="secondary">{t("services.supportedServices")}:</Text>
                   <br />
-                  <Text>{selectedService?.description || "短信验证码接收"}</Text>
+                  <Text>{selectedService?.description || t("services.smsVerification")}</Text>
                 </Col>
               </Row>
             </Card>
@@ -1244,12 +1344,18 @@ const GetNumberPage: React.FC = () => {
         <div style={{ textAlign: "center", marginTop: "32px" }}>
           <Space size="middle">
             {currentStep > 0 && (
-              <Button onClick={() => setCurrentStep(currentStep - 1)}>上一步</Button>
+              <Button onClick={() => setCurrentStep(currentStep - 1)}>
+                {t("services.previousStep")}
+              </Button>
             )}
 
             {currentStep < 2 && (
               <Tooltip
-                title={currentStep === 1 && !hasEnoughBalance() ? "余额不足，无法继续" : undefined}
+                title={
+                  currentStep === 1 && !hasEnoughBalance()
+                    ? t("services.insufficientBalance")
+                    : undefined
+                }
               >
                 <Button
                   type="primary"
@@ -1260,29 +1366,32 @@ const GetNumberPage: React.FC = () => {
                     (currentStep === 1 && !hasEnoughBalance())
                   }
                 >
-                  下一步
+                  {t("services.nextStep")}
                 </Button>
               </Tooltip>
             )}
 
             {currentStep === 2 && (
               <Popconfirm
-                title="确认订单"
-                description={`确定要购买 ${
-                  selectedService?.name_cn || selectedService?.name
-                } 服务吗？将从您的账户扣除 $${getTotalPrice()}`}
+                title={t("services.confirmOrder")}
+                description={t("services.confirmOrderDescription", {
+                  serviceName: selectedService ? getLocalizedName(selectedService) : "",
+                  totalPrice: getTotalPrice(),
+                })}
                 onConfirm={handleConfirmOrder}
-                okText="确认"
-                cancelText="取消"
+                okText={t("services.confirm")}
+                cancelText={t("services.cancel")}
                 okButtonProps={{ loading: loading }}
               >
                 <Button type="primary" size="large" disabled={!hasEnoughBalance()}>
-                  {loading ? "正在处理..." : `确认订单 ($${getTotalPrice()})`}
+                  {loading
+                    ? t("services.processing")
+                    : t("services.confirmOrderButton", { totalPrice: getTotalPrice() })}
                 </Button>
               </Popconfirm>
             )}
 
-            <Button onClick={handleReset}>重新选择</Button>
+            <Button onClick={handleReset}>{t("services.reselect")}</Button>
           </Space>
         </div>
       </Modal>

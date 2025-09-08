@@ -7,17 +7,20 @@ import {
   EyeTwoTone,
   LoginOutlined,
 } from "@ant-design/icons";
-import { Link, useNavigate, useLocation } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
+import { useTranslation } from "react-i18next";
+import { useLocalizedNavigate } from "../../hooks/useLocalizedNavigate";
 import { useAuthStore } from "../../stores/authStore";
 
 const { Title, Text } = Typography;
 
 const LoginPage: React.FC = () => {
+  const { t } = useTranslation();
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
 
   const { login } = useAuthStore();
-  const navigate = useNavigate();
+  const navigate = useLocalizedNavigate();
   const location = useLocation();
 
   // 检查是否有来自邮箱验证的成功消息
@@ -36,12 +39,12 @@ const LoginPage: React.FC = () => {
         username: values.username,
         password: values.password,
       });
-      navigate("/dashboard");
+      navigate("dashboard");
     } catch (error: any) {
       // 检查是否是账户验证相关的错误
       if (error.message === "账户尚未激活，请先完成验证") {
         // 可以在这里提供验证选项或跳转到验证页面
-        message.info("请完成账户验证后再登录");
+        message.info(t("auth.completeVerification"));
       }
       // 其他错误已在 store 中处理
     } finally {
@@ -68,7 +71,7 @@ const LoginPage: React.FC = () => {
           boxShadow: "0 25px 50px rgba(0,0,0,0.15)",
           border: "none",
         }}
-        bodyStyle={{ padding: "48px 40px" }}
+        styles={{ body: { padding: "48px 40px" } }}
       >
         {/* Logo 和标题 */}
         <div style={{ textAlign: "center", marginBottom: "40px" }}>
@@ -91,10 +94,10 @@ const LoginPage: React.FC = () => {
             <UserOutlined />
           </div>
           <Title level={2} style={{ margin: 0, color: "#262626", fontWeight: "600" }}>
-            欢迎回来
+            {t("auth.welcomeBack")}
           </Title>
           <Text style={{ color: "#8c8c8c", fontSize: "16px", marginTop: "8px", display: "block" }}>
-            使用用户名和密码登录
+            {t("auth.loginWithCredentials")}
           </Text>
         </div>
 
@@ -104,13 +107,13 @@ const LoginPage: React.FC = () => {
           <Form.Item
             name="username"
             rules={[
-              { required: true, message: "请输入用户名" },
-              { min: 3, message: "用户名至少3个字符" },
+              { required: true, message: t("auth.enterUsername") },
+              { min: 3, message: t("auth.usernameMinLength") },
             ]}
           >
             <Input
               prefix={<UserOutlined style={{ color: "#1890ff" }} />}
-              placeholder="用户名"
+              placeholder={t("common.username")}
               autoComplete="username"
               size="large"
               style={{ height: "48px", fontSize: "16px" }}
@@ -121,13 +124,13 @@ const LoginPage: React.FC = () => {
           <Form.Item
             name="password"
             rules={[
-              { required: true, message: "请输入密码" },
-              { min: 6, message: "密码至少6个字符" },
+              { required: true, message: t("auth.enterPassword") },
+              { min: 6, message: t("auth.passwordMinLength") },
             ]}
           >
             <Input.Password
               prefix={<LockOutlined style={{ color: "#1890ff" }} />}
-              placeholder="密码"
+              placeholder={t("common.password")}
               autoComplete="current-password"
               size="large"
               style={{ height: "48px", fontSize: "16px" }}
@@ -151,14 +154,14 @@ const LoginPage: React.FC = () => {
                 borderRadius: "8px",
               }}
             >
-              登录
+              {t("common.login")}
             </Button>
           </Form.Item>
         </Form>
 
         {/* 分隔线 */}
         <Divider style={{ margin: "32px 0" }}>
-          <Text style={{ color: "#bfbfbf", fontSize: "14px" }}>或</Text>
+          <Text style={{ color: "#bfbfbf", fontSize: "14px" }}>{t("common.or")}</Text>
         </Divider>
 
         {/* 其他选项 */}
@@ -166,42 +169,56 @@ const LoginPage: React.FC = () => {
           {/* 注册链接 */}
           <div style={{ textAlign: "center" }}>
             <Text style={{ color: "#8c8c8c", fontSize: "16px" }}>
-              还没有账户？{" "}
-              <Link
-                to="/register"
+              {t("auth.noAccount")}{" "}
+              <Button
+                type="link"
+                onClick={() => navigate("register")}
                 style={{
                   color: "#1890ff",
                   fontWeight: "600",
                   textDecoration: "none",
                   fontSize: "16px",
+                  padding: 0,
+                  height: "auto",
                 }}
               >
-                立即注册
-              </Link>
+                {t("auth.registerNow")}
+              </Button>
             </Text>
           </div>
 
           {/* 忘记密码 */}
           <div style={{ textAlign: "center" }}>
-            <Link
-              to="/forgot-password"
+            <Button
+              type="link"
+              onClick={() => navigate("forgot-password")}
               style={{
                 color: "#8c8c8c",
                 fontSize: "14px",
                 textDecoration: "none",
+                padding: 0,
+                height: "auto",
               }}
             >
-              忘记密码？
-            </Link>
+              {t("auth.forgotPassword")}
+            </Button>
           </div>
         </Space>
 
         {/* 底部信息 */}
         <div style={{ textAlign: "center", marginTop: "40px" }}>
           <Text style={{ color: "#bfbfbf", fontSize: "12px" }}>
-            登录即表示同意我们的{" "}
-            <span style={{ color: "#1890ff", cursor: "pointer" }}>服务条款</span> 和{" "}
-            <span style={{ color: "#1890ff", cursor: "pointer" }}>隐私政策</span>
+            {t("auth.loginAgreement")}{" "}
+            <span style={{ color: "#1890ff", cursor: "pointer" }} onClick={() => navigate("terms")}>
+              {t("common.terms")}
+            </span>{" "}
+            {t("auth.and")}{" "}
+            <span
+              style={{ color: "#1890ff", cursor: "pointer" }}
+              onClick={() => navigate("privacy")}
+            >
+              {t("common.privacy")}
+            </span>
           </Text>
         </div>
       </Card>

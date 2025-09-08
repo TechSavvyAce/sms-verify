@@ -1,6 +1,8 @@
 import React from "react";
 import { Layout, Menu, Drawer } from "antd";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useLocation } from "react-router-dom";
+import { useTranslation } from "react-i18next";
+import { useLocalizedNavigate } from "../../hooks/useLocalizedNavigate";
 import {
   DashboardOutlined,
   MobileOutlined,
@@ -26,70 +28,71 @@ interface AppSidebarProps {
 }
 
 const AppSidebar: React.FC<AppSidebarProps> = ({ collapsed, isMobile, onCollapse }) => {
-  const navigate = useNavigate();
+  const { t } = useTranslation();
+  const navigate = useLocalizedNavigate();
   const location = useLocation();
   const { user } = useAuthStore();
 
   // 菜单项配置
   const menuItems = [
     {
-      key: "/dashboard",
+      key: "dashboard",
       icon: <DashboardOutlined />,
-      label: "仪表板",
+      label: t("navigation.dashboard"),
     },
     {
       key: "services",
       icon: <MobileOutlined />,
-      label: "短信服务",
+      label: t("navigation.smsServices"),
       children: [
         {
-          key: "/get-number",
+          key: "get-number",
           icon: <MessageOutlined />,
-          label: "获取号码",
+          label: t("navigation.getNumber"),
         },
         {
-          key: "/rent-number",
+          key: "rent-number",
           icon: <PhoneOutlined />,
-          label: "租用号码",
+          label: t("navigation.rentNumber"),
         },
       ],
     },
     {
       key: "records",
       icon: <HistoryOutlined />,
-      label: "记录管理",
+      label: t("navigation.records"),
       children: [
         {
-          key: "/activations",
+          key: "activations",
           icon: <MessageOutlined />,
-          label: "激活记录",
+          label: t("navigation.activations"),
         },
         {
-          key: "/rentals",
+          key: "rentals",
           icon: <ClockCircleOutlined />,
-          label: "租用记录",
+          label: t("navigation.rentals"),
         },
         {
-          key: "/transactions",
+          key: "transactions",
           icon: <WalletOutlined />,
-          label: "交易记录",
+          label: t("navigation.transactions"),
         },
       ],
     },
     {
       key: "user",
       icon: <UserOutlined />,
-      label: "用户中心",
+      label: t("navigation.userCenter"),
       children: [
         {
-          key: "/profile",
+          key: "profile",
           icon: <UserOutlined />,
-          label: "个人中心",
+          label: t("navigation.personalCenter"),
         },
         {
-          key: "/balance",
+          key: "balance",
           icon: <CreditCardOutlined />,
-          label: "账户充值",
+          label: t("navigation.accountRecharge"),
         },
       ],
     },
@@ -100,17 +103,17 @@ const AppSidebar: React.FC<AppSidebarProps> = ({ collapsed, isMobile, onCollapse
     menuItems.push({
       key: "admin",
       icon: <SettingOutlined />,
-      label: "系统管理",
+      label: t("navigation.admin"),
       children: [
         {
-          key: "/admin/users",
+          key: "admin/users",
           icon: <TeamOutlined />,
-          label: "用户管理",
+          label: t("navigation.userManagement"),
         },
         {
-          key: "/admin/transactions",
+          key: "admin/transactions",
           icon: <WalletOutlined />,
-          label: "交易管理",
+          label: t("navigation.transactionManagement"),
         },
       ],
     });
@@ -127,28 +130,40 @@ const AppSidebar: React.FC<AppSidebarProps> = ({ collapsed, isMobile, onCollapse
   // 获取当前选中的菜单项
   const getSelectedKeys = () => {
     const pathname = location.pathname;
-    return [pathname];
+    // Remove language prefix to get the relative path
+    const pathSegments = pathname.split("/").filter(Boolean);
+    const hasLanguagePrefix =
+      pathSegments.length > 0 && ["zh-CN", "en-US"].includes(pathSegments[0]);
+    const relativePath = hasLanguagePrefix ? "/" + pathSegments.slice(1).join("/") : pathname;
+
+    return [relativePath];
   };
 
   // 获取当前展开的菜单项
   const getOpenKeys = () => {
     const pathname = location.pathname;
+    // Remove language prefix to get the relative path
+    const pathSegments = pathname.split("/").filter(Boolean);
+    const hasLanguagePrefix =
+      pathSegments.length > 0 && ["zh-CN", "en-US"].includes(pathSegments[0]);
+    const relativePath = hasLanguagePrefix ? "/" + pathSegments.slice(1).join("/") : pathname;
+
     const openKeys: string[] = [];
 
-    if (pathname.startsWith("/get-number") || pathname.startsWith("/rent-number")) {
+    if (relativePath.startsWith("/get-number") || relativePath.startsWith("/rent-number")) {
       openKeys.push("services");
     }
     if (
-      pathname.startsWith("/activations") ||
-      pathname.startsWith("/rentals") ||
-      pathname.startsWith("/transactions")
+      relativePath.startsWith("/activations") ||
+      relativePath.startsWith("/rentals") ||
+      relativePath.startsWith("/transactions")
     ) {
       openKeys.push("records");
     }
-    if (pathname.startsWith("/profile") || pathname.startsWith("/balance")) {
+    if (relativePath.startsWith("/profile") || relativePath.startsWith("/balance")) {
       openKeys.push("user");
     }
-    if (pathname.startsWith("/admin")) {
+    if (relativePath.startsWith("/admin")) {
       openKeys.push("admin");
     }
 
@@ -212,7 +227,7 @@ const AppSidebar: React.FC<AppSidebarProps> = ({ collapsed, isMobile, onCollapse
                 color: "#1890ff",
               }}
             >
-              SMS平台
+              {t("sidebar.smsPlatform")}
             </span>
           </div>
         )}
@@ -251,14 +266,22 @@ const AppSidebar: React.FC<AppSidebarProps> = ({ collapsed, isMobile, onCollapse
             }}
           >
             <UserOutlined style={{ marginRight: "8px", color: "#1890ff" }} />
-            <span style={{ fontSize: "14px", fontWeight: "500" }}>{user?.username || "用户"}</span>
+            <span style={{ fontSize: "14px", fontWeight: "500" }}>
+              {user?.username || t("common.user")}
+            </span>
           </div>
           <div style={{ fontSize: "12px", color: "#8c8c8c" }}>
-            余额: $
-            {(user?.balance && typeof user.balance === "number" ? user.balance : 0).toFixed(2)}
+            {t("sidebar.balance", {
+              balance: (user?.balance && typeof user.balance === "number"
+                ? user.balance
+                : 0
+              ).toFixed(2),
+            })}
           </div>
           <div style={{ fontSize: "12px", color: "#8c8c8c" }}>
-            状态: {user?.status === "active" ? "正常" : "异常"}
+            {t("sidebar.status", {
+              status: user?.status === "active" ? t("sidebar.normal") : t("sidebar.abnormal"),
+            })}
           </div>
         </div>
       )}
@@ -274,7 +297,7 @@ const AppSidebar: React.FC<AppSidebarProps> = ({ collapsed, isMobile, onCollapse
         closable={false}
         onClose={() => onCollapse(true)}
         open={!collapsed}
-        bodyStyle={{ padding: 0 }}
+        styles={{ body: { padding: 0 } }}
         width={280}
         style={{ zIndex: 1001 }}
       >
