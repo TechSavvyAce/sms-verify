@@ -25,6 +25,32 @@ const MetaTagsManager: React.FC = () => {
   // Use the custom hook to update meta tags
   useMetaTags(metaTags);
 
+  // Additional effect to ensure meta tags are updated when language changes
+  useEffect(() => {
+    // Force update after a short delay to ensure i18n has loaded
+    const timer = setTimeout(() => {
+      console.log("MetaTagsManager - Force updating meta tags after language change");
+      if (metaTags.title) document.title = metaTags.title;
+      if (metaTags.description) {
+        const descMeta = document.querySelector('meta[name="description"]');
+        if (descMeta) {
+          descMeta.setAttribute("content", metaTags.description);
+        }
+      }
+      if (metaTags.keywords) {
+        const keywordsMeta = document.querySelector('meta[name="keywords"]');
+        if (keywordsMeta) {
+          keywordsMeta.setAttribute("content", metaTags.keywords);
+        }
+      }
+      if (metaTags.lang) {
+        document.documentElement.lang = metaTags.lang;
+      }
+    }, 100);
+
+    return () => clearTimeout(timer);
+  }, [currentLanguage, metaTags]);
+
   return null; // This component doesn't render anything
 };
 
