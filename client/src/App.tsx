@@ -3,6 +3,7 @@ import { Routes, Route, Navigate } from "react-router-dom";
 import { Layout } from "antd";
 import { useAuthStore } from "./stores/authStore";
 import { useWebSocket } from "./hooks/useWebSocket";
+import { useLocalizedNavigate } from "./hooks/useLocalizedNavigate";
 import AppHeader from "./components/Layout/AppHeader";
 import AppSidebar from "./components/Layout/AppSidebar";
 import ProtectedRoute from "./components/Common/ProtectedRoute";
@@ -30,6 +31,19 @@ import TermsOfServicePage from "./pages/Legal/TermsOfServicePage";
 import PrivacyPolicyPage from "./pages/Legal/PrivacyPolicyPage";
 
 const { Content } = Layout;
+
+// Custom redirect component that uses localized navigation
+const LocalizedRedirect: React.FC<{ to: string }> = ({ to }) => {
+  const navigate = useLocalizedNavigate();
+
+  useEffect(() => {
+    console.log("LocalizedRedirect: redirecting to", to, "from", window.location.pathname);
+    console.trace("LocalizedRedirect stack trace");
+    navigate(to, { replace: true });
+  }, [navigate, to]);
+
+  return <LoadingSpinner size="small" tip="正在跳转..." />;
+};
 
 const App: React.FC = () => {
   const { isAuthenticated, isLoading, user } = useAuthStore();
@@ -115,11 +129,11 @@ const AppWithLanguage: React.FC = () => {
       {/* 公开路由 */}
       <Route
         path="login"
-        element={isAuthenticated ? <Navigate to="dashboard" replace /> : <LoginPage />}
+        element={isAuthenticated ? <LocalizedRedirect to="dashboard" /> : <LoginPage />}
       />
       <Route
         path="register"
-        element={isAuthenticated ? <Navigate to="dashboard" replace /> : <RegisterPage />}
+        element={isAuthenticated ? <LocalizedRedirect to="dashboard" /> : <RegisterPage />}
       />
       <Route path="verify" element={<VerificationPage />} />
       <Route path="terms" element={<TermsOfServicePage />} />
@@ -156,8 +170,8 @@ const AppWithLanguage: React.FC = () => {
                 >
                   <ErrorBoundary>
                     <Routes>
-                      {/* 默认重定向到仪表板 */}
-                      <Route path="/" element={<Navigate to="dashboard" replace />} />
+                      {/* 默认重定向到仪表板 - 只有当路径完全为空时才重定向 */}
+                      <Route path="" element={<Navigate to="dashboard" replace />} />
 
                       {/* 仪表板 */}
                       <Route path="dashboard" element={<DashboardPage />} />

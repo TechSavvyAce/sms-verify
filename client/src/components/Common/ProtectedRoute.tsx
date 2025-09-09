@@ -1,6 +1,7 @@
 import React from "react";
 import { Navigate, useLocation } from "react-router-dom";
 import { useAuthStore } from "../../stores/authStore";
+import { useLocalizedNavigate } from "../../hooks/useLocalizedNavigate";
 import LoadingSpinner from "./LoadingSpinner";
 
 interface ProtectedRouteProps {
@@ -18,6 +19,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
 }) => {
   const { isAuthenticated, isLoading, user } = useAuthStore();
   const location = useLocation();
+  const navigate = useLocalizedNavigate();
 
   // 显示加载状态
   if (isLoading) {
@@ -27,7 +29,8 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   // 如果需要认证但用户未登录
   if (requireAuth && !isAuthenticated) {
     // 保存当前路径，登录后可以重定向回来
-    return <Navigate to="/login" state={{ from: location.pathname }} replace />;
+    navigate("login");
+    return <LoadingSpinner text="重定向到登录页面..." tip="请稍候" fullScreen />;
   }
 
   // 如果需要活跃状态但用户状态不是active
@@ -62,7 +65,8 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
 
   // 如果需要管理员权限但用户不是管理员
   if (requireAdmin && user?.id !== 1) {
-    return <Navigate to="/dashboard" replace />;
+    navigate("dashboard");
+    return <LoadingSpinner text="重定向到仪表板..." tip="请稍候" fullScreen />;
   }
 
   // 如果用户已登录且状态正常，显示受保护的内容

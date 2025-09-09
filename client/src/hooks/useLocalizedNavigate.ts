@@ -15,7 +15,26 @@ export const useLocalizedNavigate = () => {
     // Construct the full path with language prefix
     const fullPath = `/${currentLanguage}/${cleanPath}`;
 
-    console.log("Localized navigate:", { path, cleanPath, fullPath, currentLanguage });
+    console.log("Localized navigate:", {
+      path,
+      cleanPath,
+      fullPath,
+      currentLanguage,
+      currentLocation: window.location.pathname,
+      timestamp: new Date().toISOString(),
+    });
+
+    // Validate that the path doesn't contain invalid characters or nested paths
+    if (cleanPath.includes("/")) {
+      console.error("Invalid path detected:", cleanPath, "This should not contain slashes");
+    }
+
+    // Check if currentLanguage is valid
+    if (!currentLanguage || currentLanguage === "undefined") {
+      console.error("Invalid currentLanguage:", currentLanguage, "Cannot navigate");
+      return;
+    }
+
     navigate(fullPath, options);
   };
 

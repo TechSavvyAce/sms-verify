@@ -335,6 +335,14 @@ export const activationApi = {
       data: { activation_ids: activationIds },
     }),
 
+  // 获取价格信息
+  getPrices: (service?: string, country?: number): Promise<ApiResponse> =>
+    request({
+      method: "GET",
+      url: "/activations/prices",
+      params: { service, country },
+    }),
+
   // 获取运营商列表
   getOperators: (country?: number): Promise<ApiResponse<any>> =>
     request({

@@ -249,7 +249,9 @@
     "insufficientBalance": "Insufficient balance, please recharge first",
     "insufficientBalanceDescription": "Current balance ${{currentBalance}} is insufficient to purchase this service. Please recharge first.",
     "insufficientBalanceForOrder": "Current balance ${{currentBalance}}, need ${{requiredAmount}}",
-    "reorder": "Re-select"
+    "reorder": "Re-select",
+    "serviceNotAvailableInCountry": "This service is not available in the selected country, please choose another service or country",
+    "failedToValidateService": "Failed to validate service availability, please try again"
   },
   "rentals": {
     "rentalService": "Phone Number Rental Service",
@@ -450,6 +452,7 @@
     "activationCancelled": "Activation cancelled",
     "cancelFailed": "Cancel activation failed",
     "activationConfirmed": "Activation confirmed and completed!",
+    "cancelIn": "Cancel available in {{time}}",
     "confirmFailed": "Confirm activation failed",
     "retryRequested": "SMS resend requested, please wait...",
     "retryFailed": "Request SMS resend failed",

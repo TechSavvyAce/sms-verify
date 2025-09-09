@@ -1,9 +1,9 @@
 import React from "react";
 import { Result, Button } from "antd";
-import { useNavigate } from "react-router-dom";
+import { useLocalizedNavigate } from "../../hooks/useLocalizedNavigate";
 
 const NotFoundPage: React.FC = () => {
-  const navigate = useNavigate();
+  const navigate = useLocalizedNavigate();
 
   return (
     <Result

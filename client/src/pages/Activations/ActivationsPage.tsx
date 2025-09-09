@@ -476,7 +476,7 @@ const ActivationsPage: React.FC = () => {
           </Empty>
         </Card>
       ) : (
-        <Row gutter={isMobile ? [8, 8] : [16, 16]}>
+        <Row gutter={isMobile ? [12, 12] : [16, 16]}>
           {activeActivations.map((activation) => {
             const country = getCountryInfo(activation.country_id);
             const statusInfo = getStatusInfo(activation);
@@ -486,17 +486,32 @@ const ActivationsPage: React.FC = () => {
               remainingTime > 0 ? Math.max(0, Math.min(100, (remainingTime / (20 * 60)) * 100)) : 0;
 
             return (
-              <Col xs={24} sm={12} lg={8} xl={6} key={activation.id}>
+              <Col xs={24} sm={12} md={12} lg={8} xl={8} xxl={6} key={activation.id}>
                 <Card
                   size="small"
                   style={{
-                    borderRadius: "8px",
-                    boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
-                    border: activation.sms_code ? "2px solid #52c41a" : "1px solid #d9d9d9",
+                    borderRadius: "12px",
+                    boxShadow: "0 2px 12px rgba(0,0,0,0.08)",
+                    border: activation.sms_code ? "2px solid #52c41a" : "1px solid #e8e8e8",
+                    height: "100%",
+                    transition: "all 0.3s ease",
+                    background: "#ffffff",
+                    cursor: "default",
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.boxShadow = "0 4px 20px rgba(0,0,0,0.12)";
+                    e.currentTarget.style.transform = "translateY(-2px)";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.boxShadow = "0 2px 12px rgba(0,0,0,0.08)";
+                    e.currentTarget.style.transform = "translateY(0)";
                   }}
                   styles={{
                     body: {
-                      padding: isMobile ? "12px" : "16px",
+                      padding: isMobile ? "14px" : "18px",
+                      height: "100%",
+                      display: "flex",
+                      flexDirection: "column",
                     },
                   }}
                 >
@@ -504,86 +519,117 @@ const ActivationsPage: React.FC = () => {
                   <div
                     style={{
                       display: "flex",
-                      alignItems: "center",
+                      alignItems: "flex-start",
                       marginBottom: isMobile ? "8px" : "12px",
-                      flexDirection: isMobile ? "column" : "row",
-                      gap: isMobile ? "8px" : "0",
+                      flexDirection: "column",
+                      gap: "6px",
                     }}
                   >
+                    {/* 服务名称和状态标签 - 第一行 */}
                     <div
                       style={{
                         display: "flex",
                         alignItems: "center",
-                        flex: 1,
-                        width: isMobile ? "100%" : "auto",
+                        justifyContent: "space-between",
+                        width: "100%",
                       }}
                     >
-                      {serviceIcon && (
-                        <img
-                          src={serviceIcon}
-                          alt={activation.service_name}
-                          style={{
-                            width: isMobile ? "20px" : "24px",
-                            height: isMobile ? "20px" : "24px",
-                            marginRight: isMobile ? "6px" : "8px",
-                            borderRadius: "4px",
-                          }}
-                          onError={(e) => {
-                            (e.target as HTMLImageElement).style.display = "none";
-                          }}
-                        />
-                      )}
-                      <div style={{ flex: 1 }}>
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          flex: 1,
+                          minWidth: 0,
+                        }}
+                      >
+                        {serviceIcon && (
+                          <img
+                            src={serviceIcon}
+                            alt={activation.service_name}
+                            style={{
+                              width: isMobile ? "20px" : "24px",
+                              height: isMobile ? "20px" : "24px",
+                              marginRight: isMobile ? "6px" : "8px",
+                              borderRadius: "4px",
+                              flexShrink: 0,
+                            }}
+                            onError={(e) => {
+                              (e.target as HTMLImageElement).style.display = "none";
+                            }}
+                          />
+                        )}
                         <Text
                           strong
                           style={{
                             fontSize: isMobile ? "13px" : "14px",
-                            display: "block",
+                            lineHeight: 1.2,
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                            whiteSpace: "nowrap",
+                            flex: 1,
                           }}
                         >
                           {activation.service_name}
                         </Text>
-                        <div
-                          style={{
-                            display: "flex",
-                            alignItems: "center",
-                            marginTop: "2px",
-                          }}
-                        >
-                          {country && (
-                            <img
-                              src={country.flag}
-                              alt={country.name_cn}
-                              style={{
-                                width: isMobile ? "14px" : "16px",
-                                height: isMobile ? "10px" : "12px",
-                                marginRight: "4px",
-                                borderRadius: "2px",
-                              }}
-                            />
-                          )}
-                          <Text
-                            type="secondary"
-                            style={{
-                              fontSize: isMobile ? "11px" : "12px",
-                            }}
-                          >
-                            {country ? getLocalizedName(country) : activation.country_name}
-                          </Text>
-                        </div>
                       </div>
+                      <Tag
+                        color={statusInfo.color}
+                        icon={statusInfo.icon}
+                        style={{
+                          fontSize: isMobile ? "10px" : "12px",
+                          marginLeft: "8px",
+                        }}
+                      >
+                        {statusInfo.text}
+                      </Tag>
                     </div>
 
-                    <Tag
-                      color={statusInfo.color}
-                      icon={statusInfo.icon}
+                    {/* 国家信息 - 第二行 */}
+                    <div
                       style={{
-                        fontSize: isMobile ? "10px" : "12px",
-                        marginLeft: isMobile ? "0" : "8px",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        width: "100%",
                       }}
                     >
-                      {statusInfo.text}
-                    </Tag>
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          flex: 1,
+                        }}
+                      >
+                        {country && (
+                          <img
+                            src={country.flag}
+                            alt={country.name_cn}
+                            style={{
+                              width: isMobile ? "16px" : "18px",
+                              height: isMobile ? "12px" : "14px",
+                              marginRight: "6px",
+                              borderRadius: "2px",
+                              flexShrink: 0,
+                            }}
+                          />
+                        )}
+                        <Text
+                          type="secondary"
+                          style={{
+                            fontSize: isMobile ? "11px" : "12px",
+                            fontWeight: 500,
+                            lineHeight: 1.2,
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                            whiteSpace: "nowrap",
+                          }}
+                        >
+                          {country ? getLocalizedName(country) : activation.country_name}
+                        </Text>
+                      </div>
+                      {/* 空占位符，保持与第一行对齐 */}
+                      <div style={{ width: "60px" }} />
+                    </div>
                   </div>
 
                   {/* 手机号码 */}
@@ -784,6 +830,7 @@ const ActivationsPage: React.FC = () => {
                       display: "flex",
                       gap: isMobile ? "4px" : "8px",
                       flexDirection: isMobile ? "column" : "row",
+                      marginTop: "auto",
                     }}
                   >
                     <Tooltip title={t("activations.reorderWithSameSettings")}>
@@ -836,34 +883,61 @@ const ActivationsPage: React.FC = () => {
                       </Button>
                     )}
 
-                    {/* 只有在可以取消且未收到短信时才显示取消按钮 */}
-                    {activation.can_cancel &&
-                      !activation.sms_code &&
+                    {/* 取消按钮 - 检查2分钟规则 */}
+                    {!activation.sms_code &&
                       activation.status !== "3" &&
                       activation.status !== "6" &&
-                      activation.status !== "8" && (
-                        <Popconfirm
-                          title={t("activations.confirmCancelActivation")}
-                          description={t("activations.cancelRefundDescription")}
-                          onConfirm={() => handleCancel(activation)}
-                          okText={t("activations.confirm")}
-                          cancelText={t("activations.cancel")}
-                        >
+                      activation.status !== "8" &&
+                      (() => {
+                        const now = new Date();
+                        const createdTime = new Date(activation.created_at);
+                        const diffMinutes = (now.getTime() - createdTime.getTime()) / (1000 * 60);
+                        const canCancelNow = diffMinutes >= 2;
+                        const remainingSeconds = Math.max(
+                          0,
+                          Math.floor(2 * 60 - (now.getTime() - createdTime.getTime()) / 1000)
+                        );
+
+                        return canCancelNow ? (
+                          <Popconfirm
+                            title={t("activations.confirmCancelActivation")}
+                            description={t("activations.cancelRefundDescription")}
+                            onConfirm={() => handleCancel(activation)}
+                            okText={t("activations.confirm")}
+                            cancelText={t("activations.cancel")}
+                          >
+                            <Button
+                              type="default"
+                              size="small"
+                              icon={<CloseOutlined />}
+                              danger
+                              style={{
+                                flex: 1,
+                                fontSize: isMobile ? "10px" : "12px",
+                                height: isMobile ? "28px" : "32px",
+                              }}
+                            >
+                              {t("activations.cancel")}
+                            </Button>
+                          </Popconfirm>
+                        ) : (
                           <Button
                             type="default"
                             size="small"
-                            icon={<CloseOutlined />}
-                            danger
+                            icon={<ClockCircleOutlined />}
+                            disabled
                             style={{
                               flex: 1,
                               fontSize: isMobile ? "10px" : "12px",
                               height: isMobile ? "28px" : "32px",
                             }}
                           >
-                            {t("activations.cancel")}
+                            {t("activations.cancelIn", {
+                              time: formatRemainingTime(remainingSeconds),
+                            })}
                           </Button>
-                        </Popconfirm>
-                      )}
+                        );
+                      })()}
                   </div>
 
                   {/* 额外信息 */}

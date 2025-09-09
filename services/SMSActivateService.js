@@ -768,6 +768,13 @@ class SMSActivateService {
 
     const apiStatus = statusMap[status] || status;
 
+    logger.info("setActivationStatus调用:", {
+      activationId,
+      localStatus: status,
+      apiStatus,
+      statusMap,
+    });
+
     const result = await this.makeRequest(
       {
         api_key: this.apiKey,
@@ -777,6 +784,12 @@ class SMSActivateService {
       },
       "POST"
     );
+
+    logger.info("setActivationStatus结果:", {
+      activationId,
+      result,
+      resultType: typeof result,
+    });
 
     return result;
   }

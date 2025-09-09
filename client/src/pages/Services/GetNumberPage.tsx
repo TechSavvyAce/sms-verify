@@ -22,7 +22,8 @@ import {
 } from "antd";
 import { MessageOutlined, ArrowRightOutlined, ClockCircleOutlined } from "@ant-design/icons";
 import { useAuthStore } from "../../stores/authStore";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useLocation } from "react-router-dom";
+import { useLocalizedNavigate } from "../../hooks/useLocalizedNavigate";
 import { serviceCategories, countries, calculatePrice } from "../../data/services";
 import { activationApi } from "../../services/api";
 import { getApiErrorMessage } from "../../utils/errorHelpers";
@@ -34,7 +35,7 @@ const { Title, Paragraph, Text } = Typography;
 const GetNumberPage: React.FC = () => {
   const { t } = useTranslation();
   const { currentLanguage } = useLanguage();
-  const navigate = useNavigate();
+  const navigate = useLocalizedNavigate();
   const location = useLocation();
   const { user } = useAuthStore();
   const [modalVisible, setModalVisible] = useState(false);
@@ -196,11 +197,42 @@ const GetNumberPage: React.FC = () => {
     return ["any"];
   };
 
+  // 验证服务可用性
+  const validateServiceAvailability = async (service: string, country: number) => {
+    try {
+      const response = await activationApi.getPrices(service, country);
+      return (
+        response.success &&
+        response.data &&
+        response.data[country] &&
+        response.data[country][service]
+      );
+    } catch (error) {
+      console.error("验证服务可用性失败:", error);
+      return false;
+    }
+  };
+
   // 确认订单（支持多个号码）
   const handleConfirmOrder = async () => {
     if (!selectedService || selectedCountry === null) {
       message.error(t("services.pleaseSelectServiceAndCountry"));
       return;
+    }
+
+    // 验证服务可用性
+    setLoading(true);
+    try {
+      const isAvailable = await validateServiceAvailability(selectedService.code, selectedCountry);
+      if (!isAvailable) {
+        message.error(t("services.serviceNotAvailableInCountry"));
+        return;
+      }
+    } catch (error) {
+      message.error(t("services.failedToValidateService"));
+      return;
+    } finally {
+      setLoading(false);
     }
 
     // 验证 FreePrice 模式

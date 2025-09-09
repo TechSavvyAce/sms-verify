@@ -249,7 +249,9 @@
     "insufficientBalance": "余额不足，请先充值",
     "insufficientBalanceDescription": "当前余额 ${{currentBalance}}，不足以购买此服务。请先充值。",
     "insufficientBalanceForOrder": "当前余额 ${{currentBalance}}，需要 ${{requiredAmount}}",
-    "reorder": "重新选择"
+    "reorder": "重新选择",
+    "serviceNotAvailableInCountry": "该服务在所选国家不可用，请选择其他服务或国家",
+    "failedToValidateService": "验证服务可用性失败，请重试"
   },
   "rentals": {
     "rentalService": "号码租用服务",
@@ -450,6 +452,7 @@
     "activationCancelled": "激活已取消",
     "cancelFailed": "取消激活失败",
     "activationConfirmed": "激活已确认完成！",
+    "cancelIn": "{{time}}后可取消",
     "confirmFailed": "确认激活失败",
     "retryRequested": "已请求重发短信，请稍候...",
     "retryFailed": "请求重发短信失败",

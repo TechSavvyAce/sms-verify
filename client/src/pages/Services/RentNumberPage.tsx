@@ -20,19 +20,19 @@ import {
 } from "antd";
 import { PhoneOutlined, ArrowRightOutlined, ClockCircleOutlined } from "@ant-design/icons";
 import { useAuthStore } from "../../stores/authStore";
-import { useNavigate } from "react-router-dom";
 import { rentalApi } from "../../services/api";
 import countriesData from "../../data/countries.json";
 import { getApiErrorMessage } from "../../utils/errorHelpers";
 import { useTranslation } from "react-i18next";
 import { useLanguage } from "../../contexts/LanguageContext";
+import { useLocalizedNavigate } from "../../hooks/useLocalizedNavigate";
 
 const { Title, Paragraph, Text } = Typography;
 
 const RentNumberPage: React.FC = () => {
   const { t } = useTranslation();
   const { currentLanguage } = useLanguage();
-  const navigate = useNavigate();
+  const navigate = useLocalizedNavigate();
   const { user } = useAuthStore();
   const [modalVisible, setModalVisible] = useState(false);
   const [currentStep, setCurrentStep] = useState(0);

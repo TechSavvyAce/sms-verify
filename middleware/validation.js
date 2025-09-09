@@ -237,6 +237,13 @@ const validateSearch = Joi.object({
 });
 
 /**
+ * ID参数验证
+ */
+const validateId = Joi.object({
+  id: commonRules.id,
+});
+
+/**
  * 创建验证中间件
  */
 const createValidationMiddleware = (schema, property = "body") => {
@@ -375,6 +382,7 @@ module.exports = {
   validateWebhookTest,
   validateNotificationSettings,
   validateSearch,
+  validateId,
 
   // 中间件创建函数
   createValidationMiddleware,

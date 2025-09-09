@@ -110,7 +110,17 @@ Activation.prototype.isExpired = function () {
 };
 
 Activation.prototype.canCancel = function () {
-  return ["0", "1"].includes(this.status);
+  // 检查状态是否允许取消
+  if (!["0", "1"].includes(this.status)) {
+    return false;
+  }
+
+  // 检查是否超过2分钟
+  const now = new Date();
+  const createdTime = new Date(this.created_at);
+  const diffMinutes = (now - createdTime) / (1000 * 60);
+
+  return diffMinutes >= 2; // 2分钟后才能取消
 };
 
 Activation.prototype.isCompleted = function () {

@@ -191,6 +191,173 @@ router.post("/webhook", async (req, res) => {
   }
 });
 
+// 诊断端点（无需认证）
+/**
+ * 检查数据库连接
+ * GET /api/activations/db-status
+ */
+router.get("/db-status", async (req, res) => {
+  try {
+    logger.info("检查数据库连接状态");
+
+    // 测试数据库连接
+    await sequelize.authenticate();
+    logger.info("数据库连接成功");
+
+    // 测试基本查询
+    const activationCount = await Activation.count();
+    logger.info("数据库查询成功", { activationCount });
+
+    res.json({
+      success: true,
+      data: {
+        databaseConnected: true,
+        activationCount: activationCount,
+        timestamp: new Date().toISOString(),
+      },
+    });
+  } catch (error) {
+    logger.error("数据库连接检查失败:", error);
+    res.status(500).json({
+      success: false,
+      error: error.message,
+      databaseConnected: false,
+    });
+  }
+});
+
+/**
+ * 检查SMS-Activate服务
+ * GET /api/activations/sms-service-status
+ */
+router.get("/sms-service-status", async (req, res) => {
+  try {
+    logger.info("检查SMS-Activate服务状态");
+
+    // 测试获取余额
+    const balanceResult = await smsService.getBalance();
+    logger.info("SMS-Activate服务测试成功", { balanceResult });
+
+    res.json({
+      success: true,
+      data: {
+        smsServiceConnected: true,
+        balance: balanceResult,
+        timestamp: new Date().toISOString(),
+      },
+    });
+  } catch (error) {
+    logger.error("SMS-Activate服务检查失败:", error);
+    res.status(500).json({
+      success: false,
+      error: error.message,
+      smsServiceConnected: false,
+    });
+  }
+});
+
+/**
+ * 检查认证状态
+ * GET /api/activations/auth-status
+ */
+router.get("/auth-status", async (req, res) => {
+  try {
+    const authHeader = req.headers["authorization"];
+    const token = authHeader && authHeader.split(" ")[1];
+
+    logger.info("检查认证状态:", {
+      hasAuthHeader: !!authHeader,
+      hasToken: !!token,
+      tokenLength: token ? token.length : 0,
+      userAgent: req.get("User-Agent"),
+      ip: req.ip,
+    });
+
+    res.json({
+      success: true,
+      data: {
+        hasAuthHeader: !!authHeader,
+        hasToken: !!token,
+        tokenLength: token ? token.length : 0,
+        timestamp: new Date().toISOString(),
+      },
+    });
+  } catch (error) {
+    logger.error("检查认证状态失败:", error);
+    res.status(500).json({
+      success: false,
+      error: error.message,
+    });
+  }
+});
+
+/**
+ * 测试取消激活功能 - 最小版本（无需认证）
+ * POST /api/activations/minimal-test-cancel/:id
+ */
+router.post("/minimal-test-cancel/:id", async (req, res) => {
+  try {
+    const activationId = req.params.id;
+
+    logger.info("最小测试取消激活:", {
+      activationId,
+      timestamp: new Date().toISOString(),
+    });
+
+    // 只测试数据库连接和基本查询
+    const activation = await Activation.findOne({
+      where: {
+        id: activationId,
+      },
+    });
+
+    if (!activation) {
+      return res.status(404).json({
+        success: false,
+        error: "激活记录不存在",
+      });
+    }
+
+    // 测试 canCancel 方法
+    const canCancel = activation.canCancel();
+    const now = new Date();
+    const createdTime = new Date(activation.created_at);
+    const diffMinutes = (now.getTime() - createdTime.getTime()) / (1000 * 60);
+
+    res.json({
+      success: true,
+      message: "最小测试成功",
+      data: {
+        activation: {
+          id: activation.id,
+          status: activation.status,
+          canCancel: canCancel,
+          created_at: activation.created_at,
+          diffMinutes: diffMinutes,
+          service: activation.service,
+          cost: activation.cost,
+        },
+        timeInfo: {
+          now: now.toISOString(),
+          created: createdTime.toISOString(),
+          diffMinutes: diffMinutes,
+          canCancelAfter2Min: diffMinutes >= 2,
+        },
+      },
+    });
+  } catch (error) {
+    logger.error("最小测试取消激活失败:", {
+      error: error.message,
+      stack: error.stack,
+      activationId: req.params.id,
+    });
+    res.status(500).json({
+      success: false,
+      error: error.message,
+    });
+  }
+});
+
 // 所有其他激活路由都需要认证
 router.use(authenticateToken);
 
@@ -230,6 +397,30 @@ router.get("/operators", async (req, res) => {
     res.status(500).json({
       success: false,
       error: "获取运营商列表失败",
+      details: error.message,
+    });
+  }
+});
+
+/**
+ * 获取价格信息
+ * GET /api/activations/prices
+ */
+router.get("/prices", async (req, res) => {
+  try {
+    const { service, country } = req.query;
+    const countryCode = country !== undefined ? parseInt(country) : null;
+
+    const prices = await smsService.getPrices(service, countryCode);
+    res.json({
+      success: true,
+      data: prices,
+    });
+  } catch (error) {
+    logger.error("获取价格信息失败:", error);
+    res.status(500).json({
+      success: false,
+      error: "获取价格信息失败",
       details: error.message,
     });
   }
@@ -899,122 +1090,597 @@ router.post(
   createValidationMiddleware(validateId, "params"),
   logUserActivity("cancel_activation"),
   async (req, res) => {
-    const transaction = await sequelize.transaction();
+    try {
+      let transaction;
 
+      try {
+        logger.info("开始取消激活流程:", {
+          activationId: req.params.id,
+          userId: req.user?.id,
+          userExists: !!req.user,
+          timestamp: new Date().toISOString(),
+        });
+
+        // 检查用户是否已认证
+        if (!req.user) {
+          logger.error("用户未认证:", {
+            activationId: req.params.id,
+            hasUser: !!req.user,
+          });
+          return res.status(401).json({
+            success: false,
+            error: "用户未认证",
+          });
+        }
+
+        transaction = await sequelize.transaction();
+        logger.info("数据库事务创建成功");
+      } catch (transactionError) {
+        logger.error("创建数据库事务失败:", {
+          error: transactionError.message,
+          stack: transactionError.stack,
+        });
+        return res.status(500).json({
+          success: false,
+          error: "数据库连接失败",
+          details: {
+            errorName: transactionError.name,
+            errorCode: transactionError.code,
+          },
+        });
+      }
+
+      try {
+        const activationId = req.params.id;
+
+        logger.info("查找激活记录:", { activationId, userId: req.user.id });
+
+        const activation = await Activation.findOne({
+          where: {
+            id: activationId,
+            user_id: req.user.id,
+          },
+          transaction,
+        });
+
+        if (!activation) {
+          logger.warn("激活记录不存在:", { activationId, userId: req.user.id });
+          await transaction.rollback();
+          return res.status(404).json({
+            success: false,
+            error: "激活记录不存在",
+          });
+        }
+
+        logger.info("找到激活记录:", {
+          id: activation.id,
+          status: activation.status,
+          service: activation.service,
+          created_at: activation.created_at,
+        });
+
+        logger.info("检查是否可以取消:", {
+          canCancel: activation.canCancel(),
+          status: activation.status,
+          created_at: activation.created_at,
+          now: new Date().toISOString(),
+        });
+
+        if (!activation.canCancel()) {
+          logger.warn("激活无法取消:", {
+            id: activation.id,
+            status: activation.status,
+            canCancel: activation.canCancel(),
+          });
+          await transaction.rollback();
+          return res.status(400).json({
+            success: false,
+            error: "该激活无法取消",
+          });
+        }
+
+        // 调用API取消激活
+        try {
+          logger.info("开始调用API取消激活:", {
+            activationId: activation.activation_id,
+            service: activation.service,
+            status: activation.status,
+          });
+
+          const apiResult = await smsService.cancelActivation(activation.activation_id);
+          logger.info("API取消激活成功:", apiResult);
+        } catch (apiError) {
+          logger.warn("API取消激活失败，继续本地处理:", {
+            error: apiError.message,
+            stack: apiError.stack,
+            activationId: activation.activation_id,
+          });
+          // 即使API调用失败，也继续本地取消流程
+        }
+
+        // 计算退款金额（可能需要根据业务规则调整）
+        logger.info("计算退款金额:", {
+          activationId: activation.id,
+          status: activation.status,
+          cost: activation.cost,
+        });
+
+        const refundAmount = calculateRefundAmount(activation);
+
+        logger.info("退款金额计算结果:", {
+          refundAmount,
+          activationCost: activation.cost,
+          activationStatus: activation.status,
+        });
+
+        if (refundAmount > 0) {
+          // 退款给用户
+          logger.info("开始处理退款:", {
+            userId: req.user.id,
+            refundAmount,
+          });
+
+          const user = await User.findByPk(req.user.id, { transaction });
+          if (!user) {
+            logger.error("用户不存在:", { userId: req.user.id });
+            throw new Error("用户不存在");
+          }
+
+          logger.info("找到用户:", {
+            userId: user.id,
+            currentBalance: user.balance,
+          });
+
+          const balanceBefore = parseFloat(user.balance);
+          const balanceAfter = balanceBefore + refundAmount;
+
+          logger.info("更新用户余额:", {
+            userId: req.user.id,
+            balanceBefore,
+            refundAmount,
+            balanceAfter,
+          });
+
+          await user.update(
+            {
+              balance: balanceAfter.toFixed(2),
+            },
+            { transaction }
+          );
+
+          // 记录退款交易
+          logger.info("创建退款交易记录:", {
+            userId: req.user.id,
+            type: "refund",
+            amount: refundAmount,
+            balanceBefore,
+            balanceAfter,
+            referenceId: activation.id.toString(),
+            description: `取消激活退款 - ${activation.service_name || activation.service}`,
+          });
+
+          try {
+            await Transaction.create(
+              {
+                user_id: req.user.id,
+                type: "refund",
+                amount: refundAmount.toFixed(2),
+                balance_before: balanceBefore.toFixed(2),
+                balance_after: balanceAfter.toFixed(2),
+                reference_id: activation.id.toString(),
+                description: `取消激活退款 - ${activation.service_name || activation.service}`,
+              },
+              { transaction }
+            );
+            logger.info("退款交易记录创建成功");
+          } catch (transactionCreateError) {
+            logger.error("创建退款交易记录失败:", {
+              error: transactionCreateError.message,
+              stack: transactionCreateError.stack,
+              transactionData: {
+                user_id: req.user.id,
+                type: "refund",
+                amount: refundAmount.toFixed(2),
+                balance_before: balanceBefore.toFixed(2),
+                balance_after: balanceAfter.toFixed(2),
+                reference_id: activation.id.toString(),
+              },
+            });
+            throw transactionCreateError;
+          }
+        }
+
+        // 更新激活状态
+        logger.info("更新激活状态为已取消:", {
+          activationId: activation.id,
+          oldStatus: activation.status,
+          newStatus: "6",
+        });
+
+        try {
+          await activation.update(
+            {
+              status: "6", // 已取消
+              last_check_at: new Date(),
+            },
+            { transaction }
+          );
+          logger.info("激活状态更新成功");
+        } catch (activationUpdateError) {
+          logger.error("更新激活状态失败:", {
+            error: activationUpdateError.message,
+            stack: activationUpdateError.stack,
+            activationId: activation.id,
+          });
+          throw activationUpdateError;
+        }
+
+        logger.info("提交事务:", {
+          activationId: activation.id,
+          refundAmount,
+        });
+
+        try {
+          await transaction.commit();
+          logger.info("事务提交成功");
+        } catch (commitError) {
+          logger.error("事务提交失败:", {
+            error: commitError.message,
+            stack: commitError.stack,
+            activationId: activation.id,
+          });
+          throw commitError;
+        }
+
+        // 通知客户端余额更新和激活取消
+        try {
+          logger.info("检查WebSocket对象:", {
+            hasIo: !!req.io,
+            ioType: typeof req.io,
+            userId: req.user.id,
+          });
+
+          if (refundAmount > 0) {
+            logger.info("发送余额更新通知:", {
+              userId: req.user.id,
+              newBalance: balanceAfter,
+              refundAmount,
+            });
+
+            if (req.io) {
+              req.io.to(`user_${req.user.id}`).emit("balance_updated", {
+                new_balance: balanceAfter,
+                change_amount: refundAmount,
+                transaction_type: "refund",
+                reference_id: activation.id,
+                description: `取消激活退款 - ${activation.service_name || activation.service}`,
+              });
+              logger.info("余额更新通知发送成功");
+            } else {
+              logger.warn("WebSocket对象不存在，跳过余额更新通知");
+            }
+          }
+
+          logger.info("发送激活取消通知:", {
+            userId: req.user.id,
+            activationId: activation.id,
+            refundAmount,
+          });
+
+          if (req.io) {
+            req.io.to(`user_${req.user.id}`).emit("activation_cancelled", {
+              id: activation.id,
+              refund_amount: refundAmount,
+            });
+            logger.info("激活取消通知发送成功");
+          } else {
+            logger.warn("WebSocket对象不存在，跳过激活取消通知");
+          }
+        } catch (wsError) {
+          logger.warn("WebSocket通知发送失败:", {
+            error: wsError.message,
+            stack: wsError.stack,
+          });
+          // WebSocket错误不应该影响主要流程
+        }
+
+        logger.info("激活取消成功:", {
+          userId: req.user.id,
+          activationId: activation.id,
+          refundAmount,
+        });
+
+        res.json({
+          success: true,
+          message: "激活已取消",
+          data: {
+            status: "6",
+            status_text: "已取消",
+            refund_amount: refundAmount,
+          },
+        });
+      } catch (error) {
+        if (transaction) {
+          try {
+            await transaction.rollback();
+            logger.info("事务已回滚");
+          } catch (rollbackError) {
+            logger.error("事务回滚失败:", rollbackError);
+          }
+        }
+
+        logger.error("取消激活失败:", {
+          error: error.message,
+          stack: error.stack,
+          userId: req.user?.id,
+          activationId: req.params.id,
+          errorName: error.name,
+          errorCode: error.code,
+        });
+
+        // 返回更具体的错误信息
+        const errorMessage = error.message || "取消激活失败";
+        res.status(500).json({
+          success: false,
+          error: errorMessage,
+          details: {
+            errorName: error.name,
+            errorCode: error.code,
+            timestamp: new Date().toISOString(),
+          },
+        });
+      }
+    } catch (outerError) {
+      logger.error("取消激活外层错误捕获:", {
+        error: outerError.message,
+        stack: outerError.stack,
+        activationId: req.params.id,
+        userId: req.user?.id,
+      });
+
+      res.status(500).json({
+        success: false,
+        error: "取消激活失败",
+        details: {
+          errorName: outerError.name,
+          errorCode: outerError.code,
+          timestamp: new Date().toISOString(),
+        },
+      });
+    }
+  }
+);
+
+/**
+ * 检查数据库连接
+ * GET /api/activations/db-status
+ */
+router.get("/db-status", async (req, res) => {
+  try {
+    logger.info("检查数据库连接状态");
+
+    // 测试数据库连接
+    await sequelize.authenticate();
+    logger.info("数据库连接成功");
+
+    // 测试基本查询
+    const activationCount = await Activation.count();
+    logger.info("数据库查询成功", { activationCount });
+
+    res.json({
+      success: true,
+      data: {
+        databaseConnected: true,
+        activationCount: activationCount,
+        timestamp: new Date().toISOString(),
+      },
+    });
+  } catch (error) {
+    logger.error("数据库连接检查失败:", error);
+    res.status(500).json({
+      success: false,
+      error: error.message,
+      databaseConnected: false,
+    });
+  }
+});
+
+/**
+ * 检查SMS-Activate服务
+ * GET /api/activations/sms-service-status
+ */
+router.get("/sms-service-status", async (req, res) => {
+  try {
+    logger.info("检查SMS-Activate服务状态");
+
+    // 测试获取余额
+    const balanceResult = await smsService.getBalance();
+    logger.info("SMS-Activate服务测试成功", { balanceResult });
+
+    res.json({
+      success: true,
+      data: {
+        smsServiceConnected: true,
+        balance: balanceResult,
+        timestamp: new Date().toISOString(),
+      },
+    });
+  } catch (error) {
+    logger.error("SMS-Activate服务检查失败:", error);
+    res.status(500).json({
+      success: false,
+      error: error.message,
+      smsServiceConnected: false,
+    });
+  }
+});
+
+/**
+ * 检查认证状态
+ * GET /api/activations/auth-status
+ */
+router.get("/auth-status", async (req, res) => {
+  try {
+    const authHeader = req.headers["authorization"];
+    const token = authHeader && authHeader.split(" ")[1];
+
+    logger.info("检查认证状态:", {
+      hasAuthHeader: !!authHeader,
+      hasToken: !!token,
+      tokenLength: token ? token.length : 0,
+      userAgent: req.get("User-Agent"),
+      ip: req.ip,
+    });
+
+    res.json({
+      success: true,
+      data: {
+        hasAuthHeader: !!authHeader,
+        hasToken: !!token,
+        tokenLength: token ? token.length : 0,
+        timestamp: new Date().toISOString(),
+      },
+    });
+  } catch (error) {
+    logger.error("检查认证状态失败:", error);
+    res.status(500).json({
+      success: false,
+      error: error.message,
+    });
+  }
+});
+
+/**
+ * 测试取消激活功能 - 简单版本（无需认证）
+ * POST /api/activations/simple-test-cancel/:id
+ */
+router.post(
+  "/simple-test-cancel/:id",
+  createValidationMiddleware(validateId, "params"),
+  async (req, res) => {
     try {
       const activationId = req.params.id;
 
+      logger.info("简单测试取消激活:", {
+        activationId,
+        userId: req.user.id,
+        timestamp: new Date().toISOString(),
+      });
+
+      // 只测试数据库连接和基本查询
       const activation = await Activation.findOne({
         where: {
           id: activationId,
           user_id: req.user.id,
         },
-        transaction,
       });
 
       if (!activation) {
-        await transaction.rollback();
         return res.status(404).json({
           success: false,
           error: "激活记录不存在",
         });
       }
 
-      if (!activation.canCancel()) {
-        await transaction.rollback();
-        return res.status(400).json({
-          success: false,
-          error: "该激活无法取消",
-        });
-      }
+      // 测试 canCancel 方法
+      const canCancel = activation.canCancel();
+      const now = new Date();
+      const createdTime = new Date(activation.created_at);
+      const diffMinutes = (now.getTime() - createdTime.getTime()) / (1000 * 60);
 
-      // 调用API取消激活
-      try {
-        await smsService.cancelActivation(activation.activation_id);
-      } catch (apiError) {
-        logger.warn("API取消激活失败，继续本地处理:", apiError);
-        // 即使API调用失败，也继续本地取消流程
-      }
-
-      // 计算退款金额（可能需要根据业务规则调整）
-      const refundAmount = calculateRefundAmount(activation);
-
-      if (refundAmount > 0) {
-        // 退款给用户
-        const user = await User.findByPk(req.user.id, { transaction });
-        const balanceBefore = parseFloat(user.balance);
-        const balanceAfter = balanceBefore + refundAmount;
-
-        await user.update(
-          {
-            balance: balanceAfter,
+      res.json({
+        success: true,
+        message: "简单测试成功",
+        data: {
+          activation: {
+            id: activation.id,
+            status: activation.status,
+            canCancel: canCancel,
+            created_at: activation.created_at,
+            diffMinutes: diffMinutes,
+            service: activation.service,
+            cost: activation.cost,
           },
-          { transaction }
-        );
-
-        // 记录退款交易
-        await Transaction.create(
-          {
-            user_id: req.user.id,
-            type: "refund",
-            amount: refundAmount,
-            balance_before: balanceBefore,
-            balance_after: balanceAfter,
-            reference_id: activation.id.toString(),
-            description: `取消激活退款 - ${smsService.getServiceName(activation.service)}`,
+          timeInfo: {
+            now: now.toISOString(),
+            created: createdTime.toISOString(),
+            diffMinutes: diffMinutes,
+            canCancelAfter2Min: diffMinutes >= 2,
           },
-          { transaction }
-        );
-      }
-
-      // 更新激活状态
-      await activation.update(
-        {
-          status: "6", // 已取消
-          last_check_at: new Date(),
         },
-        { transaction }
-      );
+      });
+    } catch (error) {
+      logger.error("简单测试取消激活失败:", {
+        error: error.message,
+        stack: error.stack,
+        activationId: req.params.id,
+        userId: req.user.id,
+      });
+      res.status(500).json({
+        success: false,
+        error: error.message,
+      });
+    }
+  }
+);
 
-      await transaction.commit();
+/**
+ * 测试取消激活功能
+ * POST /api/activations/test-cancel/:id
+ */
+router.post(
+  "/test-cancel/:id",
+  createValidationMiddleware(validateId, "params"),
+  logUserActivity("test_cancel_activation"),
+  async (req, res) => {
+    try {
+      const activationId = req.params.id;
 
-      // 通知客户端余额更新和激活取消
-      if (refundAmount > 0) {
-        req.io.to(`user_${req.user.id}`).emit("balance_updated", {
-          new_balance: balanceAfter,
-          change_amount: refundAmount,
-          transaction_type: "refund",
-          reference_id: activation.id,
-          description: `取消激活退款 - ${smsService.getServiceName(activation.service)}`,
-        });
-      }
-
-      req.io.to(`user_${req.user.id}`).emit("activation_cancelled", {
-        id: activation.id,
-        refund_amount: refundAmount,
+      logger.info("测试取消激活:", {
+        activationId,
+        userId: req.user.id,
       });
 
-      logger.info("激活取消成功:", {
-        userId: req.user.id,
-        activationId: activation.id,
-        refundAmount,
+      const activation = await Activation.findOne({
+        where: {
+          id: activationId,
+          user_id: req.user.id,
+        },
+      });
+
+      if (!activation) {
+        return res.status(404).json({
+          success: false,
+          error: "激活记录不存在",
+        });
+      }
+
+      logger.info("找到激活记录:", {
+        id: activation.id,
+        status: activation.status,
+        canCancel: activation.canCancel(),
+        created_at: activation.created_at,
+        service: activation.service,
       });
 
       res.json({
         success: true,
-        message: "激活已取消",
+        message: "测试成功",
         data: {
-          status: "6",
-          status_text: "已取消",
-          refund_amount: refundAmount,
+          activation: {
+            id: activation.id,
+            status: activation.status,
+            canCancel: activation.canCancel(),
+            created_at: activation.created_at,
+            service: activation.service,
+          },
         },
       });
     } catch (error) {
-      await transaction.rollback();
-      logger.error("取消激活失败:", error);
+      logger.error("测试取消激活失败:", error);
       res.status(500).json({
         success: false,
-        error: "取消激活失败",
+        error: error.message,
       });
     }
   }
