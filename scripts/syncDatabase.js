@@ -179,12 +179,11 @@ class DatabaseSyncer {
         logging: (sql) => logger.debug(`SQL: ${sql}`),
       };
 
-      logger.info(`🔄 开始同步数据库...`);
+      logger.info(`🔄 数据库同步已禁用...`);
       logger.info(`同步选项: ${JSON.stringify(syncOptions, null, 2)}`);
 
-      await db.sync(syncOptions);
-
-      logger.info("✅ 数据库表同步完成");
+      // Database sync removed as requested
+      logger.info("✅ 数据库表同步已禁用");
 
       // 显示表信息
       await this.showTableInfo();

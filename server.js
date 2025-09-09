@@ -350,11 +350,9 @@ async function startServer() {
     await db.authenticate();
     logger.info("数据库连接成功");
 
-    // 同步数据库模型
+    // 数据库同步已禁用
     if (process.env.NODE_ENV === "development") {
-      // Use force: false to avoid automatic table alterations that can cause MySQL key limit errors
-      await db.sync({ force: false });
-      logger.info("数据库模型同步完成");
+      logger.info("数据库模型同步已禁用");
 
       // 初始化系统配置
       await seedSystemConfig();
