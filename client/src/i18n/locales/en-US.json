@@ -73,7 +73,8 @@
     "accountRecharge": "Account Recharge",
     "admin": "System Management",
     "userManagement": "User Management",
-    "transactionManagement": "Transaction Management"
+    "transactionManagement": "Transaction Management",
+    "pricing": "Pricing"
   },
   "auth": {
     "welcomeBack": "Welcome Back",
@@ -251,7 +252,8 @@
     "insufficientBalanceForOrder": "Current balance ${{currentBalance}}, need ${{requiredAmount}}",
     "reorder": "Re-select",
     "serviceNotAvailableInCountry": "This service is not available in the selected country, please choose another service or country",
-    "failedToValidateService": "Failed to validate service availability, please try again"
+    "failedToValidateService": "Failed to validate service availability, please try again",
+    "providerNoBalance": "Provider balance is low. Please try again shortly. Contact admin if you have concerns."
   },
   "rentals": {
     "rentalService": "Phone Number Rental Service",
@@ -724,5 +726,59 @@
     "jumpToSection": "Jump to Section",
     "readingTime": "Reading Time",
     "minutes": "minutes"
+  }
+  ,
+  "adminPricing": {
+    "title": "Pricing Management",
+    "service": "Service",
+    "country": "Country",
+    "price": "Price",
+    "priceWithCurrency": "Price ({{currency}})",
+    "enabled": "Enabled",
+    "actions": "Actions",
+    "toggle": "Toggle",
+    "newPrice": "New Price",
+    "modalTitle": "Create / Override Pricing",
+    "servicePlaceholder": "Select service",
+    "countryPlaceholder": "Select country",
+    "enabledPlaceholder": "Enabled state",
+    "hint": "Use filters and inline edit or apply batch adjustments below.",
+    "batchTitle": "Batch Adjust Pricing",
+    "byCountry": "By Country",
+    "byService": "By Service",
+    "opSet": "Set To",
+    "opIncrease": "Increase",
+    "opDecrease": "Decrease",
+    "opMultiply": "Multiply",
+    "createMissing": "Create Missing",
+    "doNotCreate": "Do Not Create",
+    "applyBatch": "Apply Batch",
+    "batchDone": "Batch update completed",
+    "selectedCount": "Selected {{count}} items",
+    "setPrice": "Set Price",
+    "setPriceTo": "Set price to",
+    "enable": "Enable",
+    "disable": "Disable",
+    "groupEditServiceTitle": "Bulk edit service: {{service}}",
+    "groupEditCountryTitle": "Bulk edit country: {{country}}",
+    "saveAll": "Save All",
+    "editAllForService": "Edit this service prices across all countries",
+    "editAllForCountry": "Edit all services prices for this country",
+    "servicesList": "Services",
+    "countriesList": "Countries",
+    "editorTitle": "Price Editor",
+    "editorHint": "Select a service or a country to edit",
+    "searchService": "Search service",
+    "searchCountry": "Search country",
+    "saved": "Pricing saved",
+    "updated": "Pricing updated",
+    "deleted": "Pricing deleted",
+    "fetchFailed": "Failed to fetch pricing",
+    "updateFailed": "Update failed",
+    "deleteFailed": "Delete failed"
+  }
+  ,
+  "footer": {
+    "supportContact": "Need help? Telegram support: {{handle}}"
   }
 }

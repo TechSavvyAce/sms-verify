@@ -1,5 +1,6 @@
 const express = require("express");
 const SMSActivateService = require("../services/SMSActivateService");
+const { PricingOverride } = require("../models");
 const { optionalAuth } = require("../middleware/auth");
 const { validateSearch, createValidationMiddleware } = require("../middleware/validation");
 const logger = require("../utils/logger");
@@ -81,6 +82,53 @@ router.get(
     }
   }
 );
+
+/**
+ * 获取每个服务的最小价格（从DB）
+ * GET /api/services/min-prices
+ */
+router.get("/min-prices", async (req, res) => {
+  try {
+    // 聚合所有定价，获取每个服务的最低价
+    const rows = await PricingOverride.findAll({ attributes: ["service_code", "price", "enabled", "country_id"] });
+    const minMap = new Map();
+    for (const r of rows) {
+      if (!r.enabled) continue;
+      const key = r.service_code;
+      const price = parseFloat(r.price);
+      if (!minMap.has(key) || price < minMap.get(key).price) {
+        minMap.set(key, { price, country_id: r.country_id });
+      }
+    }
+    const result = {};
+    for (const [svc, data] of minMap.entries()) {
+      result[svc] = data.price;
+    }
+    res.json({ success: true, data: result });
+  } catch (error) {
+    logger.error("获取最小价格失败:", error);
+    res.status(500).json({ success: false, error: "获取最小价格失败" });
+  }
+});
+
+/**
+ * 获取某服务的按国家的价格（从DB）
+ * GET /api/services/:service/pricing
+ */
+router.get("/:service/pricing", async (req, res) => {
+  try {
+    const { service } = req.params;
+    const rows = await PricingOverride.findAll({ where: { service_code: service, enabled: true } });
+    const pricingByCountry = {};
+    for (const r of rows) {
+      pricingByCountry[r.country_id] = parseFloat(r.price);
+    }
+    res.json({ success: true, data: pricingByCountry });
+  } catch (error) {
+    logger.error("获取服务国家价格失败:", error);
+    res.status(500).json({ success: false, error: "获取服务国家价格失败" });
+  }
+});
 
 /**
  * 获取指定服务的国家列表

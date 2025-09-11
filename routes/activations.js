@@ -1,6 +1,6 @@
 const express = require("express");
 const sequelize = require("../config/database");
-const { User, Activation, Transaction } = require("../models");
+const { User, Activation, Transaction, PricingOverride } = require("../models");
 const SMSActivateService = require("../services/SMSActivateService");
 const WebhookService = require("../services/WebhookService");
 const { authenticateToken, logUserActivity } = require("../middleware/auth");
@@ -441,18 +441,18 @@ router.post(
       const { service, country, operator } = req.body;
       const userId = req.user.id;
 
-      // 获取价格信息
-      const pricing = await smsService.getPrices(service, country);
-
-      if (!pricing[country] || !pricing[country][service]) {
-        await transaction.rollback();
-        return res.status(400).json({
-          success: false,
-          error: "该服务在所选国家不可用",
-        });
+      // 使用数据库定价（不再依赖外部价格接口）
+      const override = await PricingOverride.findOne({
+        where: { service_code: service, country_id: country, enabled: true },
+      });
+      let cost;
+      if (!override) {
+        // 使用系统默认价格
+        const defaultPriceStr = await SystemConfig.getConfig("default_activation_price_usd", "0.5");
+        cost = parseFloat(defaultPriceStr);
+      } else {
+        cost = parseFloat(override.price);
       }
-
-      const cost = pricing[country][service].markup;
 
       // 检查用户余额
       const user = await User.findByPk(userId, { transaction });
@@ -642,18 +642,17 @@ router.post(
         });
       }
 
-      // 获取价格信息
-      const pricing = await smsService.getPrices(service, country);
-
-      if (!pricing[country] || !pricing[country][service]) {
-        await transaction.rollback();
-        return res.status(400).json({
-          success: false,
-          error: "该服务在所选国家不可用",
-        });
+      // 使用数据库定价（不再依赖外部价格接口）
+      const override = await PricingOverride.findOne({
+        where: { service_code: service, country_id: country, enabled: true },
+      });
+      let originalCost;
+      if (!override) {
+        const defaultPriceStr = await SystemConfig.getConfig("default_activation_price_usd", "0.5");
+        originalCost = parseFloat(defaultPriceStr);
+      } else {
+        originalCost = parseFloat(override.price);
       }
-
-      const originalCost = pricing[country][service].original;
 
       // 检查 maxPrice 是否合理
       if (maxPrice < originalCost) {
@@ -666,7 +665,7 @@ router.post(
         });
       }
 
-      const cost = Math.min(maxPrice, pricing[country][service].markup);
+      const cost = Math.min(maxPrice, originalCost);
 
       // 检查用户余额
       const user = await User.findByPk(userId, { transaction });

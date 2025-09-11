@@ -1,6 +1,7 @@
 import React, { useEffect } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
-import { Layout } from "antd";
+import { Layout, Button, Tooltip } from "antd";
+import { MessageOutlined } from "@ant-design/icons";
 import { useAuthStore } from "./stores/authStore";
 import { useWebSocket } from "./hooks/useWebSocket";
 import { useLocalizedNavigate } from "./hooks/useLocalizedNavigate";
@@ -23,6 +24,7 @@ import RentalsPage from "./pages/Rentals/RentalsPage";
 import TransactionsPage from "./pages/Transactions/TransactionsPage";
 import AdminUsersPage from "./pages/Admin/AdminUsersPage";
 import AdminTransactionsPage from "./pages/Admin/AdminTransactionsPage";
+import AdminPricingPage from "./pages/Admin/AdminPricingPage";
 import NotFoundPage from "./pages/Error/NotFoundPage";
 import ProfilePage from "./pages/Profile/ProfilePage";
 import BalancePage from "./pages/Balance/BalancePage";
@@ -208,6 +210,14 @@ const AppWithLanguage: React.FC = () => {
                               </ProtectedRoute>
                             }
                           />
+                          <Route
+                            path="admin/pricing"
+                            element={
+                              <ProtectedRoute requireAdmin>
+                                <AdminPricingPage />
+                              </ProtectedRoute>
+                            }
+                          />
                         </>
                       )}
 
@@ -216,6 +226,17 @@ const AppWithLanguage: React.FC = () => {
                     </Routes>
                   </ErrorBoundary>
                 </Content>
+
+                {/* 浮动支持按钮 */}
+                <a href="https://t.me/smsyz_support" target="_blank" rel="noreferrer"
+                  style={{ position: "fixed", bottom: isMobile ? 16 : 24, right: isMobile ? 16 : 24, zIndex: 1100 }}>
+                  <Tooltip title="Telegram: @smsyz_support">
+                    <Button type="primary" shape="round" size={isMobile ? "middle" : "large"} icon={<MessageOutlined />}
+                      style={{ boxShadow: "0 6px 16px rgba(0,0,0,0.2)" }}>
+                      Support
+                    </Button>
+                  </Tooltip>
+                </a>
               </Layout>
             </Layout>
           </ProtectedRoute>

@@ -25,7 +25,7 @@ import { useAuthStore } from "../../stores/authStore";
 import { useLocation } from "react-router-dom";
 import { useLocalizedNavigate } from "../../hooks/useLocalizedNavigate";
 import { serviceCategories, countries, calculatePrice } from "../../data/services";
-import { activationApi } from "../../services/api";
+import { activationApi, serviceApi } from "../../services/api";
 import { getApiErrorMessage } from "../../utils/errorHelpers";
 import { useTranslation } from "react-i18next";
 import { useLanguage } from "../../contexts/LanguageContext";
@@ -67,6 +67,8 @@ const GetNumberPage: React.FC = () => {
 
   // 数量
   const [quantity, setQuantity] = useState<number>(1);
+  const [minPrices, setMinPrices] = useState<Record<string, number>>({});
+  const [serviceCountryPrices, setServiceCountryPrices] = useState<Record<number, number>>({});
 
   // 获取运营商列表
   const fetchOperators = useCallback(
@@ -145,9 +147,23 @@ const GetNumberPage: React.FC = () => {
     }
   }, [location.search, fetchOperators]);
 
+  // 加载所有服务的最小价格（DB）用于步骤1列表展示
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await serviceApi.getMinPrices();
+        if (res.success && res.data) setMinPrices(res.data as any);
+      } catch (e) {}
+    })();
+  }, []);
+
   // 计算单个号码最终价格（含国家系数）
   const getFinalPrice = () => {
     if (!selectedService || selectedCountry === null) return 0;
+    // 优先使用DB价格
+    if (serviceCountryPrices[selectedCountry] !== undefined) {
+      return Number(serviceCountryPrices[selectedCountry]);
+    }
     const country = countries.find((c) => c.id === selectedCountry);
     if (!country) return Number(selectedService.price);
     return calculatePrice(Number(selectedService.price), 1, country.price_multiplier);
@@ -169,6 +185,23 @@ const GetNumberPage: React.FC = () => {
   // 处理服务选择
   const handleServiceSelect = (service: any) => {
     setSelectedService(service);
+    // 预取该服务的国家价格（DB）
+    (async () => {
+      try {
+        const res = await serviceApi.getDbPricingByService(service.code);
+        if (res.success && res.data) {
+          const map: Record<number, number> = {} as any;
+          Object.entries(res.data as any).forEach(([cid, price]) => {
+            map[Number(cid)] = Number(price);
+          });
+          setServiceCountryPrices(map);
+        } else {
+          setServiceCountryPrices({});
+        }
+      } catch (e) {
+        setServiceCountryPrices({});
+      }
+    })();
     setCurrentStep(1);
   };
 
@@ -197,8 +230,13 @@ const GetNumberPage: React.FC = () => {
     return ["any"];
   };
 
-  // 验证服务可用性
+  // 验证服务可用性（优先使用DB定价作为可用性判断）
   const validateServiceAvailability = async (service: string, country: number) => {
+    // 如果DB存在该服务-国家的价格，则视为可用
+    if (serviceCountryPrices[country] !== undefined) {
+      return true;
+    }
+    // 回退到后端的价格查询（外部API），作为兜底
     try {
       const response = await activationApi.getPrices(service, country);
       return (
@@ -348,12 +386,20 @@ const GetNumberPage: React.FC = () => {
       }
     } catch (error: any) {
       console.error("创建激活订单失败:", error);
-      let errorMessage = t("services.orderCreationFailedRetry");
-      if (error.response?.data?.error) {
-        const backendError = error.response.data.error;
-        errorMessage = getApiErrorMessage(backendError, t("services.orderCreationFailedRetry"));
+      const backendError = error.response?.data?.error;
+      // 供应商余额不足的特殊提示
+      if (
+        typeof backendError === "string" &&
+        (backendError.includes("余额不足") || backendError.toUpperCase?.().includes("NO_BALANCE"))
+      ) {
+        message.warning(t("services.providerNoBalance"));
+      } else {
+        let errorMessage = t("services.orderCreationFailedRetry");
+        if (backendError) {
+          errorMessage = getApiErrorMessage(backendError, t("services.orderCreationFailedRetry"));
+        }
+        message.error(errorMessage);
       }
-      message.error(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -660,7 +706,7 @@ const GetNumberPage: React.FC = () => {
 
                       <div style={{ textAlign: "right" }}>
                         <Tag color="green" style={{ fontSize: "16px", padding: "4px 12px" }}>
-                          ${service.price}
+                          ${minPrices[service.code] !== undefined ? minPrices[service.code] : service.price}
                         </Tag>
                       </div>
                     </div>
@@ -837,7 +883,7 @@ const GetNumberPage: React.FC = () => {
 
                               <div style={{ textAlign: "right" }}>
                                 <Tag color="green" style={{ fontSize: "14px", padding: "4px 8px" }}>
-                                  ${service.price}
+                                  ${minPrices[service.code] !== undefined ? minPrices[service.code] : service.price}
                                 </Tag>
                               </div>
                             </div>
@@ -953,7 +999,11 @@ const GetNumberPage: React.FC = () => {
                         <Text strong>{getLocalizedName(country)}</Text>
                       </div>
                       <Tag color="green">
-                        ${(selectedService?.price * country.price_multiplier).toFixed(2)}
+                        ${
+                          selectedService && serviceCountryPrices[country.id] !== undefined
+                            ? serviceCountryPrices[country.id].toFixed(2)
+                            : (selectedService?.price * country.price_multiplier).toFixed(2)
+                        }
                       </Tag>
                     </div>
 

@@ -5,6 +5,7 @@ const Transaction = require("./Transaction");
 const SystemConfig = require("./SystemConfig");
 const UserActivityLog = require("./UserActivityLog");
 const ApiKey = require("./ApiKey");
+const PricingOverride = require("./PricingOverride");
 
 // 定义关联关系
 User.hasMany(Activation, {
@@ -66,4 +67,5 @@ module.exports = {
   SystemConfig,
   UserActivityLog,
   ApiKey,
+  PricingOverride,
 };

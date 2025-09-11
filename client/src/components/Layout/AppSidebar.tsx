@@ -115,6 +115,11 @@ const AppSidebar: React.FC<AppSidebarProps> = ({ collapsed, isMobile, onCollapse
           icon: <WalletOutlined />,
           label: t("navigation.transactionManagement"),
         },
+        {
+          key: "admin/pricing",
+          icon: <BarChartOutlined />,
+          label: t("navigation.pricing"),
+        },
       ],
     });
   }

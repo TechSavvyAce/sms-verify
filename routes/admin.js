@@ -1,9 +1,13 @@
 const express = require("express");
-const { User, Activation, Rental, Transaction } = require("../models");
+const { User, Activation, Rental, Transaction, PricingOverride } = require("../models");
 const { authenticateToken, requireAdmin, logUserActivity } = require("../middleware/auth");
 const {
   validatePagination,
   validateId,
+  validatePricingQuery,
+  validatePricingUpsert,
+  validatePricingUpdate,
+  validatePricingBatchUpdate,
   createValidationMiddleware,
 } = require("../middleware/validation");
 const { getPaginationParams, buildPaginatedResponse, formatDateTime } = require("../utils/helpers");
@@ -1059,3 +1063,277 @@ router.get(
 );
 
 module.exports = router;
+
+/**
+ * 定价覆盖：列表
+ * GET /api/admin/pricing
+ */
+router.get(
+  "/pricing",
+  createValidationMiddleware(validatePricingQuery, "query"),
+  logUserActivity("admin_view_pricing"),
+  async (req, res) => {
+    try {
+      // 确保定价表已创建
+      try {
+        await PricingOverride.sync();
+      } catch (syncErr) {
+        logger.error("定价表创建/检查失败:", syncErr);
+      }
+
+      const { page, limit, offset } = getPaginationParams(req.query.page, req.query.limit);
+      const { service_code, country_id, enabled, sortBy = "updated_at", sortOrder = "DESC" } =
+        req.query;
+
+      const where = {};
+      if (service_code) where.service_code = service_code;
+      if (country_id !== undefined) where.country_id = country_id;
+      if (enabled !== undefined) where.enabled = enabled;
+
+      const { count, rows } = await PricingOverride.findAndCountAll({
+        where,
+        order: [[sortBy, sortOrder]],
+        limit,
+        offset,
+      });
+
+      const items = rows.map((r) => ({
+        id: r.id,
+        service_code: r.service_code,
+        country_id: r.country_id,
+        price: parseFloat(r.price),
+        currency: r.currency,
+        enabled: !!r.enabled,
+        notes: r.notes,
+        updated_by: r.updated_by,
+        created_at: formatDateTime(r.created_at),
+        updated_at: formatDateTime(r.updated_at),
+      }));
+
+      const response = buildPaginatedResponse(items, count, page, limit);
+      res.json({ success: true, data: response });
+    } catch (error) {
+      logger.error("获取定价覆盖列表失败:", error);
+      res.status(500).json({ success: false, error: "获取定价列表失败" });
+    }
+  }
+);
+
+/**
+ * 定价覆盖：创建或覆盖
+ * POST /api/admin/pricing
+ */
+router.post(
+  "/pricing",
+  createValidationMiddleware(validatePricingUpsert),
+  logUserActivity("admin_upsert_pricing"),
+  async (req, res) => {
+    try {
+      // 确保定价表已创建
+      try {
+        await PricingOverride.sync();
+      } catch (syncErr) {
+        logger.error("定价表创建/检查失败:", syncErr);
+      }
+
+      const { service_code, country_id, price, currency = "USD", enabled = true, notes } = req.body;
+
+      const [row, created] = await PricingOverride.findOrCreate({
+        where: { service_code, country_id },
+        defaults: {
+          price,
+          currency,
+          enabled,
+          notes: notes || null,
+          updated_by: req.user.id,
+        },
+      });
+
+      if (!created) {
+        await row.update({ price, currency, enabled, notes: notes || null, updated_by: req.user.id, updated_at: new Date() });
+      }
+
+      res.status(created ? 201 : 200).json({
+        success: true,
+        message: created ? "定价已创建" : "定价已更新",
+        data: {
+          id: row.id,
+          service_code: row.service_code,
+          country_id: row.country_id,
+          price: parseFloat(row.price),
+          currency: row.currency,
+          enabled: !!row.enabled,
+          notes: row.notes,
+        },
+      });
+    } catch (error) {
+      logger.error("创建/更新定价失败:", error);
+      res.status(500).json({ success: false, error: "创建/更新定价失败" });
+    }
+  }
+);
+
+/**
+ * 定价覆盖：按ID更新
+ * PUT /api/admin/pricing/:id
+ */
+router.put(
+  "/pricing/:id",
+  createValidationMiddleware(validateId, "params"),
+  createValidationMiddleware(validatePricingUpdate),
+  logUserActivity("admin_update_pricing"),
+  async (req, res) => {
+    try {
+      // 确保定价表已创建
+      try {
+        await PricingOverride.sync();
+      } catch (syncErr) {
+        logger.error("定价表创建/检查失败:", syncErr);
+      }
+
+      const { id } = req.params;
+      const row = await PricingOverride.findByPk(id);
+      if (!row) {
+        return res.status(404).json({ success: false, error: "定价不存在" });
+      }
+
+      await row.update({ ...req.body, updated_by: req.user.id, updated_at: new Date() });
+
+      res.json({
+        success: true,
+        message: "定价已更新",
+        data: {
+          id: row.id,
+          service_code: row.service_code,
+          country_id: row.country_id,
+          price: parseFloat(row.price),
+          currency: row.currency,
+          enabled: !!row.enabled,
+          notes: row.notes,
+        },
+      });
+    } catch (error) {
+      logger.error("更新定价失败:", error);
+      res.status(500).json({ success: false, error: "更新定价失败" });
+    }
+  }
+);
+
+/**
+ * 定价覆盖：删除
+ * DELETE /api/admin/pricing/:id
+ */
+router.delete(
+  "/pricing/:id",
+  createValidationMiddleware(validateId, "params"),
+  logUserActivity("admin_delete_pricing"),
+  async (req, res) => {
+    try {
+      // 确保定价表已创建
+      try {
+        await PricingOverride.sync();
+      } catch (syncErr) {
+        logger.error("定价表创建/检查失败:", syncErr);
+      }
+
+      const { id } = req.params;
+      const row = await PricingOverride.findByPk(id);
+      if (!row) {
+        return res.status(404).json({ success: false, error: "定价不存在" });
+      }
+
+      await row.destroy();
+      res.json({ success: true, message: "定价已删除" });
+    } catch (error) {
+      logger.error("删除定价失败:", error);
+      res.status(500).json({ success: false, error: "删除定价失败" });
+    }
+  }
+);
+
+/**
+ * 定价覆盖：批量更新
+ * POST /api/admin/pricing/batch
+ */
+router.post(
+  "/pricing/batch",
+  createValidationMiddleware(validatePricingBatchUpdate),
+  logUserActivity("admin_batch_update_pricing"),
+  async (req, res) => {
+    try {
+      const { mode, country_id, service_code, operation, value, enabled, create_missing } = req.body;
+
+      // 构建筛选条件
+      const where = {};
+      if (mode === "by_country") where.country_id = country_id;
+      if (mode === "by_service") where.service_code = service_code;
+
+      const rows = await PricingOverride.findAll({ where });
+
+      let affected = 0;
+      // 如果需要创建缺失项
+      if (create_missing) {
+        if (mode === "by_country") {
+          // 为该国家的所有服务创建
+          const servicesJson = require("../client/src/data/services.json");
+          const serviceCodes = [];
+          servicesJson.forEach((cat) => cat.services?.forEach((s) => s?.code && serviceCodes.push(s.code)));
+
+          for (const code of serviceCodes) {
+            const [row] = await PricingOverride.findOrCreate({
+              where: { service_code: code, country_id },
+              defaults: { price: 0.5, currency: "USD", enabled: true },
+            });
+            rows.push(row);
+          }
+        } else if (mode === "by_service") {
+          // 为该服务的所有国家创建
+          const countriesJson = require("../client/src/data/countries.json");
+          const countryIds = countriesJson.map((c) => c.id);
+          for (const cid of countryIds) {
+            const [row] = await PricingOverride.findOrCreate({
+              where: { service_code, country_id: cid },
+              defaults: { price: 0.5, currency: "USD", enabled: true },
+            });
+            rows.push(row);
+          }
+        }
+      }
+
+      // 去重
+      const uniqueMap = new Map();
+      for (const r of rows) uniqueMap.set(`${r.service_code}_${r.country_id}`, r);
+      const uniqueRows = Array.from(uniqueMap.values());
+
+      for (const row of uniqueRows) {
+        let newPrice = parseFloat(row.price);
+        switch (operation) {
+          case "set":
+            newPrice = value;
+            break;
+          case "increase":
+            newPrice = newPrice + value;
+            break;
+          case "decrease":
+            newPrice = Math.max(0.01, newPrice - value);
+            break;
+          case "multiply":
+            newPrice = newPrice * value;
+            break;
+        }
+        await row.update({
+          price: Math.round(newPrice * 100) / 100,
+          ...(typeof enabled === "boolean" ? { enabled } : {}),
+          updated_by: req.user.id,
+          updated_at: new Date(),
+        });
+        affected += 1;
+      }
+
+      res.json({ success: true, message: "批量更新完成", data: { affected } });
+    } catch (error) {
+      logger.error("批量更新定价失败:", error);
+      res.status(500).json({ success: false, error: "批量更新定价失败" });
+    }
+  }
+);

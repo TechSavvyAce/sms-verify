@@ -360,6 +360,54 @@ const createDynamicValidation = (rules) => {
   };
 };
 
+/**
+ * 定价覆盖：查询验证
+ */
+const validatePricingQuery = Joi.object({
+  service_code: Joi.string().optional(),
+  country_id: Joi.number().integer().min(0).optional(),
+  enabled: Joi.boolean().optional(),
+  page: commonRules.page,
+  limit: commonRules.limit,
+  sortBy: Joi.string().valid("service_code", "country_id", "price", "updated_at").default("updated_at"),
+  sortOrder: Joi.string().valid("asc", "desc").default("desc"),
+});
+
+/**
+ * 定价覆盖：创建/覆盖 验证
+ */
+const validatePricingUpsert = Joi.object({
+  service_code: Joi.string().min(1).max(64).required(),
+  country_id: Joi.number().integer().min(0).required(),
+  price: Joi.number().positive().precision(2).required(),
+  currency: Joi.string().length(3).uppercase().default("USD"),
+  enabled: Joi.boolean().default(true),
+  notes: Joi.string().allow("").optional(),
+});
+
+/**
+ * 定价覆盖：更新 验证
+ */
+const validatePricingUpdate = Joi.object({
+  price: Joi.number().positive().precision(2).optional(),
+  currency: Joi.string().length(3).uppercase().optional(),
+  enabled: Joi.boolean().optional(),
+  notes: Joi.string().allow("").optional(),
+}).min(1);
+
+/**
+ * 定价覆盖：批量更新 验证
+ */
+const validatePricingBatchUpdate = Joi.object({
+  mode: Joi.string().valid("by_country", "by_service").required(),
+  country_id: Joi.number().integer().min(0).when("mode", { is: "by_country", then: Joi.required() }),
+  service_code: Joi.string().min(1).max(64).when("mode", { is: "by_service", then: Joi.required() }),
+  operation: Joi.string().valid("set", "increase", "decrease", "multiply").required(),
+  value: Joi.number().positive().required(),
+  enabled: Joi.boolean().optional(),
+  create_missing: Joi.boolean().default(true),
+});
+
 module.exports = {
   // 预定义验证规则
   commonRules,
@@ -383,6 +431,10 @@ module.exports = {
   validateNotificationSettings,
   validateSearch,
   validateId,
+  validatePricingQuery,
+  validatePricingUpsert,
+  validatePricingUpdate,
+  validatePricingBatchUpdate,
 
   // 中间件创建函数
   createValidationMiddleware,

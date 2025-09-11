@@ -73,7 +73,8 @@
     "accountRecharge": "账户充值",
     "admin": "系统管理",
     "userManagement": "用户管理",
-    "transactionManagement": "交易管理"
+    "transactionManagement": "交易管理",
+    "pricing": "价格管理"
   },
   "auth": {
     "welcomeBack": "欢迎回来",
@@ -251,7 +252,8 @@
     "insufficientBalanceForOrder": "当前余额 ${{currentBalance}}，需要 ${{requiredAmount}}",
     "reorder": "重新选择",
     "serviceNotAvailableInCountry": "该服务在所选国家不可用，请选择其他服务或国家",
-    "failedToValidateService": "验证服务可用性失败，请重试"
+    "failedToValidateService": "验证服务可用性失败，请重试",
+    "providerNoBalance": "供应商余额不足，系统正在恢复中，请稍后再试。如有疑问请联系管理员。"
   },
   "rentals": {
     "rentalService": "号码租用服务",
@@ -724,5 +726,59 @@
     "jumpToSection": "跳转到章节",
     "readingTime": "阅读时间",
     "minutes": "分钟"
+  }
+  ,
+  "adminPricing": {
+    "title": "价格管理",
+    "service": "服务",
+    "country": "国家",
+    "price": "价格",
+    "priceWithCurrency": "价格 ({{currency}})",
+    "enabled": "启用",
+    "actions": "操作",
+    "toggle": "切换",
+    "newPrice": "新增价格",
+    "modalTitle": "创建 / 覆盖价格",
+    "servicePlaceholder": "选择服务",
+    "countryPlaceholder": "选择国家",
+    "enabledPlaceholder": "启用状态",
+    "hint": "支持筛选、编辑、批量调整价格。建议先使用批量工具初始化国家或服务价格。",
+    "batchTitle": "批量调整价格",
+    "byCountry": "按国家",
+    "byService": "按服务",
+    "opSet": "设置为",
+    "opIncrease": "增加",
+    "opDecrease": "减少",
+    "opMultiply": "乘以",
+    "createMissing": "创建缺失项",
+    "doNotCreate": "不创建缺失项",
+    "applyBatch": "应用批量调整",
+    "batchDone": "批量更新完成",
+    "selectedCount": "已选择 {{count}} 项",
+    "setPrice": "设置价格",
+    "setPriceTo": "设置价格为",
+    "enable": "启用",
+    "disable": "禁用",
+    "groupEditServiceTitle": "批量编辑服务：{{service}}",
+    "groupEditCountryTitle": "批量编辑国家：{{country}}",
+    "saveAll": "全部保存",
+    "editAllForService": "编辑该服务在所有国家的价格",
+    "editAllForCountry": "编辑该国家的所有服务价格",
+    "servicesList": "服务列表",
+    "countriesList": "国家列表",
+    "editorTitle": "价格编辑",
+    "editorHint": "请选择左侧服务或中间国家进行编辑",
+    "searchService": "搜索服务",
+    "searchCountry": "搜索国家",
+    "saved": "价格已保存",
+    "updated": "价格已更新",
+    "deleted": "价格已删除",
+    "fetchFailed": "获取定价失败",
+    "updateFailed": "更新失败",
+    "deleteFailed": "删除失败"
+  }
+  ,
+  "footer": {
+    "supportContact": "需要帮助？Telegram 支持: {{handle}}"
   }
 }

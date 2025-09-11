@@ -274,6 +274,14 @@ export const serviceApi = {
   getPricing: (params?: { service?: string; country?: number }): Promise<ApiResponse> =>
     request({ method: "GET", url: "/services/pricing", params }),
 
+  // 获取每个服务的最小价格（DB）
+  getMinPrices: (): Promise<ApiResponse<Record<string, number>>> =>
+    request({ method: "GET", url: "/services/min-prices" }),
+
+  // 获取某服务的按国家价格（DB）
+  getDbPricingByService: (service: string): Promise<ApiResponse<Record<string, number>>> =>
+    request({ method: "GET", url: `/services/${service}/pricing` }),
+
   // 获取服务详情
   getServiceDetail: (service: string): Promise<ApiResponse> =>
     request({ method: "GET", url: `/services/${service}` }),
@@ -525,6 +533,50 @@ export const adminApi = {
 
   // 系统健康检查
   systemHealthCheck: (): Promise<ApiResponse> => request({ method: "GET", url: "/admin/health" }),
+
+  // 定价覆盖：列表
+  getPricing: (params?: {
+    service_code?: string;
+    country_id?: number;
+    enabled?: boolean;
+    page?: number;
+    limit?: number;
+    sortBy?: string;
+    sortOrder?: "asc" | "desc";
+  }): Promise<ApiResponse<PaginatedResponse<any>>> =>
+    request({ method: "GET", url: "/admin/pricing", params }),
+
+  // 定价覆盖：创建或覆盖
+  upsertPricing: (data: {
+    service_code: string;
+    country_id: number;
+    price: number;
+    currency?: string;
+    enabled?: boolean;
+    notes?: string;
+  }): Promise<ApiResponse<any>> => request({ method: "POST", url: "/admin/pricing", data }),
+
+  // 定价覆盖：更新
+  updatePricing: (
+    id: number,
+    data: Partial<{ price: number; currency: string; enabled: boolean; notes: string }>
+  ): Promise<ApiResponse<any>> => request({ method: "PUT", url: `/admin/pricing/${id}`, data }),
+
+  // 定价覆盖：删除
+  deletePricing: (id: number): Promise<ApiResponse<any>> =>
+    request({ method: "DELETE", url: `/admin/pricing/${id}` }),
+
+  // 定价覆盖：批量更新
+  batchUpdatePricing: (data: {
+    mode: "by_country" | "by_service";
+    country_id?: number;
+    service_code?: string;
+    operation: "set" | "increase" | "decrease" | "multiply";
+    value: number;
+    enabled?: boolean;
+    create_missing?: boolean;
+  }): Promise<ApiResponse<{ affected: number }>> =>
+    request({ method: "POST", url: "/admin/pricing/batch", data }),
 };
 
 // 系统 API
