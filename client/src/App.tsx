@@ -18,9 +18,7 @@ import RegisterPage from "./pages/Auth/RegisterPage";
 
 import DashboardPage from "./pages/Dashboard/DashboardPage";
 import GetNumberPage from "./pages/Services/GetNumberPage";
-import RentNumberPage from "./pages/Services/RentNumberPage";
 import ActivationsPage from "./pages/Activations/ActivationsPage";
-import RentalsPage from "./pages/Rentals/RentalsPage";
 import TransactionsPage from "./pages/Transactions/TransactionsPage";
 import AdminUsersPage from "./pages/Admin/AdminUsersPage";
 import AdminTransactionsPage from "./pages/Admin/AdminTransactionsPage";
@@ -180,11 +178,9 @@ const AppWithLanguage: React.FC = () => {
 
                       {/* 服务相关页面 */}
                       <Route path="get-number" element={<GetNumberPage />} />
-                      <Route path="rent-number" element={<RentNumberPage />} />
 
                       {/* 记录查看页面 */}
                       <Route path="activations" element={<ActivationsPage />} />
-                      <Route path="rentals" element={<RentalsPage />} />
                       <Route path="transactions" element={<TransactionsPage />} />
 
                       {/* 用户相关页面 */}

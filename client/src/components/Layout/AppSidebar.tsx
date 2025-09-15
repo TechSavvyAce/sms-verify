@@ -41,21 +41,9 @@ const AppSidebar: React.FC<AppSidebarProps> = ({ collapsed, isMobile, onCollapse
       label: t("navigation.dashboard"),
     },
     {
-      key: "services",
-      icon: <MobileOutlined />,
-      label: t("navigation.smsServices"),
-      children: [
-        {
-          key: "get-number",
-          icon: <MessageOutlined />,
-          label: t("navigation.getNumber"),
-        },
-        {
-          key: "rent-number",
-          icon: <PhoneOutlined />,
-          label: t("navigation.rentNumber"),
-        },
-      ],
+      key: "get-number",
+      icon: <MessageOutlined />,
+      label: t("navigation.getNumber"),
     },
     {
       key: "records",
@@ -66,11 +54,6 @@ const AppSidebar: React.FC<AppSidebarProps> = ({ collapsed, isMobile, onCollapse
           key: "activations",
           icon: <MessageOutlined />,
           label: t("navigation.activations"),
-        },
-        {
-          key: "rentals",
-          icon: <ClockCircleOutlined />,
-          label: t("navigation.rentals"),
         },
         {
           key: "transactions",
@@ -155,12 +138,8 @@ const AppSidebar: React.FC<AppSidebarProps> = ({ collapsed, isMobile, onCollapse
 
     const openKeys: string[] = [];
 
-    if (relativePath.startsWith("/get-number") || relativePath.startsWith("/rent-number")) {
-      openKeys.push("services");
-    }
     if (
       relativePath.startsWith("/activations") ||
-      relativePath.startsWith("/rentals") ||
       relativePath.startsWith("/transactions")
     ) {
       openKeys.push("records");

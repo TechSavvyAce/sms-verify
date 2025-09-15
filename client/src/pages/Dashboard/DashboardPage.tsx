@@ -12,8 +12,8 @@ import { useTranslation } from "react-i18next";
 import { useLanguage } from "../../contexts/LanguageContext";
 import { useLocalizedNavigate } from "../../hooks/useLocalizedNavigate";
 import { useAuthStore } from "../../stores/authStore";
-import { userApi, activationApi, rentalApi } from "../../services/api";
-import { UserStats, Activation, Rental } from "../../types";
+import { userApi, activationApi } from "../../services/api";
+import { UserStats, Activation } from "../../types";
 
 const { Title, Text } = Typography;
 
@@ -25,7 +25,6 @@ const DashboardPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState<UserStats | null>(null);
   const [recentActivations, setRecentActivations] = useState<Activation[]>([]);
-  const [recentRentals, setRecentRentals] = useState<Rental[]>([]);
   const [refreshing, setRefreshing] = useState(false);
 
   // Get the appropriate locale for date formatting based on current language
@@ -37,10 +36,9 @@ const DashboardPage: React.FC = () => {
   const loadData = async () => {
     console.log("Dashboard: loadData 被调用");
     try {
-      const [statsResponse, activationsResponse, rentalsResponse] = await Promise.all([
+      const [statsResponse, activationsResponse] = await Promise.all([
         userApi.getStats(),
         activationApi.getList({ page: 1, limit: 5 }),
-        rentalApi.getList({ page: 1, limit: 5 }),
       ]);
 
       if (statsResponse.success && statsResponse.data) {
@@ -51,9 +49,6 @@ const DashboardPage: React.FC = () => {
         setRecentActivations(activationsResponse.data?.data || []);
       }
 
-      if (rentalsResponse.success) {
-        setRecentRentals(rentalsResponse.data?.data || []);
-      }
     } catch (error) {
       console.error("加载仪表板数据失败:", error);
     } finally {
@@ -84,9 +79,6 @@ const DashboardPage: React.FC = () => {
   // 计算统计数据
   const totalActivations = stats
     ? Object.values(stats.activations).reduce((sum, item) => sum + item.count, 0)
-    : 0;
-  const totalRentals = stats
-    ? Object.values(stats.rentals).reduce((sum, item) => sum + item.count, 0)
     : 0;
   const successActivations = stats
     ? (stats.activations["3"]?.count || 0) + (stats.activations["8"]?.count || 0)
@@ -183,16 +175,6 @@ const DashboardPage: React.FC = () => {
         <Col xs={24} sm={12} lg={6}>
           <Card>
             <Statistic
-              title={t("dashboard.totalRentals")}
-              value={totalRentals}
-              prefix={<PhoneOutlined />}
-              valueStyle={{ color: "#722ed1" }}
-            />
-          </Card>
-        </Col>
-        <Col xs={24} sm={12} lg={6}>
-          <Card>
-            <Statistic
               title={t("dashboard.successRate")}
               value={successRate}
               suffix="%"
@@ -223,16 +205,6 @@ const DashboardPage: React.FC = () => {
               block
             >
               {t("dashboard.getVerificationCode")}
-            </Button>
-          </Col>
-          <Col xs={24} sm={12} md={6}>
-            <Button
-              size="large"
-              icon={<PhoneOutlined />}
-              onClick={() => navigate("rent-number")}
-              block
-            >
-              {t("dashboard.rentNumber")}
             </Button>
           </Col>
           <Col xs={24} sm={12} md={6}>
@@ -338,83 +310,6 @@ const DashboardPage: React.FC = () => {
           </Card>
         </Col>
 
-        {/* 最近租用 */}
-        <Col xs={24} lg={12}>
-          <Card
-            title={t("dashboard.recentRentals")}
-            extra={
-              <Button type="link" onClick={() => navigate("rentals")} style={{ padding: 0 }}>
-                {t("dashboard.viewAll")}
-              </Button>
-            }
-          >
-            {recentRentals.length > 0 ? (
-              <Space direction="vertical" style={{ width: "100%" }} size="middle">
-                {recentRentals.map((rental) => (
-                  <div
-                    key={rental.id}
-                    style={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "center",
-                    }}
-                  >
-                    <div>
-                      <Text strong>{rental.service_name}</Text>
-                      <br />
-                      <Text type="secondary" style={{ fontSize: "12px" }}>
-                        {rental.phone_number} • {rental.duration_hours}小时
-                      </Text>
-                    </div>
-                    <div style={{ textAlign: "right" }}>
-                      <div>
-                        <Text
-                          style={{
-                            color:
-                              rental.status === "active"
-                                ? "#52c41a"
-                                : rental.status === "cancelled"
-                                  ? "#ff4d4f"
-                                  : "#8c8c8c",
-                          }}
-                        >
-                          {rental.status_text}
-                        </Text>
-                      </div>
-                      <Text type="secondary" style={{ fontSize: "12px" }}>
-                        {rental.sms_count} 条短信
-                      </Text>
-                    </div>
-                  </div>
-                ))}
-              </Space>
-            ) : (
-              <div
-                style={{
-                  textAlign: "center",
-                  padding: "32px 0",
-                  color: "#8c8c8c",
-                }}
-              >
-                <ClockCircleOutlined
-                  style={{
-                    fontSize: "48px",
-                    marginBottom: "16px",
-                    opacity: 0.3,
-                  }}
-                />
-                <div>{t("dashboard.noRentalRecords")}</div>
-                <Button
-                  type="link"
-                  onClick={() => navigate("rent-number")}
-                  style={{ padding: 0, marginTop: "8px" }}
-                >
-                  {t("dashboard.rentNow")}
-                </Button>
-              </div>
-            )}
-          </Card>
-        </Col>
       </Row>
     </div>
   );
