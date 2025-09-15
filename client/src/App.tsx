@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import { Layout, Button, Tooltip } from "antd";
 import { MessageOutlined } from "@ant-design/icons";
@@ -10,6 +10,7 @@ import AppSidebar from "./components/Layout/AppSidebar";
 import ProtectedRoute from "./components/Common/ProtectedRoute";
 import LoadingSpinner from "./components/Common/LoadingSpinner";
 import ErrorBoundary from "./components/Common/ErrorBoundary";
+import SupportModal from "./components/Common/SupportModal";
 import "./i18n";
 
 // 页面组件
@@ -73,6 +74,7 @@ const AppWithLanguage: React.FC = () => {
   const { isAuthenticated, isLoading, user, initializeAuth } = useAuthStore();
   const [collapsed, setCollapsed] = React.useState(false);
   const [isMobile, setIsMobile] = React.useState(false);
+  const [supportModalVisible, setSupportModalVisible] = useState(false);
 
   // WebSocket 连接
   useWebSocket();
@@ -228,15 +230,27 @@ const AppWithLanguage: React.FC = () => {
                 </Content>
 
                 {/* 浮动支持按钮 */}
-                <a href="https://t.me/smsyz_support" target="_blank" rel="noreferrer"
-                  style={{ position: "fixed", bottom: isMobile ? 16 : 24, right: isMobile ? 16 : 24, zIndex: 1100 }}>
-                  <Tooltip title="Telegram: @smsyz_support">
-                    <Button type="primary" shape="round" size={isMobile ? "middle" : "large"} icon={<MessageOutlined />}
-                      style={{ boxShadow: "0 6px 16px rgba(0,0,0,0.2)" }}>
+                <div style={{ position: "fixed", bottom: isMobile ? 16 : 24, right: isMobile ? 16 : 24, zIndex: 1100 }}>
+                  <Tooltip title="Contact Support">
+                    <Button 
+                      type="primary" 
+                      shape="round" 
+                      size={isMobile ? "middle" : "large"} 
+                      icon={<MessageOutlined />}
+                      style={{ boxShadow: "0 6px 16px rgba(0,0,0,0.2)" }}
+                      onClick={() => setSupportModalVisible(true)}
+                    >
                       Support
                     </Button>
                   </Tooltip>
-                </a>
+                </div>
+
+                {/* 支持模态框 */}
+                <SupportModal
+                  visible={supportModalVisible}
+                  onClose={() => setSupportModalVisible(false)}
+                  isMobile={isMobile}
+                />
               </Layout>
             </Layout>
           </ProtectedRoute>

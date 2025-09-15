@@ -780,5 +780,19 @@
   ,
   "footer": {
     "supportContact": "Need help? Telegram support: {{handle}}"
+  },
+  "support": {
+    "contactSupport": "Contact Support",
+    "chooseSupportChannel": "Choose the most appropriate support channel for your inquiry. Our team is ready to help you!",
+    "primarySupport": "Primary Support",
+    "technicalSupport": "Technical Support",
+    "primarySupportDescription": "Main support channel for general inquiries, technical issues, and account assistance.",
+    "technicalSupportDescription": "Specialized technical support for advanced issues, API integration, and system troubleshooting.",
+    "availability24_7": "24/7",
+    "businessHours": "Business Hours",
+    "languageSupport": "English/中文",
+    "onlineNow": "Online Now",
+    "contactOnTelegram": "Contact on Telegram",
+    "supportTip": "💡 Tip: For faster response, please describe your issue clearly and include relevant details like error messages or account information."
   }
 }

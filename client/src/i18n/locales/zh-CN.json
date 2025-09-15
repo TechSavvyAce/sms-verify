@@ -780,5 +780,19 @@
   ,
   "footer": {
     "supportContact": "需要帮助？Telegram 支持: {{handle}}"
+  },
+  "support": {
+    "contactSupport": "联系客服",
+    "chooseSupportChannel": "选择最适合您咨询的支持渠道。我们的团队随时为您提供帮助！",
+    "primarySupport": "主要客服",
+    "technicalSupport": "技术支持",
+    "primarySupportDescription": "主要支持渠道，处理一般咨询、技术问题和账户协助。",
+    "technicalSupportDescription": "专业技术支持，处理高级问题、API集成和系统故障排除。",
+    "availability24_7": "24/7",
+    "businessHours": "工作时间",
+    "languageSupport": "English/中文",
+    "onlineNow": "在线中",
+    "contactOnTelegram": "在Telegram上联系",
+    "supportTip": "💡 提示：为了更快响应，请清楚描述您的问题，并包含相关详细信息，如错误消息或账户信息。"
   }
 }
