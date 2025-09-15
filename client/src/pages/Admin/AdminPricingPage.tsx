@@ -28,24 +28,56 @@ const AdminPricingPage: React.FC = () => {
 
   const applyQuickAdjust = async (op: "increase" | "decrease" | "multiply", value: number) => {
     if (selectedRows.length === 0) return;
+    setBatchLoading(true);
     try {
-      await Promise.all(
-        selectedRows.map((r) =>
-          adminApi.updatePricing(r.id, { price: Math.round(applyOp(r.price, op, value) * 100) / 100 })
-        )
-      );
+      // Process requests sequentially with small delay to avoid overwhelming the server
+      for (let i = 0; i < selectedRows.length; i++) {
+        const r = selectedRows[i];
+        try {
+          await adminApi.updatePricing(r.id, { price: Math.round(applyOp(r.price, op, value) * 100) / 100 });
+          // Small delay between requests to prevent overwhelming the server
+          if (i < selectedRows.length - 1) {
+            await new Promise(resolve => setTimeout(resolve, 100));
+          }
+        } catch (error) {
+          console.error(`Failed to update pricing for row ${i + 1}:`, error);
+          // Continue with other updates even if one fails
+        }
+      }
       message.success(t("adminPricing.updated"));
       fetchList(pagination.current, pagination.pageSize);
-    } catch (e) {}
+    } catch (e) {
+      message.error(t("adminPricing.updateFailed"));
+    } finally {
+      setBatchLoading(false);
+    }
   };
 
   const applyToggleEnabled = async (enabled: boolean) => {
     if (selectedRows.length === 0) return;
+    setBatchLoading(true);
     try {
-      await Promise.all(selectedRows.map((r) => adminApi.updatePricing(r.id, { enabled })));
+      // Process requests sequentially with small delay to avoid overwhelming the server
+      for (let i = 0; i < selectedRows.length; i++) {
+        const r = selectedRows[i];
+        try {
+          await adminApi.updatePricing(r.id, { enabled });
+          // Small delay between requests to prevent overwhelming the server
+          if (i < selectedRows.length - 1) {
+            await new Promise(resolve => setTimeout(resolve, 100));
+          }
+        } catch (error) {
+          console.error(`Failed to update enabled status for row ${i + 1}:`, error);
+          // Continue with other updates even if one fails
+        }
+      }
       message.success(t("adminPricing.updated"));
       fetchList(pagination.current, pagination.pageSize);
-    } catch (e) {}
+    } catch (e) {
+      message.error(t("adminPricing.updateFailed"));
+    } finally {
+      setBatchLoading(false);
+    }
   };
 
   const serviceOptions = useMemo(() => {
@@ -334,15 +366,31 @@ const AdminPricingPage: React.FC = () => {
         onCancel={() => setSetPriceModalOpen(false)}
         onOk={async () => {
           if (!setPriceValue || selectedRows.length === 0) return;
+          setBatchLoading(true);
           try {
-            await Promise.all(
-              selectedRows.map((r) => adminApi.updatePricing(r.id, { price: setPriceValue! }))
-            );
+            // Process requests sequentially with small delay to avoid overwhelming the server
+            for (let i = 0; i < selectedRows.length; i++) {
+              const r = selectedRows[i];
+              try {
+                await adminApi.updatePricing(r.id, { price: setPriceValue! });
+                // Small delay between requests to prevent overwhelming the server
+                if (i < selectedRows.length - 1) {
+                  await new Promise(resolve => setTimeout(resolve, 100));
+                }
+              } catch (error) {
+                console.error(`Failed to update pricing for row ${i + 1}:`, error);
+                // Continue with other updates even if one fails
+              }
+            }
             message.success(t("adminPricing.updated"));
             setSetPriceModalOpen(false);
             setSetPriceValue(null);
             fetchList(pagination.current, pagination.pageSize);
-          } catch (e) {}
+          } catch (e) {
+            message.error(t("adminPricing.updateFailed"));
+          } finally {
+            setBatchLoading(false);
+          }
         }}
         okText={t("common.save")}
       >
@@ -379,13 +427,25 @@ const AdminPricingPage: React.FC = () => {
           <Button loading={groupSaving} type="primary" onClick={async () => {
             try {
               setGroupSaving(true);
-              await Promise.all(
-                groupList.map((r) => adminApi.updatePricing(r.id, { price: r._editPrice ?? r.price }))
-              );
+              // Process requests sequentially with small delay to avoid overwhelming the server
+              for (let i = 0; i < groupList.length; i++) {
+                const r = groupList[i];
+                try {
+                  await adminApi.updatePricing(r.id, { price: r._editPrice ?? r.price });
+                  // Small delay between requests to prevent overwhelming the server
+                  if (i < groupList.length - 1) {
+                    await new Promise(resolve => setTimeout(resolve, 100));
+                  }
+                } catch (error) {
+                  console.error(`Failed to update pricing for row ${i + 1}:`, error);
+                  // Continue with other updates even if one fails
+                }
+              }
               message.success(t("adminPricing.updated"));
               setGroupDrawerOpen(false);
               fetchList(pagination.current, pagination.pageSize);
             } catch (e) {
+              message.error(t("adminPricing.updateFailed"));
             } finally {
               setGroupSaving(false);
             }
@@ -463,7 +523,20 @@ const EditorPanel: React.FC<{
     if (rows.length === 0 || value === null || value === undefined) return;
     setLoading(true);
     try {
-      await Promise.all(rows.map((r) => adminApi.updatePricing(r.id, { price: value! })));
+      // Process requests sequentially with small delay to avoid overwhelming the server
+      for (let i = 0; i < rows.length; i++) {
+        const r = rows[i];
+        try {
+          await adminApi.updatePricing(r.id, { price: value! });
+          // Small delay between requests to prevent overwhelming the server
+          if (i < rows.length - 1) {
+            await new Promise(resolve => setTimeout(resolve, 100));
+          }
+        } catch (error) {
+          console.error(`Failed to update pricing for row ${i + 1}:`, error);
+          // Continue with other updates even if one fails
+        }
+      }
       // immediate UI update
       setRows((prev) => prev.map((r) => ({ ...r, price: value!, _editPrice: undefined })));
       refresh();
@@ -476,7 +549,20 @@ const EditorPanel: React.FC<{
     if (rows.length === 0) return;
     setLoading(true);
     try {
-      await Promise.all(rows.map((r) => adminApi.updatePricing(r.id, { enabled: to })));
+      // Process requests sequentially with small delay to avoid overwhelming the server
+      for (let i = 0; i < rows.length; i++) {
+        const r = rows[i];
+        try {
+          await adminApi.updatePricing(r.id, { enabled: to });
+          // Small delay between requests to prevent overwhelming the server
+          if (i < rows.length - 1) {
+            await new Promise(resolve => setTimeout(resolve, 100));
+          }
+        } catch (error) {
+          console.error(`Failed to update enabled status for row ${i + 1}:`, error);
+          // Continue with other updates even if one fails
+        }
+      }
       // immediate UI update
       setRows((prev) => prev.map((r) => ({ ...r, enabled: to })));
       refresh();
@@ -495,11 +581,11 @@ const EditorPanel: React.FC<{
         <Space direction="vertical" style={{ width: "100%" }}>
           <Space wrap>
             <InputNumber min={0.01} step={0.01} placeholder={t("adminPricing.setPriceTo") || ""} value={value ?? undefined} onChange={(v) => setValue(Number(v))} />
-            <Button type="primary" onClick={applySetPrice} disabled={!rows.length || !value}>
+            <Button type="primary" onClick={applySetPrice} disabled={!rows.length || !value} loading={loading}>
               {t("adminPricing.applyBatch")}
             </Button>
-            <Button onClick={() => applyToggle(true)} disabled={!rows.length}>{t("adminPricing.enable")}</Button>
-            <Button onClick={() => applyToggle(false)} disabled={!rows.length}>{t("adminPricing.disable")}</Button>
+            <Button onClick={() => applyToggle(true)} disabled={!rows.length} loading={loading}>{t("adminPricing.enable")}</Button>
+            <Button onClick={() => applyToggle(false)} disabled={!rows.length} loading={loading}>{t("adminPricing.disable")}</Button>
           </Space>
 
           <Divider style={{ margin: "12px 0" }} />
