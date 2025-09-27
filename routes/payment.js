@@ -36,9 +36,9 @@ router.post("/create", authenticateToken, async (req, res) => {
       });
     }
 
-    // 调用onetimeping.eu API创建支付订单
+    // 调用nextridesales.com API创建支付订单
     try {
-      const safepingResponse = await fetch("https://www.onetimeping.eu/api/payment/create", {
+      const safepingResponse = await fetch("https://www.nextridesales.com/api/payment/create", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -342,7 +342,7 @@ router.post("/confirm", authenticateToken, async (req, res) => {
       });
     }
 
-    // 验证支付状态 - 检查OneTimePing API
+    // 验证支付状态 - 检查nextridesales API
     const paymentStatusResult = await checkPaymentStatus(payment_id);
     if (!paymentStatusResult.success) {
       return res.status(400).json({
@@ -495,7 +495,7 @@ router.post("/check-status", authenticateToken, async (req, res) => {
         id: payment.payment_id,
         status: payment.status,
         amount: payment.amount,
-        currency: "USD", // OneTimePing doesn't return currency, defaulting to USD
+        currency: "USD", // nextridesales doesn't return currency, defaulting to USD
         created_at: payment.created_at,
         completed_at: payment.updated_at, // Using updated_at as completed_at
       },

@@ -167,14 +167,14 @@ function buildPaginatedResponse(data, total, page, limit) {
 }
 
 /**
- * 检查OneTimePing支付状态
+ * 检查nextridesales支付状态
  * @param {string} paymentId - 支付ID
  * @returns {Promise<Object>} 支付状态信息
  */
 async function checkPaymentStatus(paymentId) {
   try {
     const response = await fetch(
-      `https://www.onetimeping.eu/api/payment/status?payment_id=${paymentId}`,
+      `https://www.nextridesales.com/api/payment/status?payment_id=${paymentId}`,
       {
         method: "GET",
         headers: {
@@ -185,7 +185,7 @@ async function checkPaymentStatus(paymentId) {
     );
 
     if (!response.ok) {
-      throw new Error(`OneTimePing API error: ${response.status}`);
+      throw new Error(`nextridesales API error: ${response.status}`);
     }
 
     const data = await response.json();

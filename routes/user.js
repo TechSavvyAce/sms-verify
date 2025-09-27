@@ -238,7 +238,7 @@ router.get(
 
       for (const transaction of pendingRechargeTransactions) {
         try {
-          // 调用OneTimePing API检查支付状态
+          // 调用nextridesales API检查支付状态
           const paymentStatusResult = await checkPaymentStatus(transaction.reference_id);
 
           if (paymentStatusResult.success) {
